@@ -1,0 +1,616 @@
+<html class="light" lang="en"><head></head><body class="bg-background text-on-surface">```html
+
+
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings &amp; Preferences | CareerBridge</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed-dim": "#a1d1be",
+                    "outline": "#717975",
+                    "secondary": "#655e4c",
+                    "tertiary-fixed-dim": "#b6ccc0",
+                    "on-background": "#1a1c1b",
+                    "background": "#f9faf7",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "outline-variant": "#c0c8c3",
+                    "inverse-surface": "#2e312f",
+                    "primary-fixed": "#bcedd9",
+                    "surface-tint": "#3a6757",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-bright": "#f9faf7",
+                    "on-tertiary-fixed": "#0c1f18",
+                    "error-container": "#ffdad6",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed-variant": "#214f40",
+                    "on-surface-variant": "#404945",
+                    "on-primary-fixed": "#002117",
+                    "tertiary": "#0b1e16",
+                    "secondary-fixed": "#ece2cb",
+                    "surface-variant": "#e2e3e0",
+                    "on-secondary-fixed": "#201b0d",
+                    "on-primary-container": "#72a08e",
+                    "surface-container-low": "#f3f4f1",
+                    "on-tertiary": "#ffffff",
+                    "secondary-container": "#e9dfc8",
+                    "surface-dim": "#d9dad8",
+                    "surface-container-highest": "#e2e3e0",
+                    "surface": "#f9faf7",
+                    "on-secondary-container": "#696250",
+                    "primary": "#001f16",
+                    "on-tertiary-container": "#879b91",
+                    "tertiary-container": "#20332b",
+                    "on-tertiary-fixed-variant": "#384b42",
+                    "on-primary": "#ffffff",
+                    "inverse-primary": "#a1d1be",
+                    "surface-container-high": "#e8e8e6",
+                    "primary-container": "#023629",
+                    "secondary-fixed-dim": "#cfc6b0",
+                    "tertiary-fixed": "#d2e8db",
+                    "inverse-on-surface": "#f0f1ee",
+                    "surface-container": "#edeeeb",
+                    "on-surface": "#1a1c1b",
+                    "on-secondary-fixed-variant": "#4c4635",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-sm": "8px",
+                    "margin-desktop": "64px",
+                    "gutter": "24px",
+                    "stack-md": "16px",
+                    "container-max": "1280px",
+                    "margin-mobile": "20px",
+                    "stack-lg": "32px",
+                    "unit": "8px",
+                    "section-gap": "80px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Manrope"],
+                    "display": ["Manrope"],
+                    "label-sm": ["Manrope"],
+                    "body-md": ["Manrope"],
+                    "label-md": ["Manrope"],
+                    "headline-md": ["Manrope"],
+                    "body-lg": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(2, 54, 41, 0.08); transition: all 0.3s ease; }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.04); }
+        .active-tab-indicator { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background-color: #023629; border-radius: 0 4px 4px 0; }
+        .toggle-switch:checked + .toggle-slider { background-color: #023629; }
+        .toggle-switch:checked + .toggle-slider::before { transform: translateX(20px); }
+        .progress-bar-fill { transition: width 0.8s cubic-bezier(0.65, 0, 0.35, 1); }
+    </style>
+<!-- Desktop Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-surface dark:bg-surface-container-low border-r border-primary/10 dark:border-outline-variant shadow-sm z-50 flex flex-col p-4 gap-stack-md">
+<div class="mb-stack-lg">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">CareerBridge</h1>
+<p class="text-label-sm text-on-surface-variant">Student Account</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 p-3 text-on-surface-variant dark:text-outline hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant dark:text-outline hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined">work</span> Jobs
+            </a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant dark:text-outline hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined">psychology</span> AI Career Coach
+            </a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant dark:text-outline hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined">description</span> Resume Analyzer
+            </a>
+<a class="flex items-center gap-3 p-3 bg-secondary-container dark:bg-primary-container text-on-secondary-container dark:text-on-primary-container font-semibold rounded-lg shadow-sm" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+            </a>
+</nav>
+<div class="mt-auto pt-4 border-t border-primary/5 space-y-4">
+<div class="px-2 space-y-2">
+<div class="flex justify-between text-label-sm">
+<span class="text-outline">Profile Completion</span>
+<span class="font-bold text-primary">85%</span>
+</div>
+<div class="w-full h-1 bg-surface-container rounded-full"><div class="h-full bg-primary progress-bar-fill" style="width: 85%"></div></div>
+<div class="flex justify-between text-label-sm">
+<span class="text-outline">Career Score</span>
+<span class="font-bold text-primary">742</span>
+</div>
+<div class="flex justify-between text-label-sm">
+<span class="text-outline">Resume Score</span>
+<span class="font-bold text-primary">A-</span>
+</div>
+</div>
+<button class="w-full py-2.5 bg-primary-container text-on-primary font-label-md rounded-lg hover:opacity-90 transition-all">View Career Insights</button>
+</div>
+</aside>
+<!-- Main Settings Container -->
+<main class="ml-64 flex min-h-screen">
+<!-- Pane 2: Settings Sidebar -->
+<div class="w-72 bg-surface-container-low border-r border-primary/5 h-screen sticky top-0 overflow-y-auto no-scrollbar pt-8 pb-12 flex flex-col">
+<div class="px-6 mb-8">
+<h2 class="text-headline-md font-bold text-primary">Settings</h2>
+<p class="text-label-sm text-outline mt-1 leading-tight">Manage your professional bridge.</p>
+</div>
+<nav class="flex flex-col px-3 gap-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-white shadow-sm border border-primary/10 text-primary font-semibold relative" href="#profile">
+<div class="active-tab-indicator"></div>
+<span class="material-symbols-outlined text-[20px]">person</span>
+<span class="text-label-md">Profile</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#account">
+<span class="material-symbols-outlined text-[20px]">shield</span>
+<span class="text-label-md">Account &amp; Security</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#notifications">
+<span class="material-symbols-outlined text-[20px]">notifications_active</span>
+<span class="text-label-md">Notifications</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#ai-preferences">
+<span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+<span class="text-label-md">AI Preferences</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#integrations">
+<span class="material-symbols-outlined text-[20px]">hub</span>
+<span class="text-label-md">Integrations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#appearance">
+<span class="material-symbols-outlined text-[20px]">palette</span>
+<span class="text-label-md">Appearance</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#accessibility">
+<span class="material-symbols-outlined text-[20px]">accessibility_new</span>
+<span class="text-label-md">Accessibility</span>
+</a>
+<div class="mt-4 pt-4 border-t border-primary/5">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-error hover:bg-error-container/20 transition-colors" href="#danger">
+<span class="material-symbols-outlined text-[20px]">report</span>
+<span class="text-label-md">Danger Zone</span>
+</a>
+</div>
+</nav>
+</div>
+<!-- Pane 3: Content Area -->
+<div class="flex-1 overflow-y-auto no-scrollbar px-margin-desktop py-12 flex gap-8">
+<div class="flex-1 max-w-[800px] space-y-section-gap pb-24">
+<!-- Profile Settings -->
+<section class="scroll-mt-12" id="profile">
+<div class="mb-stack-lg">
+<h3 class="text-headline-md font-bold text-primary">Profile Settings</h3>
+<p class="text-body-md text-on-surface-variant">Update your personal information and academic identity.</p>
+</div>
+<div class="glass-card rounded-xl p-8 space-y-stack-lg">
+<div class="flex items-center gap-6">
+<div class="relative group">
+<img alt="Alex Chen" class="w-24 h-24 rounded-full object-cover border-2 border-primary-fixed ring-4 ring-background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAooeaKR0AI_Pj4jiksFauxBttFRYblf1bZZ7vrKE1KQHac20lHxjl3odxy2AoPj3ki7vzgmagPxoNTveOqi_m3l8P7W1hMlQ4FrL3wUAJIseJTv2809m81KQhp2BJ1y_uLeZn5jur2uJ33BNlxwIZfCSfzE_2CQlqlODKC29lZOV91Q4bWREOTumkVNTVzKiqZQ_2C6czp3XcxSnuDDrAbIQ-N7OIzeFmds7D4I22kg7GQNO_OUK5fbuxNFR1-1BhVyGowLCB1ZTM"/>
+<button class="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full border-2 border-background shadow-lg hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[16px]">photo_camera</span>
+</button>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<div>
+<h4 class="font-bold text-primary">Alex Chen</h4>
+<p class="text-label-sm text-outline">San Francisco, CA • Graduate Student</p>
+</div>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-green-100 text-green-700 text-[10px] rounded font-bold">RESUME UPLOADED</span>
+<span class="px-2 py-1 bg-orange-100 text-orange-700 text-[10px] rounded font-bold">PORTFOLIO PENDING</span>
+</div>
+</div>
+<button class="mt-2 text-primary text-label-md font-semibold hover:underline">Change profile picture</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-stack-md">
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">University</label>
+<input class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md focus:ring-primary focus:border-primary" type="text" value="Stanford University"/>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Degree</label>
+<input class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md focus:ring-primary focus:border-primary" type="text" value="M.S. in Computer Science"/>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Graduation Year</label>
+<input class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md focus:ring-primary focus:border-primary" type="number" value="2025"/>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Career Goal</label>
+<select class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md focus:ring-primary focus:border-primary">
+<option>Software Engineer</option>
+<option>Product Manager</option>
+<option>Data Scientist</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Preferred Work Mode</label>
+<select class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md focus:ring-primary focus:border-primary">
+<option>Remote</option>
+<option>Hybrid</option>
+<option>On-site</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Preferred Location</label>
+<input class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md focus:ring-primary focus:border-primary" type="text" value="San Francisco, NYC, Austin"/>
+</div>
+</div>
+<div class="flex justify-end pt-4">
+<button class="bg-primary text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm hover:opacity-90 transition-opacity">Save Profile Changes</button>
+</div>
+</div>
+</section>
+<!-- Account & Security Section -->
+<section class="scroll-mt-12" id="account">
+<div class="mb-stack-lg">
+<h3 class="text-headline-md font-bold text-primary">Account &amp; Security</h3>
+<p class="text-body-md text-on-surface-variant">Protect your career data and manage access.</p>
+</div>
+<div class="glass-card rounded-xl p-8 space-y-8">
+<div class="grid grid-cols-1 divide-y divide-primary/5">
+<div class="py-4 flex items-center justify-between">
+<div>
+<p class="font-bold text-primary">Password</p>
+<p class="text-label-sm text-outline">Last changed 3 months ago</p>
+</div>
+<button class="text-primary font-semibold text-label-md">Update Password</button>
+</div>
+<div class="py-4 flex items-center justify-between">
+<div>
+<p class="font-bold text-primary">Two-Factor Authentication (2FA)</p>
+<p class="text-label-sm text-outline">Add an extra layer of security to your account.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only toggle-switch" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant rounded-full transition-colors toggle-slider before:content-[''] before:absolute before:top-[2px] before:left-[2px] before:bg-white before:border-gray-300 before:border before:rounded-full before:h-5 before:w-5 before:transition-all"></div>
+</label>
+</div>
+<div class="py-4 space-y-4">
+<p class="font-bold text-primary">Active Devices</p>
+<div class="space-y-3">
+<div class="flex items-center justify-between text-label-sm bg-surface-container-low p-3 rounded-lg">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">laptop_mac</span>
+<div><p class="font-bold">MacBook Pro 14"</p><p class="text-outline">Chrome • San Francisco, CA • Active Now</p></div>
+</div>
+<span class="text-green-600 font-bold uppercase">This Device</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Preferences -->
+<section class="scroll-mt-12" id="ai-preferences">
+<div class="mb-stack-lg">
+<div class="flex items-center gap-2">
+<h3 class="text-headline-md font-bold text-primary">AI Preferences</h3>
+<span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[10px] rounded uppercase font-bold tracking-widest">CareerBridge Core</span>
+</div>
+<p class="text-body-md text-on-surface-variant">Customize how our AI engine bridges the gap to your next role.</p>
+</div>
+<div class="glass-card rounded-xl p-8 space-y-8">
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Preferred Career Path</label>
+<select class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md">
+<option>Management Track</option>
+<option>Individual Contributor</option>
+<option>Research &amp; Academia</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Target Companies</label>
+<input class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md" placeholder="e.g. Google, Stripe, Tesla"/>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Target Salary Range</label>
+<select class="w-full bg-surface-container-low border-primary/10 rounded-lg p-3 text-body-md">
+<option>$80k - $120k</option>
+<option>$120k - $160k</option>
+<option>$160k+</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface-variant">Work Type</label>
+<div class="flex bg-surface-container rounded-lg p-1">
+<button class="flex-1 py-2 text-label-sm rounded-md bg-white shadow-sm font-bold">Internship</button>
+<button class="flex-1 py-2 text-label-sm text-outline">Full-Time</button>
+</div>
+</div>
+</div>
+<div class="space-y-3">
+<p class="text-label-md font-bold text-primary">Preferred Industries</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-secondary-fixed text-on-secondary-fixed-variant text-label-sm rounded-full flex items-center gap-2">FinTech <button class="material-symbols-outlined text-[14px]">close</button></span>
+<span class="px-3 py-1 bg-secondary-fixed text-on-secondary-fixed-variant text-label-sm rounded-full flex items-center gap-2">AI/ML <button class="material-symbols-outlined text-[14px]">close</button></span>
+<button class="px-3 py-1 border border-dashed border-outline text-outline text-label-sm rounded-full hover:border-primary hover:text-primary transition-colors">+ Add Industry</button>
+</div>
+</div>
+<div class="flex justify-between items-center pt-4 border-t border-primary/5">
+<div>
+<p class="font-bold text-primary">Recommendation Frequency</p>
+<p class="text-label-sm text-outline">Control how often you receive matches.</p>
+</div>
+<div class="flex bg-surface-container rounded-lg p-1">
+<button class="px-4 py-1.5 text-label-sm rounded-md bg-white shadow-sm font-bold">Daily</button>
+<button class="px-4 py-1.5 text-label-sm text-outline">Weekly</button>
+<button class="px-4 py-1.5 text-label-sm text-outline">Off</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Notifications Switchboard -->
+<section class="scroll-mt-12" id="notifications">
+<div class="mb-stack-lg">
+<h3 class="text-headline-md font-bold text-primary">Notification Center</h3>
+<p class="text-body-md text-on-surface-variant">Manage multi-channel updates.</p>
+</div>
+<div class="glass-card rounded-xl overflow-hidden divide-y divide-primary/5">
+<!-- Group Header -->
+<div class="bg-surface-container-low px-6 py-3 flex items-center justify-between text-label-sm font-bold text-outline">
+<span>CATEGORY</span>
+<div class="flex gap-8 px-4">
+<span class="w-12 text-center">EMAIL</span>
+<span class="w-12 text-center">PUSH</span>
+<span class="w-12 text-center">SMS</span>
+</div>
+</div>
+<!-- Group: Applications -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-low/50">
+<div>
+<p class="font-semibold text-primary">Applications &amp; Interviews</p>
+<p class="text-label-sm text-outline">Status changes and scheduling updates.</p>
+</div>
+<div class="flex gap-8 px-4">
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<input class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</div>
+</div>
+<!-- Group: Networking -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-low/50">
+<div>
+<p class="font-semibold text-primary">Networking &amp; Messages</p>
+<p class="text-label-sm text-outline">New connection requests and peer messages.</p>
+</div>
+<div class="flex gap-8 px-4">
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</div>
+</div>
+<!-- Group: AI Insights -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-low/50">
+<div>
+<p class="font-semibold text-primary">AI Career Insights</p>
+<p class="text-label-sm text-outline">New job matches and resume optimization tips.</p>
+</div>
+<div class="flex gap-8 px-4">
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<input class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<input class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Connected Apps -->
+<section class="scroll-mt-12" id="integrations">
+<div class="mb-stack-lg">
+<h3 class="text-headline-md font-bold text-primary">Integrations Ecosystem</h3>
+<p class="text-body-md text-on-surface-variant">Sync with your technical and academic platforms.</p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="glass-card p-6 rounded-xl flex items-start gap-4">
+<div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600"><span class="material-symbols-outlined">calendar_month</span></div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<h4 class="font-bold text-primary">Google Calendar</h4>
+<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">CONNECTED</span>
+</div>
+<p class="text-[12px] text-outline">Last synced: 12m ago</p>
+<button class="mt-4 text-label-sm font-bold text-primary hover:underline">Manage Connection</button>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl flex items-start gap-4">
+<div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-primary"><span class="material-symbols-outlined">terminal</span></div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<h4 class="font-bold text-primary">GitHub</h4>
+<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">CONNECTED</span>
+</div>
+<p class="text-[12px] text-outline">Last synced: 1h ago</p>
+<button class="mt-4 text-label-sm font-bold text-primary hover:underline">Manage Connection</button>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl flex items-start gap-4">
+<div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-800"><span class="material-symbols-outlined">link</span></div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<h4 class="font-bold text-primary">LinkedIn</h4>
+<span class="text-[10px] font-bold text-outline bg-surface-container px-2 py-0.5 rounded">NOT LINKED</span>
+</div>
+<p class="text-[12px] text-outline">Sync professional network</p>
+<button class="mt-4 text-label-sm font-bold text-primary hover:underline">Connect Account</button>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl flex items-start gap-4">
+<div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center text-orange-600"><span class="material-symbols-outlined">code</span></div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<h4 class="font-bold text-primary">LeetCode</h4>
+<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">CONNECTED</span>
+</div>
+<p class="text-[12px] text-outline">Last synced: Yesterday</p>
+<button class="mt-4 text-label-sm font-bold text-primary hover:underline">Manage Connection</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Appearance & Accessibility -->
+<section class="scroll-mt-12 space-y-section-gap" id="appearance">
+<div>
+<div class="mb-stack-lg">
+<h3 class="text-headline-md font-bold text-primary">Appearance</h3>
+<p class="text-body-md text-on-surface-variant">Customize your visual experience.</p>
+</div>
+<div class="glass-card rounded-xl p-8 grid grid-cols-4 gap-4">
+<button class="p-4 rounded-lg border-2 border-primary bg-white text-center">
+<div class="w-full h-12 bg-background rounded mb-2 flex items-center justify-center"><span class="material-symbols-outlined">light_mode</span></div>
+<p class="text-label-sm font-bold">Light</p>
+</button>
+<button class="p-4 rounded-lg border-2 border-transparent bg-surface-container-high text-center">
+<div class="w-full h-12 bg-primary rounded mb-2 flex items-center justify-center"><span class="material-symbols-outlined text-white">dark_mode</span></div>
+<p class="text-label-sm font-bold">Dark</p>
+</button>
+<button class="p-4 rounded-lg border-2 border-transparent bg-surface-container-high text-center">
+<div class="w-full h-12 bg-gradient-to-r from-background to-primary rounded mb-2 flex items-center justify-center"><span class="material-symbols-outlined text-white">settings_brightness</span></div>
+<p class="text-label-sm font-bold">System</p>
+</button>
+<button class="p-4 rounded-lg border-2 border-transparent bg-surface-container-high text-center">
+<div class="w-full h-12 bg-surface-variant rounded mb-2 flex items-center justify-center"><span class="material-symbols-outlined">compress</span></div>
+<p class="text-label-sm font-bold">Compact</p>
+</button>
+</div>
+</div>
+<div id="accessibility">
+<div class="mb-stack-lg">
+<h3 class="text-headline-md font-bold text-primary">Accessibility</h3>
+<p class="text-body-md text-on-surface-variant">Tailor the interface to your needs.</p>
+</div>
+<div class="glass-card rounded-xl p-8 space-y-6">
+<div class="flex items-center justify-between">
+<div><p class="font-bold text-primary">High Contrast Mode</p><p class="text-label-sm text-outline">Increases contrast for better readability.</p></div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only toggle-switch" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant rounded-full transition-colors toggle-slider before:content-[''] before:absolute before:top-[2px] before:left-[2px] before:bg-white before:border-gray-300 before:border before:rounded-full before:h-5 before:w-5 before:transition-all"></div>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<div><p class="font-bold text-primary">Reduced Motion</p><p class="text-label-sm text-outline">Minimize animations throughout the platform.</p></div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only toggle-switch" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant rounded-full transition-colors toggle-slider before:content-[''] before:absolute before:top-[2px] before:left-[2px] before:bg-white before:border-gray-300 before:border before:rounded-full before:h-5 before:w-5 before:transition-all"></div>
+</label>
+</div>
+<div class="space-y-3">
+<p class="font-bold text-primary">Font Size</p>
+<input class="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary" max="24" min="12" step="2" type="range" value="16"/>
+<div class="flex justify-between text-[10px] font-bold text-outline"><span>SMALL</span><span>MEDIUM</span><span>LARGE</span></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="scroll-mt-12" id="danger">
+<div class="border border-error/20 bg-error-container/5 rounded-xl p-8 space-y-6">
+<div>
+<h3 class="text-headline-md font-bold text-error">Danger Zone</h3>
+<p class="text-body-md text-on-surface-variant">Actions here are permanent or impactful.</p>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<div class="p-4 border border-error/10 bg-white rounded-lg flex items-center justify-between">
+<div><p class="font-bold text-primary">Download My Data</p><p class="text-label-sm text-outline">Get a JSON export of all your career activity.</p></div>
+<button class="px-4 py-2 border border-outline text-on-surface-variant font-semibold rounded-lg hover:bg-surface-container transition-colors">Request Export</button>
+</div>
+<div class="p-4 border border-error/10 bg-white rounded-lg flex items-center justify-between">
+<div><p class="font-bold text-primary">Deactivate Account</p><p class="text-label-sm text-outline">Hide your profile from recruiter searches temporarily.</p></div>
+<button class="px-4 py-2 border border-outline text-on-surface-variant font-semibold rounded-lg hover:bg-surface-container transition-colors">Deactivate</button>
+</div>
+<div class="p-4 border border-error/10 bg-white rounded-lg flex items-center justify-between">
+<div><p class="font-bold text-error">Delete Account</p><p class="text-label-sm text-outline">Permanently erase all your data from CareerBridge.</p></div>
+<button class="px-4 py-2 bg-error text-white font-semibold rounded-lg hover:opacity-90 transition-opacity">Delete Permanently</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Pane 4: Right Sidebar -->
+<aside class="w-80 space-y-6 sticky top-12 h-fit">
+<div class="glass-card rounded-xl p-6 shadow-sm">
+<h4 class="font-bold text-primary text-label-md mb-4">Account Health</h4>
+<div class="space-y-4">
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm"><span class="text-outline">Profile Completion</span><span class="text-primary font-bold">85%</span></div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary progress-bar-fill" style="width: 85%"></div></div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm"><span class="text-outline">Resume Quality</span><span class="text-primary font-bold">92%</span></div>
+<div class="w-full h-2 bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary progress-bar-fill" style="width: 92%"></div></div>
+</div>
+<div class="pt-4 border-t border-primary/5 space-y-2">
+<div class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span> LinkedIn Connected
+</div>
+<div class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span> GitHub Connected
+</div>
+<div class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-orange-500 text-[18px]">pending</span> Portfolio Added
+</div>
+<div class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span> Email Verified
+</div>
+<div class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span> Phone Verified
+</div>
+</div>
+</div>
+</div>
+<div class="bg-primary text-white rounded-xl p-6 shadow-lg">
+<h4 class="font-bold text-label-md mb-1 opacity-80">Subscription Status</h4>
+<p class="text-headline-md font-bold mb-4">Student Pro</p>
+<p class="text-label-sm opacity-90 leading-tight mb-6">Renews on Oct 12, 2024 • $0.00/yr</p>
+<button class="w-full py-2 bg-white text-primary font-bold rounded-lg hover:bg-secondary-fixed transition-colors">Manage Plan</button>
+</div>
+<div class="p-4 rounded-xl border-2 border-dashed border-outline/20 text-center">
+<h4 class="font-bold text-primary text-label-sm mb-1">Career Advisor Ready</h4>
+<p class="text-[11px] text-outline mb-4">Our AI has prepared 3 new insights based on your recent activity.</p>
+<button class="text-primary font-bold text-label-sm flex items-center gap-1 mx-auto hover:gap-2 transition-all">
+Go to Insights <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</aside>
+</div>
+</main>
+<div class="fixed bottom-8 right-8 glass-card border-primary/20 p-4 rounded-xl shadow-xl flex items-center gap-4 transform translate-y-32 opacity-0 transition-all duration-300 z-[100]" id="save-toast">
+<div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[18px]">check</span>
+</div>
+<div>
+<p class="font-bold text-primary text-label-md">Settings Saved</p>
+<p class="text-label-sm text-outline">Your preferences were updated successfully.</p>
+</div>
+</div>
+<script>
+        const saveButtons = document.querySelectorAll('button');
+        const toast = document.getElementById('save-toast');
+        saveButtons.forEach(btn => {
+            if(btn.textContent.includes('Save') || btn.textContent.includes('Update')) {
+                btn.addEventListener('click', () => {
+                    toast.classList.remove('translate-y-32', 'opacity-0');
+                    toast.classList.add('translate-y-0', 'opacity-100');
+                    setTimeout(() => {
+                        toast.classList.add('translate-y-32', 'opacity-0');
+                        toast.classList.remove('translate-y-0', 'opacity-</script></body></html>

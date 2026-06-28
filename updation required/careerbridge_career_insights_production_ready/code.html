@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CareerBridge | Career Insights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Use the provided Tailwind Config -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "primary-container": "#023629",
+                  "on-secondary-container": "#696250",
+                  "surface-container-lowest": "#ffffff",
+                  "on-tertiary-fixed-variant": "#384b42",
+                  "inverse-primary": "#a1d1be",
+                  "tertiary-fixed": "#d2e8db",
+                  "primary": "#001f16",
+                  "surface-container-low": "#f3f4f1",
+                  "on-primary-container": "#72a08e",
+                  "surface-dim": "#d9dad8",
+                  "on-tertiary-container": "#879b91",
+                  "tertiary-fixed-dim": "#b6ccc0",
+                  "surface-tint": "#3a6757",
+                  "secondary-container": "#e9dfc8",
+                  "on-secondary-fixed": "#201b0d",
+                  "surface": "#f9faf7",
+                  "tertiary": "#0b1e16",
+                  "on-tertiary": "#ffffff",
+                  "error-container": "#ffdad6",
+                  "outline-variant": "#c0c8c3",
+                  "on-surface": "#1a1c1b",
+                  "surface-bright": "#f9faf7",
+                  "primary-fixed": "#bcedd9",
+                  "on-surface-variant": "#404945",
+                  "on-primary-fixed": "#002117",
+                  "on-secondary-fixed-variant": "#4c4635",
+                  "on-primary": "#ffffff",
+                  "on-background": "#1a1c1b",
+                  "inverse-surface": "#2e312f",
+                  "on-primary-fixed-variant": "#214f40",
+                  "surface-container-high": "#e8e8e6",
+                  "surface-container": "#edeeeb",
+                  "on-secondary": "#ffffff",
+                  "outline": "#717975",
+                  "background": "#f9faf7",
+                  "secondary": "#655e4c",
+                  "on-error": "#ffffff",
+                  "on-error-container": "#93000a",
+                  "on-tertiary-fixed": "#0c1f18",
+                  "secondary-fixed-dim": "#cfc6b0",
+                  "surface-container-highest": "#e2e3e0",
+                  "primary-fixed-dim": "#a1d1be",
+                  "tertiary-container": "#20332b",
+                  "surface-variant": "#e2e3e0",
+                  "error": "#ba1a1a",
+                  "secondary-fixed": "#ece2cb",
+                  "inverse-on-surface": "#f0f1ee"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "section-gap": "80px",
+                  "margin-mobile": "20px",
+                  "container-max": "1280px",
+                  "margin-desktop": "64px",
+                  "stack-sm": "8px",
+                  "unit": "8px",
+                  "stack-md": "16px",
+                  "gutter": "24px",
+                  "stack-lg": "32px"
+          },
+          "fontFamily": {
+                  "label-md": ["Manrope"],
+                  "headline-lg-mobile": ["Manrope"],
+                  "body-md": ["Manrope"],
+                  "label-sm": ["Manrope"],
+                  "headline-lg": ["Manrope"],
+                  "body-lg": ["Manrope"],
+                  "headline-md": ["Manrope"],
+                  "display": ["Manrope"]
+          },
+          "fontSize": {
+                  "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                  "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                  "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                  "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                  "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                  "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                  "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                  "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #f9faf7; /* Background from tokens */
+      font-family: 'Manrope', sans-serif;
+    }
+    .custom-shadow {
+      box-shadow: 0 4px 20px rgba(2, 54, 41, 0.04);
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(2, 54, 41, 0.08);
+    }
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.35s;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+    .animate-float {
+      animation: float 6s ease-in-out infinite;
+    }
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+      100% { transform: translateY(0px); }
+    }
+    .transition-hover {
+      transition: all 250ms ease-in-out;
+    }
+    .transition-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(2, 54, 41, 0.08);
+    }
+  </style>
+</head>
+<body class="text-on-surface">
+<!-- Side Navigation Anchor -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface dark:bg-inverse-surface border-r border-primary/5 flex flex-col py-unit px-gutter z-50">
+<div class="mb-stack-lg">
+<div class="font-display text-headline-md text-primary dark:text-inverse-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+        CareerBridge
+      </div>
+<p class="font-label-sm text-on-surface-variant">Career Intelligence</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">work</span>
+<span class="font-label-md">Jobs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-md">Applications</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-label-md">AI Career Coach</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md">Resume Analyzer</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">video_chat</span>
+<span class="font-label-md">Mock Interviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md">Network</span>
+</a>
+<!-- ACTIVE STATE -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-primary-fixed-variant font-bold border-r-4 border-primary-fixed-dim bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-label-md">Career Insights</span>
+</a>
+</nav>
+<div class="mt-auto space-y-4 pt-4 border-t border-primary/5">
+<div class="p-4 bg-primary-container rounded-xl text-on-primary text-center">
+<p class="font-label-sm mb-2">Unlock Premium Insights</p>
+<button class="bg-primary-fixed text-on-primary-fixed px-4 py-2 rounded-full font-label-md w-full hover:brightness-110 transition-all">Upgrade to Pro</button>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-md">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 bg-surface/80 backdrop-blur-md border-b border-primary/5 flex items-center justify-between px-gutter z-40">
+<div class="flex-1 max-w-md">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-2 pl-10 pr-4 font-body-md focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search insights..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-stack-lg">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined">chat_bubble</span></button>
+<div class="flex items-center gap-3 pl-4 border-l border-primary/10">
+<div class="text-right">
+<p class="font-label-md text-on-surface">Alex Chen</p>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold">Premium Member</p>
+</div>
+<img class="w-10 h-10 rounded-full border-2 border-primary-fixed" data-alt="Professional headshot of a young male software engineer in a modern workspace, high-end professional photography, minimalist background, soft focus lighting, premium corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAV7PlryerdfNR62z0QXwpzts1zUPNCc8ypKunl_UVLBPGL5A3cOZ7eY3-Xc8T2pCiGCpotBlGY3xHgahQ8HLBH6GC_ZbasGSIwQ2xPZt8RRTeNG_nqqaIaL--QXlrKQS7UUB9YVn87HboklgkpReF_YRjpUoo0a15ijXC6JPw_iLW7why4mIvmnL9bL6VjSaApZc38SS3lQHq8HiojElUV3DKzp86ZBCL8M6xGMOxTuX8Wdx4US7AlzAB-FOSvJ5U5kVtCgPDCSoY"/>
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-64 mt-16 p-gutter max-w-container-max mx-auto">
+<!-- Hero Header -->
+<section class="mb-stack-lg">
+<h1 class="font-display text-headline-lg text-primary mb-2">Career Insights</h1>
+<p class="font-body-lg text-on-surface-variant max-w-2xl">AI-powered analysis of your career readiness, skills, learning progress and job opportunities.</p>
+</section>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- HERO CARD (AI Summary) -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-xl p-8 custom-shadow flex flex-col md:flex-row items-center gap-stack-lg border border-primary/5">
+<div class="relative w-48 h-48 flex-shrink-0">
+<svg class="w-full h-full" viewbox="0 0 100 100">
+<circle class="text-surface-container" cx="50" cy="50" fill="transparent" r="42" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary-container progress-ring__circle" cx="50" cy="50" fill="transparent" r="42" stroke="currentColor" stroke-dasharray="264" stroke-dashoffset="34" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display text-headline-lg text-primary">87%</span>
+<span class="font-label-sm text-on-surface-variant">Overall Ready</span>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h2 class="font-headline-md text-primary">AI Career Summary</h2>
+</div>
+<p class="font-body-lg text-on-surface-variant mb-6 leading-relaxed">
+            You are <span class="font-bold text-primary">87% ready</span> for Frontend Engineer roles. Based on current market trends, improving your <span class="text-primary underline decoration-primary-fixed decoration-2 underline-offset-4">Docker</span> and <span class="text-primary underline decoration-primary-fixed decoration-2 underline-offset-4">System Design</span> skills can increase your market readiness score to <span class="font-bold text-primary">95%</span>.
+          </p>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] uppercase font-bold text-on-surface-variant mb-1">Readiness</p>
+<p class="font-label-md text-primary">850/1000</p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] uppercase font-bold text-on-surface-variant mb-1">Resume</p>
+<p class="font-label-md text-primary">91%</p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] uppercase font-bold text-on-surface-variant mb-1">Interview</p>
+<p class="font-label-md text-primary">88%</p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] uppercase font-bold text-on-surface-variant mb-1">Job Match</p>
+<p class="font-label-md text-primary">87%</p>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT SIDEBAR START -->
+<aside class="col-span-12 lg:col-span-4 space-y-gutter">
+<!-- Today's Career Tip -->
+<div class="bg-primary-container text-on-primary rounded-xl p-6 custom-shadow relative overflow-hidden">
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined">lightbulb</span>
+<h3 class="font-label-md">Career Tip of the Day</h3>
+</div>
+<p class="font-body-md opacity-90 leading-snug">"Quantify your achievements on your resume. Instead of 'Lead a team', use 'Led a team of 5 to increase deployment frequency by 40%.'"</p>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-[100px]">auto_stories</span>
+</div>
+</div>
+<!-- Hiring Trends -->
+<div class="bg-surface-container-lowest rounded-xl p-6 custom-shadow border border-primary/5">
+<h3 class="font-headline-md text-primary mb-4">Hiring Trends</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-secondary-container/30 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+</div>
+<span class="font-label-md">FinTech Sector</span>
+</div>
+<span class="text-primary font-bold text-sm">+12%</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-secondary-container/30 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+</div>
+<span class="font-label-md">Remote Work</span>
+</div>
+<span class="text-primary font-bold text-sm">+8.5%</span>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-primary/5">
+<p class="font-label-sm text-on-surface-variant mb-3">Trending Technologies</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-full text-xs font-medium">Rust</span>
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-full text-xs font-medium">Next.js 14</span>
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-full text-xs font-medium">GraphQL</span>
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-full text-xs font-medium">LangChain</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- CAREER READINESS SECTION -->
+<div class="col-span-12 lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Readiness Score Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-primary/5 custom-shadow transition-hover">
+<h3 class="font-label-md text-on-surface-variant mb-6">Career Readiness Score</h3>
+<div class="flex items-end gap-4 mb-4">
+<span class="font-display text-5xl text-primary">850</span>
+<div class="flex items-center text-on-tertiary-container font-bold pb-2">
+<span class="material-symbols-outlined text-lg">arrow_drop_up</span>
+<span>5% improvement</span>
+</div>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full mb-2">
+<div class="bg-primary-container h-full rounded-full" style="width: 85%"></div>
+</div>
+<div class="flex justify-between font-label-sm text-on-surface-variant">
+<span>Last month: 810</span>
+<span>Target: 950</span>
+</div>
+</div>
+<!-- Job Readiness -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-primary/5 custom-shadow transition-hover">
+<h3 class="font-label-md text-on-surface-variant mb-4">Job Match Analysis</h3>
+<div class="space-y-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-primary-fixed/20 rounded-lg flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined">terminal</span>
+</div>
+<div class="flex-1">
+<p class="font-label-md">Frontend Engineer</p>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full mt-1">
+<div class="bg-primary-container h-full rounded-full" style="width: 94%"></div>
+</div>
+</div>
+<span class="font-bold text-primary">94%</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-primary-fixed/20 rounded-lg flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined">brush</span>
+</div>
+<div class="flex-1">
+<p class="font-label-md">UI Developer</p>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full mt-1">
+<div class="bg-primary-container h-full rounded-full" style="width: 88%"></div>
+</div>
+</div>
+<span class="font-bold text-primary">88%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- SKILL GAP ANALYSIS -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-xl p-8 border border-primary/5 custom-shadow">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline-md text-primary">Skill Gap Analysis</h3>
+<button class="text-primary font-label-md flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm">refresh</span> Refresh analysis
+          </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-lg">
+<div>
+<div class="flex items-center gap-2 mb-4 text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="font-label-md">Core Strengths</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-4 py-2 bg-surface-container-low border border-primary/5 rounded-lg font-label-md text-on-surface">React</span>
+<span class="px-4 py-2 bg-surface-container-low border border-primary/5 rounded-lg font-label-md text-on-surface">TypeScript</span>
+<span class="px-4 py-2 bg-surface-container-low border border-primary/5 rounded-lg font-label-md text-on-surface">SQL</span>
+<span class="px-4 py-2 bg-surface-container-low border border-primary/5 rounded-lg font-label-md text-on-surface">Communication</span>
+<span class="px-4 py-2 bg-surface-container-low border border-primary/5 rounded-lg font-label-md text-on-surface">Problem Solving</span>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-4 text-error">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-label-md">Growth Opportunities</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-lg border border-primary/5">
+<div>
+<p class="font-label-md text-on-surface">Docker</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Intermediate • 10h remaining</p>
+</div>
+<span class="material-symbols-outlined text-primary-container">arrow_forward</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-lg border border-primary/5">
+<div>
+<p class="font-label-md text-on-surface">AWS Fundamentals</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Beginner • 20h remaining</p>
+</div>
+<span class="material-symbols-outlined text-primary-container">arrow_forward</span>
+</div>
+<div class="flex flex-wrap gap-2 pt-2">
+<span class="text-xs font-bold text-on-surface-variant bg-surface-container opacity-60 px-2 py-1 rounded">CI/CD</span>
+<span class="text-xs font-bold text-on-surface-variant bg-surface-container opacity-60 px-2 py-1 rounded">System Design</span>
+<span class="text-xs font-bold text-on-surface-variant bg-surface-container opacity-60 px-2 py-1 rounded">Testing</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- INTERVIEW READINESS -->
+<aside class="col-span-12 lg:col-span-4 bg-surface-container-lowest rounded-xl p-6 border border-primary/5 custom-shadow">
+<h3 class="font-headline-md text-primary mb-6">Interview Mastery</h3>
+<div class="space-y-5">
+<div class="space-y-2">
+<div class="flex justify-between font-label-md">
+<span>Communication</span>
+<span>92%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full">
+<div class="bg-primary-container h-full rounded-full" style="width: 92%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between font-label-md">
+<span>Technical Knowledge</span>
+<span>84%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full">
+<div class="bg-primary-container h-full rounded-full" style="width: 84%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between font-label-md">
+<span>Problem Solving</span>
+<span>88%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full">
+<div class="bg-primary-container h-full rounded-full" style="width: 88%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between font-label-md">
+<span>Confidence</span>
+<span>78%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full">
+<div class="bg-primary-container h-full rounded-full" style="width: 78%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between font-label-md">
+<span>Behavioral Skills</span>
+<span>90%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full">
+<div class="bg-primary-container h-full rounded-full" style="width: 90%"></div>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-3 rounded-lg border border-primary text-primary font-bold hover:bg-primary-fixed/20 transition-all">Start Practice Session</button>
+</aside>
+<!-- LEARNING ROADMAP -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-xl p-8 border border-primary/5 custom-shadow">
+<h3 class="font-headline-md text-primary mb-8">Personalized Roadmap</h3>
+<div class="relative">
+<div class="absolute left-4 top-0 bottom-0 w-0.5 bg-surface-container-high"></div>
+<div class="space-y-8">
+<div class="relative pl-12">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-sm">done</span>
+</div>
+<div class="flex items-center justify-between">
+<h4 class="font-label-md">Week 1: Docker Basics</h4>
+<span class="font-label-sm text-on-tertiary-fixed-variant">80% Complete</span>
+</div>
+<p class="font-body-md text-on-surface-variant mt-1">Containers, Images, and basic CLI commands.</p>
+</div>
+<div class="relative pl-12">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-primary-fixed border-2 border-primary-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+</div>
+<div class="flex items-center justify-between">
+<h4 class="font-label-md">Week 2: AWS Fundamentals</h4>
+<span class="font-label-sm text-primary font-bold">20% Complete</span>
+</div>
+<p class="font-body-md text-on-surface-variant mt-1">IAM, EC2, and S3 core services overview.</p>
+</div>
+<div class="relative pl-12 opacity-50">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">lock</span>
+</div>
+<h4 class="font-label-md">Week 3: System Design</h4>
+<p class="font-body-md text-on-surface-variant mt-1">Scalability, availability, and microservices.</p>
+</div>
+<div class="relative pl-12 opacity-50">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">lock</span>
+</div>
+<h4 class="font-label-md">Week 4: Mock Interview</h4>
+<p class="font-body-md text-on-surface-variant mt-1">Full-stack technical round simulation.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- AI RECOMMENDATIONS -->
+<div class="col-span-12 lg:col-span-4 space-y-gutter">
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-primary/5 custom-shadow">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary-container">stars</span>
+<h3 class="font-headline-md text-primary">Today's Focus</h3>
+</div>
+<div class="space-y-4">
+<div class="p-4 bg-primary-fixed/10 border border-primary/5 rounded-xl">
+<p class="font-label-md text-primary mb-3">Complete Docker Quiz</p>
+<button class="w-full py-2 bg-primary-container text-on-primary rounded-lg font-label-md hover:opacity-90">Start Now</button>
+</div>
+<div class="p-4 bg-surface-container-low border border-primary/5 rounded-xl group cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="flex items-center justify-between">
+<p class="font-label-md">Update Resume for AWS</p>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low border border-primary/5 rounded-xl group cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="flex items-center justify-between">
+<p class="font-label-md">Schedule Mock Interview</p>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-primary/5 custom-shadow">
+<h3 class="font-label-md text-on-surface-variant mb-4">Learning Reminder</h3>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container animate-bounce">notifications_active</span>
+<div>
+<p class="font-label-md">30 mins AWS prep</p>
+<p class="text-xs text-on-surface-variant">Scheduled for 6:00 PM</p>
+</div>
+</div>
+</div>
+</div>
+<!-- CERTIFICATIONS -->
+<div class="col-span-12">
+<h3 class="font-headline-md text-primary mb-6">Target Certifications</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-primary/5 custom-shadow transition-hover relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 bg-blue-50 text-blue-600 rounded flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<span class="px-2 py-1 bg-primary-fixed/20 text-primary-container text-[10px] font-bold rounded uppercase">Priority: High</span>
+</div>
+<h4 class="font-label-md text-primary mb-2">AWS Cloud Practitioner</h4>
+<div class="flex gap-4 text-on-surface-variant font-label-sm mb-6">
+<span>Intermediate</span>
+<span>15-20 hours</span>
+</div>
+<button class="w-full py-3 bg-surface-container-low text-primary font-bold rounded-lg group-hover:bg-primary-container group-hover:text-on-primary transition-all">Enroll Now</button>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-primary/5 custom-shadow transition-hover group">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 bg-red-50 text-red-600 rounded flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cloud</span>
+</div>
+<span class="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-bold rounded uppercase">Priority: Med</span>
+</div>
+<h4 class="font-label-md text-primary mb-2">Google Cloud Associate</h4>
+<div class="flex gap-4 text-on-surface-variant font-label-sm mb-6">
+<span>Advanced</span>
+<span>30-40 hours</span>
+</div>
+<button class="w-full py-3 bg-surface-container-low text-primary font-bold rounded-lg group-hover:bg-primary-container group-hover:text-on-primary transition-all">Enroll Now</button>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-primary/5 custom-shadow transition-hover group">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 bg-blue-100 text-blue-800 rounded flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">code</span>
+</div>
+<span class="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-bold rounded uppercase">Priority: Med</span>
+</div>
+<h4 class="font-label-md text-primary mb-2">Meta Front-End Cert</h4>
+<div class="flex gap-4 text-on-surface-variant font-label-sm mb-6">
+<span>Beginner</span>
+<span>40-50 hours</span>
+</div>
+<button class="w-full py-3 bg-surface-container-low text-primary font-bold rounded-lg group-hover:bg-primary-container group-hover:text-on-primary transition-all">Enroll Now</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Actions Sticky Container -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 md:ml-32 flex items-center gap-4 px-6 py-4 bg-surface/90 backdrop-blur-xl rounded-full border border-primary/10 shadow-2xl z-50">
+<button class="bg-primary-container text-on-primary px-8 py-3 rounded-full font-label-md shadow-lg shadow-primary-container/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+        Generate Personalized Learning Plan
+      </button>
+<div class="h-6 w-px bg-primary/10 mx-2"></div>
+<button class="p-3 text-on-surface-variant hover:text-primary-container transition-colors rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined">download</span>
+</button>
+<button class="p-3 text-on-surface-variant hover:text-primary-container transition-colors rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+<!-- Padding for bottom sticky bar -->
+<div class="h-24"></div>
+</main>
+<script>
+    // Micro-interactions and data visualization triggers
+    document.addEventListener('DOMContentLoaded', () => {
+      // Progress rings animation
+      const circles = document.querySelectorAll('.progress-ring__circle');
+      circles.forEach(circle => {
+        // Simple logic to "draw" the rings on load
+        // Actual dashoffset values are set in HTML for speed, 
+        // but we could animate them here.
+      });
+
+      // Hover effects for cards
+      const cards = document.querySelectorAll('.custom-shadow');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+          // Additional subtle feedback if needed
+        });
+      });
+    });
+  </script>
+</body></html>

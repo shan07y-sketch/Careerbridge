@@ -1,0 +1,702 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  STUDENT
+  EMPLOYER
+  UNIVERSITY
+  ADMIN
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  CONTRACT
+  TEMPORARY
+}
+
+enum WorkMode {
+  ON_SITE
+  HYBRID
+  REMOTE
+}
+
+enum ApplicationStatus {
+  APPLIED
+  REVIEWING
+  SCREENING
+  INTERVIEWING
+  OFFERED
+  REJECTED
+  WITHDRAWN
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum NotificationType {
+  SYSTEM
+  APPLICATION
+  JOB
+  MESSAGE
+  INTERVIEW
+  NETWORK
+  AI
+  EVENT
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ResumeStatus {
+  PARSED
+  PROCESSING
+  FAILED
+}
+
+enum CareerLevel {
+  ENTRY_LEVEL
+  MID_LEVEL
+  SENIOR_LEVEL
+  LEAD
+}
+
+// ==========================================
+// AUTHENTICATION & USERS
+// ==========================================
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  passwordHash       String
+  role               UserRole
+  isVerified         Boolean            @default(false)
+  verificationToken  String?
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  
+  // Soft delete indicators
+  isDeleted          Boolean            @default(false)
+  deletedAt          DateTime?
+
+  // Relations
+  companyId          String?
+  company            Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  refreshTokens      RefreshToken[]
+  studentProfile     StudentProfile?
+  recruiterProfile   Recruiter?
+  universityProfile  University?
+  auditLogs          AuditLog[]
+  sentNotifications  Notification[]     @relation("NotificationSender")
+  receivedNotifications Notification[]   @relation("NotificationRecipient")
+
+  @@index([email])
+  @@index([companyId])
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  isRevoked  Boolean  @default(false)
+
+  @@index([userId])
+}
+
+// ==========================================
+// STUDENT PROFILE
+// ==========================================
+
+model StudentProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName          String
+  lastName           String
+  phone              String?
+  avatarUrl          String?
+  bio                String?
+  currentGpa         Float?
+  universityId       String?
+  university         University?        @relation(fields: [universityId], references: [id], onDelete: SetNull)
+  departmentId       String?
+  department         Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  graduationYear     Int?
+  preferredRole      String?
+  preferredWorkMode  WorkMode?
+  preferredLocations String[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  educationHistory   Education[]
+  experienceHistory  Experience[]
+  projects           Project[]
+  certifications     Certification[]
+  skills             StudentSkill[]
+  resumes            Resume[]
+  savedJobs          SavedJob[]
+  applications       Application[]
+  mentorBookings     MentorBooking[]
+  mentorProfile      Mentor?
+  connectionsSent    Connection[]       @relation("ConnectionSender")
+  connectionsReceived Connection[]     @relation("ConnectionReceiver")
+  conversationParticipants ConversationParticipant[]
+  messages           Message[]
+  careerInsights     CareerInsight[]
+  resumeAnalyses     ResumeAnalysis[]
+  mockInterviews     MockInterview[]
+  eventRegistrations EventRegistration[]
+
+  @@index([universityId])
+  @@index([graduationYear])
+}
+
+model Education {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  institution      String
+  degree           String
+  fieldOfStudy     String
+  startDate        DateTime
+  endDate          DateTime?
+  gpa              Float?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Experience {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  companyName      String
+  roleTitle        String
+  employmentType   String?
+  startDate        DateTime
+  endDate          DateTime?
+  isCurrent        Boolean        @default(false)
+  description      String?
+  location         String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Project {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  linkUrl          String?
+  repoUrl          String?
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Certification {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  name             String
+  issuingOrg       String
+  issueDate        DateTime
+  expiryDate       DateTime?
+  credentialId     String?
+  credentialUrl    String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Skill {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  createdAt DateTime       @default(now())
+
+  studentSkills StudentSkill[]
+  jobSkills     JobSkill[]
+
+  @@index([name])
+}
+
+model StudentSkill {
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  skillId          String
+  skill            Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  level            Int            @default(50)
+
+  @@id([studentProfileId, skillId])
+}
+
+model Resume {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  fileName         String
+  fileUrl          String
+  status           ResumeStatus   @default(PROCESSING)
+  parsedText       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  resumeAnalyses   ResumeAnalysis[]
+}
+
+// ==========================================
+// ORGANIZATION: COMPANY
+// ==========================================
+
+model Company {
+  id           String      @id @default(uuid())
+  name         String      @unique
+  logoUrl      String?
+  website      String?
+  industry     String
+  description  String
+  size         Int?
+  headquarters String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Soft delete indicators
+  isDeleted    Boolean     @default(false)
+  deletedAt    DateTime?
+
+  // Relations
+  users        User[]
+  recruiters   Recruiter[]
+  jobs         Job[]
+
+  @@index([name])
+}
+
+model Recruiter {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title     String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs      Job[]
+}
+
+// ==========================================
+// UNIVERSITY
+// ==========================================
+
+model University {
+  id           String           @id @default(uuid())
+  userId       String           @unique
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String           @unique
+  logoUrl      String?
+  location     String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  
+  // Soft delete indicators
+  isDeleted    Boolean          @default(false)
+  deletedAt    DateTime?
+
+  departments  Department[]
+  placementCells PlacementCell[]
+  students     StudentProfile[]
+
+  @@index([name])
+}
+
+model Department {
+  id           String         @id @default(uuid())
+  universityId String
+  university   University     @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name         String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  students     StudentProfile[]
+
+  @@unique([universityId, name])
+}
+
+model PlacementCell {
+  id           String     @id @default(uuid())
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  directorName String
+  contactEmail String
+  phone        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+// ==========================================
+// JOBS
+// ==========================================
+
+model JobCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  jobs      Job[]
+}
+
+model Job {
+  id             String       @id @default(uuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  recruiterId    String
+  recruiter      Recruiter    @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       JobCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  requirements   String
+  benefits       String?
+  location       String
+  jobType        JobType
+  workMode       WorkMode
+  salaryMin      Float?
+  salaryMax      Float?
+  currency       String       @default("USD")
+  deadline       DateTime?
+  isPublished    Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Soft delete indicators
+  isDeleted      Boolean      @default(false)
+  deletedAt      DateTime?
+
+  skillsRequired JobSkill[]
+  savedByStudents SavedJob[]
+  applications   Application[]
+
+  @@index([title])
+  @@index([companyId])
+  @@index([categoryId])
+}
+
+model JobSkill {
+  jobId   String
+  job     Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([jobId, skillId])
+}
+
+model SavedJob {
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  jobId            String
+  job              Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+
+  @@id([studentProfileId, jobId])
+}
+
+// ==========================================
+// APPLICATIONS
+// ==========================================
+
+model Application {
+  id               String            @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile    @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  jobId            String
+  job              Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status           ApplicationStatus @default(APPLIED)
+  coverLetter      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  stages           ApplicationStage[]
+  interviews       Interview[]
+
+  @@unique([studentProfileId, jobId])
+  @@index([status])
+}
+
+model ApplicationStage {
+  id            String            @id @default(uuid())
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stageName     String
+  status        ApplicationStatus
+  notes         String?
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Interview {
+  id            String          @id @default(uuid())
+  applicationId String
+  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  title         String
+  scheduledAt   DateTime
+  duration      Int
+  locationUrl   String?
+  status        InterviewStatus @default(SCHEDULED)
+  feedback      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([scheduledAt])
+}
+
+// ==========================================
+// NETWORKING
+// ==========================================
+
+model Connection {
+  id          String           @id @default(uuid())
+  senderId    String
+  sender      StudentProfile   @relation("ConnectionSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    StudentProfile   @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      ConnectionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+model Mentor {
+  id               String         @id @default(uuid())
+  studentProfileId String         @unique
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  expertise        String[]
+  jobTitle         String
+  companyName      String
+  bio              String
+  rating           Float          @default(5.0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  bookings         MentorBooking[]
+}
+
+model MentorBooking {
+  id               String         @id @default(uuid())
+  mentorId         String
+  mentor           Mentor         @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  scheduledAt      DateTime
+  duration         Int            @default(45)
+  topic            String
+  meetingUrl       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+// ==========================================
+// MESSAGING
+// ==========================================
+
+model Conversation {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id               String         @id @default(uuid())
+  conversationId   String
+  conversation     Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  joinedAt         DateTime       @default(now())
+
+  @@unique([conversationId, studentProfileId])
+}
+
+model Message {
+  id               String         @id @default(uuid())
+  conversationId   String
+  conversation     Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId         String
+  sender           StudentProfile @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content          String
+  status           MessageStatus  @default(SENT)
+  createdAt        DateTime       @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
+
+model Notification {
+  id          String               @id @default(uuid())
+  senderId    String?
+  sender      User?                @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+  recipientId String
+  recipient   User                 @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  priority    NotificationPriority @default(MEDIUM)
+  title       String
+  content     String
+  isRead      Boolean              @default(false)
+  linkUrl     String?
+  createdAt   DateTime             @default(now())
+
+  @@index([recipientId])
+  @@index([isRead])
+}
+
+// ==========================================
+// AI & CAREER (LIGHTWEIGHT METADATA)
+// ==========================================
+
+model CareerInsight {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  summary          String
+  score            Int
+  status           String
+  modelVersion     String
+  generatedAt      DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model ResumeAnalysis {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  resumeId         String
+  resume           Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  summary          String
+  score            Int
+  status           String
+  modelVersion     String
+  generatedAt      DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model MockInterview {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  jobTitle         String
+  durationLimit    Int            @default(30)
+  createdAt        DateTime       @default(now())
+
+  reports          MockInterviewReport[]
+}
+
+model MockInterviewReport {
+  id              String        @id @default(uuid())
+  mockInterviewId String
+  mockInterview   MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
+  summary         String
+  score           Int
+  status          String
+  modelVersion    String
+  generatedAt     DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// ==========================================
+// EVENTS
+// ==========================================
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  location    String
+  scheduledAt DateTime
+  deadline    DateTime
+  maxSeats    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Soft delete indicators
+  isDeleted   Boolean  @default(false)
+  deletedAt   DateTime?
+
+  registrations EventRegistration[]
+
+  @@index([scheduledAt])
+}
+
+model EventRegistration {
+  id               String         @id @default(uuid())
+  eventId          String
+  event            Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  registeredAt     DateTime       @default(now())
+
+  @@unique([eventId, studentProfileId])
+}
+
+// ==========================================
+// AUDIT LOGS
+// ==========================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  ipAddress String?
+  details   String?
+  createdAt DateTime @default(now())
+}

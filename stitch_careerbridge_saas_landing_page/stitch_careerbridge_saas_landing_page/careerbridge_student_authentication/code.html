@@ -1,0 +1,322 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Student Authentication | CareerBridge</title>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tab-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .auth-card-shadow {
+            box-shadow: 0 4px 20px rgba(2, 54, 41, 0.04);
+        }
+        input:focus {
+            box-shadow: 0 0 0 4px rgba(2, 54, 41, 0.08);
+        }
+        .benefit-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(2, 54, 41, 0.06);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#0b1e16",
+                        "surface-container": "#edeeeb",
+                        "secondary-fixed": "#ece2cb",
+                        "on-tertiary-fixed-variant": "#384b42",
+                        "surface-tint": "#3a6757",
+                        "on-surface": "#1a1c1b",
+                        "on-secondary-fixed": "#201b0d",
+                        "inverse-primary": "#a1d1be",
+                        "on-tertiary-fixed": "#0c1f18",
+                        "on-surface-variant": "#404945",
+                        "on-secondary-container": "#696250",
+                        "on-primary-fixed": "#002117",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#f9faf7",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-container-highest": "#e2e3e0",
+                        "surface-dim": "#d9dad8",
+                        "surface": "#f9faf7",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f0f1ee",
+                        "tertiary-fixed": "#d2e8db",
+                        "surface-container-low": "#f3f4f1",
+                        "on-primary-fixed-variant": "#214f40",
+                        "on-primary-container": "#72a08e",
+                        "tertiary-container": "#20332b",
+                        "primary": "#001f16",
+                        "on-secondary-fixed-variant": "#4c4635",
+                        "surface-bright": "#f9faf7",
+                        "secondary-fixed-dim": "#cfc6b0",
+                        "outline": "#717975",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed-dim": "#a1d1be",
+                        "on-error-container": "#93000a",
+                        "outline-variant": "#c0c8c3",
+                        "on-background": "#1a1c1b",
+                        "surface-variant": "#e2e3e0",
+                        "surface-container-high": "#e8e8e6",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#e9dfc8",
+                        "secondary": "#655e4c",
+                        "on-tertiary-container": "#879b91",
+                        "primary-fixed": "#bcedd9",
+                        "primary-container": "#023629",
+                        "tertiary-fixed-dim": "#b6ccc0",
+                        "inverse-surface": "#2e312f",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "20px",
+                        "unit": "8px",
+                        "stack-lg": "32px",
+                        "gutter": "24px",
+                        "stack-sm": "8px",
+                        "container-max": "1280px",
+                        "section-gap": "80px",
+                        "margin-desktop": "64px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Manrope"],
+                        "headline-md": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "headline-lg": ["Manrope"],
+                        "body-md": ["Manrope"],
+                        "label-md": ["Manrope"],
+                        "display": ["Manrope"],
+                        "body-lg": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-surface shadow-[0_4px_20px_rgba(2,54,41,0.04)] w-full top-0 z-50">
+<div class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">school</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">CareerBridge</span>
+</div>
+<div class="flex items-center gap-stack-md">
+<button class="text-on-surface-variant font-medium font-body-md hover:text-primary transition-colors duration-200 active:scale-95" onclick="toggleAuthTab('signin')">Sign In</button>
+<button class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:opacity-90 transition-all active:scale-95" onclick="toggleAuthTab('signup')">Create Account</button>
+</div>
+</div>
+</header>
+<main class="flex-grow flex items-center justify-center py-stack-lg px-margin-mobile md:px-margin-desktop overflow-hidden">
+<div class="max-w-container-max w-full mx-auto flex flex-col lg:flex-row gap-12 items-start justify-center">
+<!-- Authentication Card -->
+<div class="bg-surface-container-lowest w-full max-w-[540px] p-8 md:p-10 rounded-[16px] auth-card-shadow border border-primary/5 transition-all duration-500" id="auth-container">
+<div class="flex flex-col items-center text-center mb-10">
+<div class="w-12 h-12 bg-secondary-container rounded-full flex items-center justify-center mb-4 text-primary">
+<span class="material-symbols-outlined text-2xl">school</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-primary mb-2">Welcome Student</h1>
+<p class="text-on-surface-variant font-body-md max-w-[360px]">Sign in or create your CareerBridge account to unlock your career potential.</p>
+</div>
+<!-- Tabs -->
+<div class="relative flex border-b border-surface-container-highest mb-8">
+<button class="flex-1 py-4 font-label-md text-label-md text-primary transition-colors" id="tab-signin" onclick="toggleAuthTab('signin')">Sign In</button>
+<button class="flex-1 py-4 font-label-md text-label-md text-on-surface-variant transition-colors" id="tab-signup" onclick="toggleAuthTab('signup')">Create Account</button>
+<!-- Indicator -->
+<div class="absolute bottom-0 left-0 w-1/2 h-[3px] bg-primary tab-transition rounded-t-full" id="tab-indicator"></div>
+</div>
+<!-- Sign In Form -->
+<div class="space-y-6" id="signin-form">
+<div class="space-y-4">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5 ml-1">Email</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-3 outline-none focus:border-primary transition-all font-body-md" placeholder="name@university.edu" type="email">
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5 ml-1">Password</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-3 outline-none focus:border-primary transition-all font-body-md" placeholder="••••••••" type="password">
+</div>
+</div>
+<div class="flex items-center justify-between">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-secondary-container text-primary focus:ring-primary" type="checkbox">
+<span class="text-label-md font-label-md text-on-surface-variant group-hover:text-primary transition-colors">Remember Me</span>
+</label>
+<a class="text-label-md font-label-md text-primary hover:underline" href="#">Forgot Password?</a>
+</div>
+<button class="w-full bg-primary text-white font-bold py-4 rounded-[12px] hover:opacity-95 transition-all active:scale-[0.98]">Sign In</button>
+<div class="relative flex items-center py-2">
+<div class="flex-grow border-t border-surface-container-highest"></div>
+<span class="flex-shrink mx-4 text-on-surface-variant font-label-sm text-label-sm">OR</span>
+<div class="flex-grow border-t border-surface-container-highest"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex items-center justify-center gap-2 border border-secondary-container rounded-[12px] py-3 font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
+<div class="w-5 h-5 flex items-center justify-center"><img src="https://www.google.com/favicon.ico" alt="Google" class="w-5 h-5 object-contain"></div>
+                            Google
+                        </button>
+<button class="flex items-center justify-center gap-2 border border-secondary-container rounded-[12px] py-3 font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
+<div class="w-5 h-5 flex items-center justify-center"><img src="https://www.microsoft.com/favicon.ico" alt="Microsoft" class="w-5 h-5 object-contain"></div>
+                            Microsoft
+                        </button>
+</div>
+</div>
+<!-- Create Account Form (Hidden by default) -->
+<div class="space-y-5 hidden" id="signup-form">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Full Name</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-2.5 outline-none focus:border-primary transition-all font-body-md" placeholder="Alex Rivera" type="text">
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Email</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-2.5 outline-none focus:border-primary transition-all font-body-md" placeholder="alex@uni.edu" type="email">
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Password</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-2.5 outline-none focus:border-primary transition-all font-body-md" placeholder="••••••••" type="password">
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Confirm Password</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-2.5 outline-none focus:border-primary transition-all font-body-md" placeholder="••••••••" type="password">
+</div>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">University Name</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-2.5 outline-none focus:border-primary transition-all font-body-md" placeholder="Massachusetts Institute of Technology" type="text">
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Degree/Program</label>
+<input class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-2.5 outline-none focus:border-primary transition-all font-body-md" placeholder="B.S. Computer Science" type="text">
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Graduation Year</label>
+<select class="w-full bg-surface-container-low border border-secondary-container rounded-[12px] px-4 py-2.5 outline-none focus:border-primary transition-all font-body-md">
+<option>2024</option>
+<option>2025</option>
+<option>2026</option>
+<option>2027</option>
+</select>
+</div>
+</div>
+<label class="flex items-start gap-3 cursor-pointer mt-4">
+<input class="mt-1 w-4 h-4 rounded border-secondary-container text-primary focus:ring-primary" type="checkbox">
+<span class="text-label-sm font-label-sm text-on-surface-variant leading-tight">I agree to the <a class="text-primary font-bold" href="#">Terms of Service</a> and <a class="text-primary font-bold" href="#">Privacy Policy</a> of CareerBridge.</span>
+</label>
+<button class="w-full bg-primary text-white font-bold py-4 rounded-[12px] hover:opacity-95 transition-all active:scale-[0.98] mt-2">Create Account</button>
+</div>
+</div>
+<!-- Desktop Benefit Panel (>1200px) -->
+<div class="hidden lg:flex flex-col w-[320px] gap-6 sticky top-stack-lg">
+<div class="benefit-card bg-surface p-6 rounded-[16px] border border-primary/5 auth-card-shadow transition-all group">
+<div class="w-10 h-10 bg-secondary-container/40 rounded-lg flex items-center justify-center mb-4 text-primary transition-colors group-hover:bg-secondary-container">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-1">AI Career Guidance</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Personalized roadmap based on your unique skills and academic background.</p>
+</div>
+<div class="benefit-card bg-surface p-6 rounded-[16px] border border-primary/5 auth-card-shadow transition-all group">
+<div class="w-10 h-10 bg-secondary-container/40 rounded-lg flex items-center justify-center mb-4 text-primary transition-colors group-hover:bg-secondary-container">
+<span class="material-symbols-outlined">description</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-1">Resume Analysis</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Instant feedback to optimize your resume for applicant tracking systems.</p>
+</div>
+<div class="benefit-card bg-surface p-6 rounded-[16px] border border-primary/5 auth-card-shadow transition-all group">
+<div class="w-10 h-10 bg-secondary-container/40 rounded-lg flex items-center justify-center mb-4 text-primary transition-colors group-hover:bg-secondary-container">
+<span class="material-symbols-outlined">forum</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-1">Mock Interviews</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Real-time practice sessions with AI to polish your communication skills.</p>
+</div>
+<div class="benefit-card bg-surface p-6 rounded-[16px] border border-primary/5 auth-card-shadow transition-all group">
+<div class="w-10 h-10 bg-secondary-container/40 rounded-lg flex items-center justify-center mb-4 text-primary transition-colors group-hover:bg-secondary-container">
+<span class="material-symbols-outlined">work</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-1">Exclusive Jobs</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Access to hand-picked internships and full-time roles from top-tier partners.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface border-t border-primary/10 w-full py-stack-lg">
+<div class="max-w-container-max mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-stack-md">
+<span class="font-label-sm text-label-sm text-on-surface-variant">© 2024 CareerBridge. All rights reserved.</span>
+<div class="flex gap-8">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Support</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Legal</a>
+</div>
+</div>
+</footer>
+<script>
+        function toggleAuthTab(tab) {
+            const indicator = document.getElementById('tab-indicator');
+            const signinForm = document.getElementById('signin-form');
+            const signupForm = document.getElementById('signup-form');
+            const tabSignin = document.getElementById('tab-signin');
+            const tabSignup = document.getElementById('tab-signup');
+
+            if (tab === 'signin') {
+                indicator.style.transform = 'translateX(0%)';
+                signinForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                tabSignin.classList.replace('text-on-surface-variant', 'text-primary');
+                tabSignup.classList.replace('text-primary', 'text-on-surface-variant');
+            } else {
+                indicator.style.transform = 'translateX(100%)';
+                signinForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                tabSignup.classList.replace('text-on-surface-variant', 'text-primary');
+                tabSignin.classList.replace('text-primary', 'text-on-surface-variant');
+            }
+        }
+
+        // Add subtle mouse hover parallax effect to the benefit cards on desktop
+        const benefitCards = document.querySelectorAll('.benefit-card');
+        benefitCards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const xPct = (x / rect.width - 0.5) * 10;
+                const yPct = (y / rect.height - 0.5) * 10;
+                
+                card.style.transform = `perspective(1000px) rotateX</script>
+
+</body></html>

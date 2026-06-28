@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Job Details | CareerBridge</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#c0c8c3",
+                    "background": "#f9faf7",
+                    "on-surface-variant": "#404945",
+                    "surface-variant": "#e2e3e0",
+                    "on-background": "#1a1c1b",
+                    "on-primary-container": "#72a08e",
+                    "tertiary-container": "#20332b",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#bcedd9",
+                    "on-tertiary-fixed": "#0c1f18",
+                    "on-primary-fixed-variant": "#214f40",
+                    "secondary-fixed-dim": "#cfc6b0",
+                    "primary-container": "#023629",
+                    "primary": "#001f16",
+                    "secondary-container": "#e9dfc8",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#d2e8db",
+                    "tertiary-fixed-dim": "#b6ccc0",
+                    "on-tertiary-container": "#879b91",
+                    "secondary-fixed": "#ece2cb",
+                    "on-surface": "#1a1c1b",
+                    "error-container": "#ffdad6",
+                    "primary-fixed-dim": "#a1d1be",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-bright": "#f9faf7",
+                    "secondary": "#655e4c",
+                    "on-secondary-fixed": "#201b0d",
+                    "on-tertiary-fixed-variant": "#384b42",
+                    "on-primary-fixed": "#002117",
+                    "inverse-surface": "#2e312f",
+                    "surface-container-highest": "#e2e3e0",
+                    "surface-container-high": "#e8e8e6",
+                    "on-secondary": "#ffffff",
+                    "surface": "#f9faf7",
+                    "surface-dim": "#d9dad8",
+                    "inverse-on-surface": "#f0f1ee",
+                    "on-secondary-fixed-variant": "#4c4635",
+                    "inverse-primary": "#a1d1be",
+                    "on-error": "#ffffff",
+                    "on-secondary-container": "#696250",
+                    "tertiary": "#0b1e16",
+                    "on-tertiary": "#ffffff",
+                    "surface-tint": "#3a6757",
+                    "surface-container-low": "#f3f4f1",
+                    "outline": "#717975",
+                    "surface-container": "#edeeeb",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "section-gap": "80px",
+                    "margin-desktop": "64px",
+                    "stack-lg": "32px",
+                    "container-max": "1280px",
+                    "margin-mobile": "20px",
+                    "stack-sm": "8px",
+                    "gutter": "24px",
+                    "stack-md": "16px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Manrope"],
+                    "headline-lg": ["Manrope"],
+                    "headline-lg-mobile": ["Manrope"],
+                    "display": ["Manrope"],
+                    "body-lg": ["Manrope"],
+                    "label-md": ["Manrope"],
+                    "headline-md": ["Manrope"],
+                    "body-md": ["Manrope"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #f9faf7; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-hover { transition: transform 250ms ease-out, box-shadow 250ms ease-out; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(2, 54, 41, 0.08); }
+        .circular-progress {
+            background: conic-gradient(#72a08e calc(var(--progress) * 1%), #edeeeb 0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .circular-progress::before {
+            content: "";
+            position: absolute;
+            width: 85%;
+            height: 85%;
+            background-color: #f9faf7;
+            border-radius: 50%;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c0c8c3; border-radius: 10px; }
+    </style>
+</head>
+<body class="font-body-md text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Sidebar (Shared Component JSON Mapping) -->
+<aside class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface shadow-[0_4px_20px_rgba(2,54,41,0.04)] py-stack-lg z-50 overflow-y-auto">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">CareerBridge</h1>
+<p class="text-label-sm text-on-surface-variant uppercase tracking-wider mt-1">Premium Career Suite</p>
+</div>
+<nav class="flex-1 space-y-2 px-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:text-primary hover:bg-secondary-container/40 transition-colors group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-primary font-bold border-r-4 border-primary bg-secondary-container/20" href="#">
+<span class="material-symbols-outlined">work</span>
+<span class="font-label-md">Jobs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:text-primary hover:bg-secondary-container/40 transition-colors group" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-md">Applications</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:text-primary hover:bg-secondary-container/40 transition-colors group" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-label-md">AI Career Coach</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:text-primary hover:bg-secondary-container/40 transition-colors group" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md">Resume Analyzer</span>
+</a>
+</nav>
+<div class="px-6 mt-auto space-y-6">
+<div class="bg-primary-container p-4 rounded-2xl text-on-primary">
+<p class="text-label-sm font-bold opacity-80 mb-2">PRO PLAN</p>
+<p class="text-label-md mb-4 leading-tight">Get 10x more visibility with AI Resume tuning.</p>
+<button class="w-full bg-primary-fixed text-on-primary-fixed py-2 rounded-lg font-bold text-label-sm active:scale-95 transition-transform">Upgrade to Pro</button>
+</div>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-label-md">Help</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Navigation (Shared Component JSON Mapping) -->
+<header class="fixed top-0 right-0 w-full md:w-[calc(100%-16rem)] h-16 bg-surface/80 backdrop-blur-md z-40 border-b border-primary/10 flex justify-between items-center px-6 md:px-margin-desktop">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-body-md focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all" placeholder="Search for jobs, companies, or skills..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-6">
+<button class="hover:bg-surface-container-low rounded-full p-2 relative text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border border-surface"></span>
+</button>
+<button class="hover:bg-surface-container-low rounded-full p-2 text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+</button>
+<div class="h-8 w-[1px] bg-outline-variant mx-2"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right hidden sm:block">
+<p class="text-label-md text-on-surface font-bold leading-none">Alex Rivera</p>
+<p class="text-[10px] text-on-surface-variant uppercase mt-1">Computer Science Senior</p>
+</div>
+<img class="w-10 h-10 rounded-full border-2 border-primary/10 object-cover" data-alt="A professional studio portrait of a young adult Hispanic male student with a kind smile, short dark hair, wearing a professional charcoal grey blazer over a white shirt. Soft, warm natural lighting from a window creates a high-end, clean academic feel. High resolution and sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjVoSJbXjiNQmgUud71U1SCguWj2akGeSUP9aVnrwJbzZ8w9fu-pA4xXAQsMgr_GAY0aJC3kn_1BSkFoXUZrg9abYgUM9lHK1I-ob6u_JvoT2UWlHo4ykX4lL0etbDNW5hzha0um9qQiN9gQTWkvhncAY500DduS6O2UHrzeeFgISSupctErPTqmu080aqAPYRMkGcaqbnsX0qq0NxzuEMXBoZ0oVIFL_y4NWdrKOLV-UPjXqN2TaVfxGNJsSTDSR-eQ-k0Niw8cU"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="pt-16 md:ml-64 min-h-screen">
+<div class="max-w-[1440px] mx-auto px-6 md:px-margin-desktop py-stack-lg">
+<!-- Breadcrumbs & Actions -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 animate-fade-in">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<a class="hover:text-primary transition-colors font-label-md" href="#">Jobs</a>
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+<span class="font-label-md text-on-surface font-bold">Senior Software Engineer, Cloud</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-xl border border-outline-variant text-primary font-bold hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">share</span>
+                        Share
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-xl border border-outline-variant text-primary font-bold hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">bookmark</span>
+                        Save Job
+                    </button>
+<button class="px-8 py-2 rounded-xl bg-primary text-on-primary font-bold shadow-md hover:opacity-90 active:scale-95 transition-all">
+                        Apply Now
+                    </button>
+</div>
+</div>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Center Feed (8 Columns) -->
+<div class="lg:col-span-8 space-y-stack-md">
+<!-- Hero Header Card -->
+<div class="bg-surface rounded-2xl p-8 shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 animate-fade-in" style="animation-delay: 100ms;">
+<div class="flex flex-wrap items-start justify-between gap-6">
+<div class="flex gap-6">
+<div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center shadow-sm border border-outline-variant/30">
+<img class="w-10 h-10 object-contain" data-alt="Official corporate logo of Google, featuring the iconic multicolored G in clean, modern flat design. The logo is centered on a white background with ample whitespace for a high-end tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmGtRvOnTRbSettgt0FnBuNnTsFd9rE-WWc1K1KTdxabN02kOKSnCzHcukq45xCzu3P4WfvJbUQcyCVYosZmFtsbW_MZb_jlDFZ2m-hOkJnWi0id_Hb3H1A3dwBos4MAh-fxbOPcsutkc113UCRyQEndJJlAERDSuKcUFCY5IkGiCCHwPQlhNkq227bC0swZT7t-Mc43NzFhxUITQe-hp6XmE5UUHOADggNvEtVN3Ygjt3m5NuNbGXezsO6ZMPklP9U2IRE6UzUyc"/>
+</div>
+<div>
+<h2 class="font-display text-[28px] md:text-display leading-tight text-primary mb-2">Senior Software Engineer, Cloud</h2>
+<div class="flex flex-wrap gap-x-6 gap-y-2 text-on-surface-variant font-label-md">
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[20px]">apartment</span>Google</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[20px]">location_on</span>Mountain View, CA (Hybrid)</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[20px]">work_history</span>Full-Time</div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 pt-8 border-t border-outline-variant/20">
+<div>
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Salary Range</p>
+<p class="text-body-lg font-bold text-primary">$180k - $240k</p>
+</div>
+<div>
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Posted Date</p>
+<p class="text-body-lg font-bold text-primary">2 days ago</p>
+</div>
+<div>
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Deadline</p>
+<p class="text-body-lg font-bold text-primary">Nov 15, 2024</p>
+</div>
+<div>
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Candidates</p>
+<p class="text-body-lg font-bold text-primary">45 Applied</p>
+</div>
+</div>
+</div>
+<!-- AI Match Analysis (Visually Prominent) -->
+<div class="bg-primary text-on-primary rounded-2xl p-8 shadow-xl relative overflow-hidden animate-fade-in" style="animation-delay: 200ms;">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-container rounded-full -translate-y-1/2 translate-x-1/2 opacity-20 blur-3xl"></div>
+<div class="relative z-10 flex flex-col md:flex-row items-center gap-10">
+<div class="relative w-40 h-40 shrink-0">
+<div class="circular-progress w-full h-full" style="--progress: 94">
+<div class="z-20 text-center flex flex-col items-center justify-center">
+<span class="text-display leading-none text-primary">94%</span>
+<span class="text-label-sm font-bold text-on-primary-container">MATCH</span>
+</div>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary-fixed">auto_awesome</span>
+<h3 class="text-headline-md font-bold text-primary-fixed">Why You're a Great Fit</h3>
+</div>
+<ul class="space-y-3">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-fixed-dim text-[20px]">check_circle</span>
+<p class="text-body-md opacity-90">Your <span class="font-bold">React experience</span> matches this role perfectly based on your portfolio.</p>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-fixed-dim text-[20px]">check_circle</span>
+<p class="text-body-md opacity-90"><span class="font-bold">TypeScript proficiency</span> is above average for this seniority level.</p>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-fixed-dim text-[20px]">check_circle</span>
+<p class="text-body-md opacity-90"><span class="font-bold">Strong frontend portfolio</span> detected with relevant architectural patterns.</p>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-fixed-dim text-[20px]">check_circle</span>
+<p class="text-body-md opacity-90"><span class="font-bold">Leadership experience</span> increases your chances for this Senior title.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Job Description Sections -->
+<div class="bg-surface rounded-2xl p-8 shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 animate-fade-in space-y-8" style="animation-delay: 300ms;">
+<section>
+<h3 class="text-headline-md font-bold text-primary mb-4">Role Summary</h3>
+<p class="text-body-md text-on-surface-variant leading-relaxed">
+                                As a Senior Software Engineer in Google Cloud, you will be part of a team building the foundation for the next generation of cloud infrastructure. You'll work on high-performance distributed systems, focusing on scalability, security, and developer productivity.
+                            </p>
+</section>
+<section>
+<h3 class="text-headline-md font-bold text-primary mb-4">Responsibilities</h3>
+<ul class="list-disc list-inside text-body-md text-on-surface-variant space-y-2 marker:text-primary">
+<li>Design and implement scalable cloud services using React, TypeScript, and Go.</li>
+<li>Collaborate with cross-functional teams to define architecture and product roadmaps.</li>
+<li>Optimize system performance and solve complex distributed computing problems.</li>
+<li>Mentor junior engineers and foster a culture of technical excellence.</li>
+</ul>
+</section>
+<section>
+<h3 class="text-headline-md font-bold text-primary mb-4">Skills &amp; Qualifications</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div>
+<p class="text-label-md font-bold text-on-surface mb-3">Required Skills</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-lg text-label-sm font-bold">React</span>
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-lg text-label-sm font-bold">TypeScript</span>
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-lg text-label-sm font-bold">Go</span>
+<span class="px-3 py-1 bg-secondary-container/40 text-primary rounded-lg text-label-sm font-bold">Kubernetes</span>
+</div>
+</div>
+<div>
+<p class="text-label-md font-bold text-on-surface mb-3">Preferred Skills</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-lg text-label-sm">Docker</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-lg text-label-sm">AWS</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-lg text-label-sm">Terraform</span>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h3 class="text-headline-md font-bold text-primary mb-4">Benefits</h3>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+<div class="flex items-center gap-3 p-3 rounded-xl bg-background border border-primary/5">
+<span class="material-symbols-outlined text-primary">health_and_safety</span>
+<span class="text-label-md">Health Insurance</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-background border border-primary/5">
+<span class="material-symbols-outlined text-primary">savings</span>
+<span class="text-label-md">401(k) Matching</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-background border border-primary/5">
+<span class="material-symbols-outlined text-primary">flight_takeoff</span>
+<span class="text-label-md">Unlimited PTO</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-xl bg-background border border-primary/5">
+<span class="material-symbols-outlined text-primary">fitness_center</span>
+<span class="text-label-md">Wellness Stipend</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Skills Analysis & Comparison -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md animate-fade-in" style="animation-delay: 400ms;">
+<div class="bg-surface rounded-2xl p-6 shadow-sm border border-primary/5">
+<h3 class="flex items-center gap-2 text-headline-md font-bold text-primary mb-6">
+<span class="material-symbols-outlined text-primary-container">verified</span>
+                                You Already Have
+                            </h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-body-md">React</span>
+<span class="text-label-sm px-2 py-0.5 bg-green-100 text-green-800 rounded font-bold">Expert</span>
+</div>
+<div class="w-full bg-outline-variant/20 h-1.5 rounded-full"><div class="bg-primary w-full h-full rounded-full"></div></div>
+<div class="flex items-center justify-between">
+<span class="text-body-md">TypeScript</span>
+<span class="text-label-sm px-2 py-0.5 bg-green-100 text-green-800 rounded font-bold">Advanced</span>
+</div>
+<div class="w-full bg-outline-variant/20 h-1.5 rounded-full"><div class="bg-primary w-4/5 h-full rounded-full"></div></div>
+<div class="flex items-center justify-between">
+<span class="text-body-md">SQL</span>
+<span class="text-label-sm px-2 py-0.5 bg-green-100 text-green-800 rounded font-bold">Advanced</span>
+</div>
+<div class="w-full bg-outline-variant/20 h-1.5 rounded-full"><div class="bg-primary w-3/4 h-full rounded-full"></div></div>
+</div>
+</div>
+<div class="bg-surface rounded-2xl p-6 shadow-sm border border-primary/5">
+<h3 class="flex items-center gap-2 text-headline-md font-bold text-primary mb-6"><span class="material-symbols-outlined text-error">trending_up</span> Recommended Next Skills</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-body-md">Docker</span>
+<span class="text-label-sm text-on-surface-variant">Beginner</span>
+</div>
+<div class="w-full bg-outline-variant/20 h-1.5 rounded-full"><div class="bg-error w-1/4 h-full rounded-full"></div></div>
+<div class="flex items-center justify-between">
+<span class="text-body-md">AWS</span>
+<span class="text-label-sm text-on-surface-variant">Novice</span>
+</div>
+<div class="w-full bg-outline-variant/20 h-1.5 rounded-full"><div class="bg-error w-1/5 h-full rounded-full"></div></div>
+<div class="flex items-center justify-between">
+<span class="text-body-md">CI/CD</span>
+<span class="text-label-sm text-on-surface-variant">Self-Taught</span>
+</div>
+<div class="w-full bg-outline-variant/20 h-1.5 rounded-full"><div class="bg-error w-1/3 h-full rounded-full"></div></div>
+</div>
+</div>
+</div>
+<!-- Salary Insights -->
+<div class="bg-surface rounded-2xl p-8 shadow-sm border border-primary/5 animate-fade-in" style="animation-delay: 500ms;">
+<h3 class="text-headline-md font-bold text-primary mb-6">Salary Insights</h3>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="p-4 bg-background rounded-xl">
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Market Demand</p>
+<p class="text-headline-md font-bold text-primary">High</p>
+</div>
+<div class="p-4 bg-background rounded-xl">
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Competition</p>
+<p class="text-headline-md font-bold text-primary">Medium</p>
+</div>
+<div class="p-4 bg-background rounded-xl">
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Trend</p>
+<p class="text-headline-md font-bold text-green-600">+4.2% ↑</p>
+</div>
+<div class="p-4 bg-background rounded-xl">
+<p class="text-label-sm text-on-surface-variant uppercase mb-1">Average Pay</p>
+<p class="text-headline-md font-bold text-primary">$210k</p>
+</div>
+</div>
+<!-- Stylized Salary Distribution Chart -->
+<div class="relative h-48 flex items-end justify-between gap-1 px-4 mt-10">
+<div class="absolute inset-0 flex flex-col justify-between -z-10 pointer-events-none">
+<div class="border-b border-outline-variant/20 w-full"></div>
+<div class="border-b border-outline-variant/20 w-full"></div>
+<div class="border-b border-outline-variant/20 w-full"></div>
+</div>
+<!-- Bars -->
+<div class="w-full bg-primary/10 rounded-t-lg h-[20%]"></div>
+<div class="w-full bg-primary/20 rounded-t-lg h-[35%]"></div>
+<div class="w-full bg-primary/40 rounded-t-lg h-[60%]"><div class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-primary font-bold text-[10px] whitespace-nowrap">You are here</div></div>
+<div class="w-full bg-primary rounded-t-lg h-[90%] relative group">
+<div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">Most Likely</div>
+</div>
+<div class="w-full bg-primary/60 rounded-t-lg h-[75%]"></div>
+<div class="w-full bg-primary/30 rounded-t-lg h-[45%]"></div>
+<div class="w-full bg-primary/10 rounded-t-lg h-[25%]"></div>
+</div>
+<div class="flex justify-between mt-4 text-label-sm text-on-surface-variant px-4">
+<span>$150k</span>
+<span>$210k</span>
+<span>$280k</span>
+</div>
+</div>
+<!-- Similar Jobs Horizontal Scroll -->
+<div class="space-y-4 animate-fade-in" style="animation-delay: 600ms;">
+<div class="flex items-center justify-between">
+<h3 class="text-headline-md font-bold text-primary">Similar Openings</h3>
+<button class="text-label-md text-primary font-bold hover:underline">See All</button>
+</div>
+<div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
+<!-- Card 1 -->
+<div class="min-w-[300px] bg-white p-5 rounded-2xl border border-primary/5 shadow-sm snap-start card-hover">
+<div class="flex items-center justify-between mb-4">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center p-2">
+<img class="w-full h-full object-contain" data-alt="Official logo of Amazon, featuring the signature arrow design in black on a white square. Minimalist and corporate tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKYX-OKfRXJc1ipK_CzPilLQvEzhNlQvKaHkxuJuUsDJ8YZElqHI2NeOHwbtL38NhIioCgaFzAdqUFcoNdvCc36A7rR-zzRaQjiwZrpr-lm-evTAj9Bb2rCz9T7zQYZqMIhmGOMPBARVgpcUNZJCWVGI1WPY966eAciKc2nqDocy9m20b-yqVyaPjlGoxr9ZbWhkccDL4FvFCtD7mnQzj7prkHO7C5_f-hMQsCAt1s5K9kPZRmEu9uvv05qBNXU4C1927xJNDN8-E"/>
+</div>
+<span class="text-label-sm font-bold bg-primary-fixed/50 px-2 py-0.5 rounded text-primary">91% Match</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1 truncate">Software Dev II</h4>
+<p class="text-label-sm text-on-surface-variant mb-4">Amazon • Seattle, WA</p>
+<div class="flex items-center justify-between">
+<span class="text-label-md font-bold">$165k - $210k</span>
+<button class="text-primary font-bold text-label-sm border border-primary/20 px-3 py-1 rounded-lg hover:bg-surface-container-low transition-colors">View Details</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="min-w-[300px] bg-white p-5 rounded-2xl border border-primary/5 shadow-sm snap-start card-hover">
+<div class="flex items-center justify-between mb-4">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center p-2">
+<img class="w-full h-full object-contain" data-alt="Microsoft corporate logo, showing the four-colored squares in red, green, blue, and yellow. Simple, modern digital tech branding." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAd6DCDTfVHh1HyYev5D6gff9I0qZ_PzvL34U6ujdhQtA7RIL4yrfH3KHOVZvtcRc0DBA2gDIMguIxEVv4URzR_I-fcGxgz8AJiBJD_PetIzVXA2M4E1K3yIuNAopv73GvKoPuFuwgcPv8JACjFtHbl58OkJn4JTDu_M525CZ0WdNhQFa4gl89J-5FQGVei9tp7QLHGA_6vVHU4QHuHJlwRogp2keIVV5JWtCT12J8T0sJXtiouoM60FEq9vO238R7_bCspV-v7-TE"/>
+</div>
+<span class="text-label-sm font-bold bg-primary-fixed/50 px-2 py-0.5 rounded text-primary">88% Match</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1 truncate">Cloud Solutions Arch</h4>
+<p class="text-label-sm text-on-surface-variant mb-4">Microsoft • Redmond, WA</p>
+<div class="flex items-center justify-between">
+<span class="text-label-md font-bold">$170k - $230k</span>
+<button class="text-primary font-bold text-label-sm border border-primary/20 px-3 py-1 rounded-lg hover:bg-surface-container-low transition-colors">View Details</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="min-w-[300px] bg-white p-5 rounded-2xl border border-primary/5 shadow-sm snap-start card-hover">
+<div class="flex items-center justify-between mb-4">
+<div class="w-10 h-10 rounded bg-background flex items-center justify-center p-2">
+<img class="w-full h-full object-contain" data-alt="Netflix corporate logo, a bold red 'N' on a white background. Distinctive and highly recognizable media technology brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcY5qTZepsITIVaqm-ArCapzzK9Vdwj5tMCUFaYHoEIsjaEoeGwmKpjNGJBzbgnQbIAwUhe3WXD81lgp2aW4lduw0vOUguUiFU9n546iOGBJ59gvuY74-bf4Dk-M9pqb4aijKbAHTSG-FZ4aT14uk7QtRGyPU0YteyIl9ydMsPyreF7pYgyYnVOteKM6wvwaNDC2M7Nsjps9yakGZn4ewaA-SrHSD8EP2xp5W9y6swhmhZxYhvEKNYMiM5aMEag24KVVPCD40ychw"/>
+</div>
+<span class="text-label-sm font-bold bg-primary-fixed/50 px-2 py-0.5 rounded text-primary">85% Match</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1 truncate">Platform Engineer</h4>
+<p class="text-label-sm text-on-surface-variant mb-4">Netflix • Los Gatos, CA</p>
+<div class="flex items-center justify-between">
+<span class="text-label-md font-bold">$200k - $260k</span>
+<button class="text-primary font-bold text-label-sm border border-primary/20 px-3 py-1 rounded-lg hover:bg-surface-container-low transition-colors">View Details</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar / AI Analysis Panel (4 Columns) -->
+<aside class="lg:col-span-4 space-y-stack-md relative">
+<!-- Application Quick Status (Sticky-ish) -->
+<div class="bg-surface rounded-2xl p-6 shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 animate-fade-in lg:sticky lg:top-24" style="animation-delay: 150ms;">
+<h3 class="text-label-sm font-bold text-on-surface-variant uppercase mb-4 tracking-wider">Application Status</h3>
+<div class="space-y-5 mb-8">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="text-label-md">Deadline</span>
+</div>
+<span class="text-label-md font-bold text-primary">Nov 15 (14 days)</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">timer</span>
+<span class="text-label-md">Est. Time</span>
+</div>
+<span class="text-label-md font-bold text-primary">10 mins</span>
+</div>
+<div class="flex items-center justify-between"><div class="flex items-center gap-2 text-on-surface-variant"><span class="material-symbols-outlined text-[20px]">description</span><span class="text-label-md">Resume Score</span></div><div class="flex flex-col items-end"><span class="text-label-sm bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-bold">91%</span><span class="text-[8px] text-green-600 font-bold uppercase mt-0.5">Ready to Apply</span></div></div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+<span class="text-label-md">Cover Letter</span>
+</div>
+<span class="text-label-sm bg-secondary-container/60 text-on-secondary-container px-2 py-0.5 rounded-full font-bold">Drafted</span>
+</div>
+</div>
+<div class="space-y-3">
+<button class="w-full py-4 rounded-xl bg-primary text-on-primary font-bold shadow-lg hover:opacity-90 active:scale-95 transition-all">Apply Now</button>
+<button class="w-full py-3 rounded-xl border border-primary/20 text-primary font-bold hover:bg-surface-container-low transition-colors">Save for Later</button>
+</div>
+</div>
+<!-- Interview Readiness -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-primary/5 animate-fade-in" style="animation-delay: 250ms;">
+<h3 class="text-label-sm font-bold text-on-surface-variant uppercase mb-4 tracking-wider">Interview Readiness</h3>
+<div class="flex items-end gap-3 mb-4">
+<span class="text-[40px] font-bold text-primary leading-none">81%</span>
+<span class="text-label-sm text-green-600 font-bold mb-1">+10% target</span>
+</div>
+<div class="w-full bg-outline-variant/10 h-2 rounded-full mb-6">
+<div class="bg-primary w-[81%] h-full rounded-full relative">
+<div class="absolute right-0 top-0 w-3 h-3 bg-white border-2 border-primary rounded-full translate-x-1/2 -translate-y-1/4"></div>
+</div>
+</div>
+<div class="bg-primary-container/5 p-4 rounded-xl space-y-3 mb-6">
+<p class="text-label-md font-bold text-primary">AI Recommendations:</p>
+<ul class="space-y-2">
+<li class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                                    Practice System Design patterns.
+                                </li>
+<li class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                                    Complete one Mock Interview.
+                                </li>
+<li class="flex items-center gap-2 text-label-sm text-on-surface-variant">
+<span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                                    Improve Docker knowledge.
+                                </li>
+</ul>
+</div>
+<button class="w-full py-3 rounded-xl bg-secondary-container text-on-secondary-container font-bold hover:opacity-90 transition-opacity">Start Mock Interview</button>
+</div>
+<!-- Company Info Card -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-primary/5 animate-fade-in" style="animation-delay: 350ms;">
+<h3 class="text-label-sm font-bold text-on-surface-variant uppercase mb-6 tracking-wider">Company Profile</h3>
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-lg bg-background flex items-center justify-center p-2 border border-outline-variant/20">
+<img class="w-full h-full object-contain" data-alt="Google logo icon, multicolored letter G on a clean white background. High fidelity corporate branding image." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBO-qrpsFqDL0EdS5V3HwFMC_GpbFc9lmVKxFMe4DMfo8W1z7edmXwuvr6ssYXrWRtcPq0SEW8v8NZb2jBoaAKaBwF8gCp2AFzRREt6xaYd_WIKfLrH4CJAjiTLYBa6sdPL_fbRjOZZpEka-brRFRT-oV8ieOqqMVrSR2j-ZhGxfBX8eWwN80xu7HuPluuil9Ur8KIHYYDuV6QnYPFcEWBQ4pEc_unBXShEW-kTNBnZQsKIFAz-j7zHxhLti_znJz4v4TtZHCUlaww"/>
+</div>
+<div>
+<h4 class="font-bold text-primary">Google</h4>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-yellow-500 text-[18px]">star</span>
+<span class="text-label-md font-bold">4.8/5</span>
+<span class="text-label-sm text-on-surface-variant font-normal">(10k+ reviews)</span>
+</div>
+</div>
+</div>
+<p class="text-label-md text-on-surface-variant leading-relaxed mb-6">
+                            Google's mission is to organize the world's information and make it universally accessible and useful.
+                        </p>
+<div class="grid grid-cols-2 gap-4 mb-6 text-label-sm">
+<div class="flex flex-col">
+<span class="text-on-surface-variant opacity-60">Industry</span>
+<span class="font-bold text-primary">Technology</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface-variant opacity-60">Size</span>
+<span class="font-bold text-primary">10,000+</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface-variant opacity-60">Founded</span>
+<span class="font-bold text-primary">1998</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface-variant opacity-60">Headquarters</span>
+<span class="font-bold text-primary">Mountain View</span>
+</div>
+</div>
+<button class="w-full py-2 border-b border-primary/10 text-primary font-bold text-label-md hover:bg-surface-container-low rounded-t-lg transition-colors">Visit Company Profile</button>
+</div>
+<!-- AI Career Advice (Premium) -->
+<div class="bg-gradient-to-br from-primary to-primary-container rounded-2xl p-6 shadow-xl text-on-primary animate-fade-in relative overflow-hidden" style="animation-delay: 450ms;">
+<div class="absolute -bottom-8 -left-8 w-32 h-32 bg-primary-fixed/10 rounded-full blur-2xl"></div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary-fixed">psychology</span>
+<h3 class="text-label-sm font-bold uppercase tracking-widest text-primary-fixed">AI Advisor Tip</h3>
+</div>
+<p class="text-body-md leading-relaxed opacity-90 mb-6 italic">
+                                "This role matches your current profile very well. Our simulations show that spending 4 hours learning <span class="text-primary-fixed font-bold">Docker</span> and <span class="text-primary-fixed font-bold">AWS basics</span> would increase your match score to 98% and put you in the top 2% of applicants."
+                            <br/><span class="text-primary-fixed font-bold not-italic mt-2 block">Estimated Match Increase: +4%</span></p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img class="w-6 h-6 rounded-full border border-primary" data-alt="Small thumbnail avatar of a diverse male professional in a tech setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuClrBhgC-esDKZw517bKYSmP6iC7fjFCNFwfbMS7OWBiXukXlSFORjuOTKOx7UZnKq-OSaHrK9mlKbZ9-3xJrzGcdLXHF_eXfaCXv7hJRMhLvSA0QaDpB9pGsPJYYJ4uuwuVxL_nWAP7GIDsgW-Wbu9qrLT0TrRKPVPACjIZwV6HJV4xSS10jFuXEvrHwYyLDYHsxdqWvPrjl1BK6_LStF75MkuAX2VTRmEdDTsKqGYwbjFjeu7fL6VE-ALKw-JfsaVx2UxhN5tbEc"/>
+<img class="w-6 h-6 rounded-full border border-primary" data-alt="Small thumbnail avatar of a young female professional smiling in an office environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmClVWJjzavU9mwhWNykSLFjoQHk-G35dY45hZgeREEzSGAm-SivcJjUVpS9tpZAAde2GjhXy0iKHg-tFzYoUcgt8IQA3_nSBhCstuAugbe0GjN0bxHk2KDoEcExqE3afX9ifKXPO2bo-cX7ph7svNzt_2NClfu48OE1LHQ4pkkwUcUPxLbg9udt632CfMMoVMiSgWsDA94jtJszOR_e5T4Utfbfax3xO3eTlkVF-C_bfq2T4HEZ2KsQIgEx09greVXlrN81i6pcA"/>
+<div class="w-6 h-6 rounded-full bg-primary-fixed text-[8px] flex items-center justify-center text-primary font-bold border border-primary">+12</div>
+</div>
+<span class="text-[10px] uppercase font-bold text-primary-fixed/80">3 friends work here</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile Only - Suppressed per rules but included if top-level) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface border-t border-primary/5 flex justify-around py-3 px-2 z-50">
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-bold">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">work</span>
+<span class="text-[10px] font-bold">Jobs</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-[10px] font-bold">Apps</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="text-[10px] font-bold">Coach</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="text-[10px] font-bold">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions and subtle effects
+        document.querySelectorAll('.card-hover').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98) translateY(0px)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1) translateY(-2px)';
+            });
+        });
+
+        // Simple intersection observer for scroll animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.animate-fade-in').forEach(el => observer.observe(el));
+    </script>
+<div class="fixed inset-0 z-[100] hidden items-center justify-center p-4 animate-fade-in" id="apply-modal"><div class="absolute inset-0 bg-on-background/40 backdrop-blur-md"></div><div class="relative bg-surface w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-primary/10"><div class="p-6 border-b border-outline-variant/20"><h3 class="text-headline-md font-bold text-primary">Confirm Application</h3><p class="text-label-sm text-on-surface-variant">Review your profile before submitting</p></div><div class="p-6 space-y-4"><div class="grid grid-cols-2 gap-4"><div class="p-3 bg-background rounded-xl border border-primary/5"><p class="text-[10px] text-on-surface-variant uppercase">Resume Score</p><p class="text-label-md font-bold text-primary">91%</p></div><div class="p-3 bg-background rounded-xl border border-primary/5"><p class="text-[10px] text-on-surface-variant uppercase">Cover Letter</p><p class="text-label-md font-bold text-primary">Drafted</p></div><div class="p-3 bg-background rounded-xl border border-primary/5"><p class="text-[10px] text-on-surface-variant uppercase">AI Match</p><p class="text-label-md font-bold text-primary">94%</p></div><div class="p-3 bg-background rounded-xl border border-primary/5"><p class="text-[10px] text-on-surface-variant uppercase">Readiness</p><p class="text-label-md font-bold text-primary">81%</p></div></div><div class="bg-primary-fixed/20 p-4 rounded-xl flex items-center justify-between"><span class="text-label-md font-bold text-primary">Estimated Success</span><span class="text-label-sm bg-primary text-on-primary px-3 py-1 rounded-full font-bold">High</span></div></div><div class="p-6 bg-surface-container-low flex gap-3"><button class="flex-1 py-3 rounded-xl border border-outline-variant text-on-surface-variant font-bold hover:bg-surface-container-high transition-colors" onclick="document.getElementById('apply-modal').classList.add('hidden'); document.getElementById('apply-modal').classList.remove('flex')">Cancel</button><button class="flex-1 py-3 rounded-xl bg-primary text-on-primary font-bold shadow-lg hover:opacity-90 active:scale-95 transition-all">Submit Application</button></div></div></div></body></html>

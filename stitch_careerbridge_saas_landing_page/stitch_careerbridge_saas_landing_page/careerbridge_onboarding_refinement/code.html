@@ -1,0 +1,469 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>CareerBridge | Student Onboarding</title>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#f3f4f1",
+                    "surface-container-highest": "#e2e3e0",
+                    "on-surface-variant": "#404945",
+                    "background": "#f9faf7",
+                    "surface-dim": "#d9dad8",
+                    "on-surface": "#1a1c1b",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#ece2cb",
+                    "tertiary-container": "#20332b",
+                    "surface-variant": "#e2e3e0",
+                    "on-secondary-container": "#696250",
+                    "tertiary-fixed-dim": "#b6ccc0",
+                    "on-primary-fixed-variant": "#214f40",
+                    "on-primary-container": "#72a08e",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "surface": "#f9faf7",
+                    "tertiary": "#0b1e16",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#384b42",
+                    "tertiary-fixed": "#d2e8db",
+                    "primary": "#001f16",
+                    "inverse-on-surface": "#f0f1ee",
+                    "on-secondary-fixed-variant": "#4c4635",
+                    "primary-fixed-dim": "#a1d1be",
+                    "on-secondary-fixed": "#201b0d",
+                    "surface-container": "#edeeeb",
+                    "primary-container": "#023629",
+                    "on-background": "#1a1c1b",
+                    "secondary": "#655e4c",
+                    "on-tertiary-fixed": "#0c1f18",
+                    "outline-variant": "#c0c8c3",
+                    "inverse-surface": "#2e312f",
+                    "on-tertiary-container": "#879b91",
+                    "surface-container-high": "#e8e8e6",
+                    "primary-fixed": "#bcedd9",
+                    "outline": "#717975",
+                    "secondary-fixed-dim": "#cfc6b0",
+                    "surface-tint": "#3a6757",
+                    "error": "#ba1a1a",
+                    "inverse-primary": "#a1d1be",
+                    "surface-bright": "#f9faf7",
+                    "on-primary-fixed": "#002117",
+                    "on-secondary": "#ffffff",
+                    "secondary-container": "#e9dfc8",
+                    "on-error": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "16px",
+                    "section-gap": "80px",
+                    "margin-desktop": "64px",
+                    "container-max": "1280px",
+                    "unit": "8px",
+                    "stack-lg": "32px",
+                    "stack-sm": "8px",
+                    "margin-mobile": "20px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Manrope"],
+                    "body-lg": ["Manrope"],
+                    "headline-lg": ["Manrope"],
+                    "display": ["Manrope"],
+                    "headline-md": ["Manrope"],
+                    "label-sm": ["Manrope"],
+                    "label-md": ["Manrope"],
+                    "body-md": ["Manrope"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .step-transition {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hidden-step {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .active-step {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .nav-blur {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c0c8c3;
+            border-radius: 10px;
+        }
+        .chip-active {
+            background-color: #023629 !important;
+            color: #ffffff !important;
+            border-color: #023629 !important;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar (Shared Component) -->
+<!-- The navbar is suppressed for the focused onboarding journey per "Relevance Check" rule, but the user requested it for the logo area. We will keep it as a branding header. -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 bg-surface dark:bg-background shadow-[0_4px_20px_rgba(2,54,41,0.04)] nav-blur">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-fixed text-[20px]">badge</span>
+</div>
+<span class="font-display text-headline-md text-primary dark:text-primary-fixed">CareerBridge</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="hidden md:block font-body-md text-body-md text-on-surface-variant">Onboarding Session</span>
+<button class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<main class="flex-grow flex items-center justify-center pt-24 pb-12 px-margin-mobile md:px-margin-desktop">
+<div class="w-full max-w-[1100px] flex gap-10 items-start">
+<!-- Main Content Area: Onboarding Wizard -->
+<div class="flex-grow max-w-[750px] bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 p-8 md:p-12 relative overflow-hidden">
+<!-- Progress Header -->
+<div class="mb-10">
+<div class="flex justify-between items-end mb-4">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary mb-1">Complete Your Profile</h1>
+<p class="text-on-surface-variant text-body-md max-w-md">Help us personalize your career journey and match you with opportunities.</p>
+</div>
+<div class="text-right"><span class="text-label-sm font-label-md text-on-surface-variant mr-2">40% Complete</span>
+<span class="text-label-md font-label-md text-primary uppercase tracking-wider" id="step-counter">Step 2 of 5</span>
+</div>
+</div>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary transition-all duration-500 ease-in-out" id="progress-bar" style="width: 40%;"></div>
+</div>
+</div>
+<!-- Step 1: Academic Info -->
+<div class="step-transition active-step" id="step-1">
+<div class="flex flex-col md:flex-row gap-8 mb-8 items-start">
+<div class="flex-shrink-0">
+<div class="w-24 h-24 rounded-full bg-surface-container-high border-2 border-dashed border-outline-variant flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors group relative overflow-hidden">
+<span class="material-symbols-outlined text-[32px] text-outline group-hover:text-primary">add_a_photo</span>
+<span class="text-[10px] font-label-sm mt-1 text-outline group-hover:text-primary">Add Photo</span>
+<!-- Mock image overlay -->
+<div class="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-primary"></div>
+</div>
+</div>
+<div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+<div class="md:col-span-2">
+<label class="block text-label-md font-label-md text-on-surface-variant mb-2">University</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">school</span>
+<input class="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-variant bg-transparent focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none" placeholder="e.g. Stanford University" type="text">
+</div>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-2">Degree</label>
+<select class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-transparent focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none appearance-none cursor-pointer">
+<option>Bachelors of Science</option>
+<option>Bachelors of Arts</option>
+<option>Masters of Science</option>
+<option>MBA</option>
+<option>PhD</option>
+</select>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-2">Major</label>
+<input class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-transparent focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none" placeholder="e.g. Computer Science" type="text">
+</div>
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-2">Current Year</label>
+<select class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-transparent focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none appearance-none cursor-pointer">
+<option>Freshman</option>
+<option>Sophomore</option>
+<option>Junior</option>
+<option>Senior</option>
+<option>Graduate</option>
+</select>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-2">Graduation Year</label>
+<input class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-transparent focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none" placeholder="2025" type="number">
+</div>
+</div>
+</div>
+</div>
+<!-- Step 2: Career Interests -->
+<div class="step-transition hidden-step" id="step-2" style="display: none;">
+<h3 class="font-headline-md text-headline-md text-primary mb-6">What fields interest you?</h3>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">code</span>
+<span class="text-label-md font-label-md">Software Engineering</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">auto_awesome</span>
+<span class="text-label-md font-label-md">Artificial Intelligence</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">palette</span>
+<span class="text-label-md font-label-md">UI/UX Design</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">bar_chart</span>
+<span class="text-label-md font-label-md">Data Science</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">shopping_cart</span>
+<span class="text-label-md font-label-md">Product Management</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">security</span>
+<span class="text-label-md font-label-md">Cybersecurity</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">biotech</span>
+<span class="text-label-md font-label-md">BioTech</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">account_balance</span>
+<span class="text-label-md font-label-md">FinTech</span>
+</button>
+<button class="flex items-center gap-2 p-4 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all text-left group" onclick="this.classList.toggle('chip-active')">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">campaign</span>
+<span class="text-label-md font-label-md">Marketing</span>
+</button>
+</div>
+</div>
+<!-- Step 3: Skills -->
+<div class="step-transition hidden-step" id="step-3" style="display: none;">
+<h3 class="font-headline-md text-headline-md text-primary mb-2">Showcase your skills</h3>
+<p class="text-on-surface-variant text-body-md mb-6">Type to add skills that define your professional capabilities.</p>
+<div class="relative mb-6">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-12 pr-4 py-4 rounded-xl border border-outline-variant bg-transparent focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none" id="skill-input" placeholder="Search skills (e.g. Java, Figma, SQL)..." type="text">
+</div><div class="bg-surface-container-low p-4 rounded-xl"><h4 class="text-label-sm font-label-md text-outline uppercase mb-3 tracking-widest">Suggested Skills</h4><div class="flex flex-wrap gap-2"><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">React</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">TypeScript</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Python</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Java</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">SQL</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">AWS</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Docker</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Git</button></div></div>
+<div class="flex flex-wrap gap-2 mb-4" id="skill-chips">
+<!-- Initial Chips -->
+<div class="flex items-center gap-1 bg-secondary-container/40 text-primary px-3 py-1.5 rounded-full border border-primary/5 text-label-md font-label-md">
+                            Python <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-error" onclick="this.parentElement.remove()">close</span>
+</div>
+<div class="flex items-center gap-1 bg-secondary-container/40 text-primary px-3 py-1.5 rounded-full border border-primary/5 text-label-md font-label-md">
+                            React <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-error" onclick="this.parentElement.remove()">close</span>
+</div>
+<div class="flex items-center gap-1 bg-secondary-container/40 text-primary px-3 py-1.5 rounded-full border border-primary/5 text-label-md font-label-md">
+                            Strategic Thinking <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-error" onclick="this.parentElement.remove()">close</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl"><h4 class="text-label-sm font-label-md text-outline uppercase mb-3 tracking-widest">Suggested Skills</h4><div class="flex flex-wrap gap-2"><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">React</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">TypeScript</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Python</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Java</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">SQL</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">AWS</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Docker</button><button class="px-3 py-1 rounded-full border border-outline-variant hover:border-primary hover:bg-white transition-all text-label-md">Git</button></div></div>
+</div>
+<!-- Step 4: Career Goal -->
+<div class="step-transition hidden-step" id="step-4" style="display: none;">
+<h3 class="font-headline-md text-headline-md text-primary mb-6">What is your primary goal?</h3>
+<div class="space-y-4"><label class="flex items-center justify-between p-5 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all cursor-pointer group"><div class="flex items-center gap-4"><div class="w-12 h-12 bg-secondary-container/30 rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">work</span></div><div><p class="font-headline-md text-[18px] text-primary">Internship</p><p class="text-body-md text-on-surface-variant">Gain practical experience during your studies.</p></div></div><input class="w-5 h-5 text-primary focus:ring-primary border-outline-variant" name="goal" type="radio"></label><label class="flex items-center justify-between p-5 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all cursor-pointer group"><div class="flex items-center gap-4"><div class="w-12 h-12 bg-secondary-container/30 rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">business_center</span></div><div><p class="font-headline-md text-[18px] text-primary">Full-Time Job</p><p class="text-body-md text-on-surface-variant">Start your professional career post-graduation.</p></div></div><input checked="" class="w-5 h-5 text-primary focus:ring-primary border-outline-variant" name="goal" type="radio"></label><label class="flex items-center justify-between p-5 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all cursor-pointer group"><div class="flex items-center gap-4"><div class="w-12 h-12 bg-secondary-container/30 rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">school</span></div><div><p class="font-headline-md text-[18px] text-primary">Higher Studies</p><p class="text-body-md text-on-surface-variant">Pursue a Masters, MBA, or PhD.</p></div></div><input class="w-5 h-5 text-primary focus:ring-primary border-outline-variant" name="goal" type="radio"></label><label class="flex items-center justify-between p-5 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all cursor-pointer group"><div class="flex items-center gap-4"><div class="w-12 h-12 bg-secondary-container/30 rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">science</span></div><div><p class="font-headline-md text-[18px] text-primary">Research</p><p class="text-body-md text-on-surface-variant">Contribute to academic or industrial innovation.</p></div></div><input class="w-5 h-5 text-primary focus:ring-primary border-outline-variant" name="goal" type="radio"></label><label class="flex items-center justify-between p-5 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all cursor-pointer group"><div class="flex items-center gap-4"><div class="w-12 h-12 bg-secondary-container/30 rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">rocket_launch</span></div><div><p class="font-headline-md text-[18px] text-primary">Startup</p><p class="text-body-md text-on-surface-variant">Build or join an early-stage venture.</p></div></div><input class="w-5 h-5 text-primary focus:ring-primary border-outline-variant" name="goal" type="radio"></label><label class="flex items-center justify-between p-5 rounded-xl border border-outline-variant bg-surface hover:border-primary-container transition-all cursor-pointer group"><div class="flex items-center gap-4"><div class="w-12 h-12 bg-secondary-container/30 rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><span class="material-symbols-outlined">laptop_mac</span></div><div><p class="font-headline-md text-[18px] text-primary">Freelancing</p><p class="text-body-md text-on-surface-variant">Work independently on diverse projects.</p></div></div><input class="w-5 h-5 text-primary focus:ring-primary border-outline-variant" name="goal" type="radio"></label></div>
+</div>
+<!-- Step 5: Resume Upload -->
+<div class="step-transition hidden-step" id="step-5" style="display: none;">
+<h3 class="font-headline-md text-headline-md text-primary mb-2">Upload your resume</h3>
+<p class="text-on-surface-variant text-body-md mb-8">Our AI will scan your resume to pre-fill your profile and suggest tailored roles.</p>
+<div class="border-2 border-dashed border-outline-variant rounded-2xl p-12 flex flex-col items-center justify-center bg-surface-container-low hover:bg-surface-container-high hover:border-primary transition-all cursor-pointer group">
+<div class="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[40px] text-primary">upload_file</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-primary mb-1">Drag and drop here</h4>
+<p class="text-on-surface-variant text-body-md mb-6">Supports PDF, DOCX (Max 10MB)</p>
+<button class="bg-primary text-white px-8 py-3 rounded-full font-label-md transition-transform active:scale-95 hover:shadow-lg">Select File</button>
+</div>
+<div class="mt-8 p-4 bg-secondary-container/20 rounded-xl flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">verified_user</span>
+<p class="text-label-md text-on-secondary-fixed-variant">Your data is encrypted and used only for career matching purposes.</p>
+</div>
+</div>
+<!-- Success Screen -->
+<div class="step-transition hidden-step text-center py-8" id="step-success" style="display: none;">
+<div class="relative w-32 h-32 mx-auto mb-8">
+<div class="absolute inset-0 bg-primary-container opacity-10 rounded-full animate-pulse"></div>
+<div class="absolute inset-4 bg-primary-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[48px]">check_circle</span>
+</div>
+</div>
+<h3 class="font-display text-headline-lg text-primary mb-2">Welcome to CareerBridge!</h3>
+<p class="text-on-surface-variant text-body-lg max-w-sm mx-auto mb-10">Your profile is 100% complete. We've already found 12 job matches for you.</p>
+<div class="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+<button class="py-4 px-6 rounded-full border border-primary text-primary font-label-md hover:bg-surface-container-high transition-all">View Profile</button>
+<button class="py-4 px-6 rounded-full bg-primary text-white font-label-md hover:shadow-xl transition-all active:scale-95">Go to Dashboard</button>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="mt-12 pt-8 border-t border-outline-variant flex justify-between items-center" id="onboarding-footer">
+<button class="px-6 py-3 rounded-full text-on-surface-variant font-label-md hover:text-primary transition-colors opacity-0 pointer-events-none" id="back-btn">
+                        Back
+                    </button>
+<button class="bg-primary-container text-white px-10 py-3 rounded-full font-label-md transition-all hover:bg-primary hover:shadow-lg active:scale-95 flex items-center gap-2" id="next-btn" onclick="nextStep()">
+<span class="">Continue</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Slim Sidebar (Desktop Only) -->
+<aside class="hidden lg:flex flex-col gap-6 w-72 pt-12">
+<div class="bg-surface p-6 rounded-xl shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary">psychology</span>
+<h4 class="font-label-md text-primary uppercase tracking-wider">AI Features</h4>
+</div>
+<div class="space-y-6">
+<div class="flex gap-4">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-secondary-container/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px] text-primary">description</span>
+</div>
+<div>
+<p class="text-label-md font-label-md text-primary">AI Resume Analysis</p>
+<p class="text-[12px] text-on-surface-variant leading-tight">Instant feedback on keywords and formatting.</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-secondary-container/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px] text-primary">trending_up</span>
+</div>
+<div>
+<p class="text-label-md font-label-md text-primary">Readiness Score</p>
+<p class="text-[12px] text-on-surface-variant leading-tight">Measure your profile strength against top roles.</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-secondary-container/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px] text-primary">handshake</span>
+</div>
+<div>
+<p class="text-label-md font-label-md text-primary">Smart Matches</p>
+<p class="text-[12px] text-on-surface-variant leading-tight">Jobs that align perfectly with your skills.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="relative overflow-hidden rounded-xl h-48 group"><div class="absolute inset-0 bg-primary/10"></div><div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuDQwapqQu1N5G60aH9uSJJUCW2SFFQr9VkDVSIfUTVvQvLBQKDqucUlhXFadHKobG2p-UTsDHwUufZYySQda2wZFFKZL6-XI2RpAAwccJ_9XqIskQShQDOpIk0CP1pm8CxryU4X6-YZeXL3BySohsA724GY1zPkfpsbMpaC1xAhwB7Nd8FCcpP92Lc9uj6tK0umK6b6CCrRLmXbKDKlrPc02xP66GKSCQoHCTLMHiKMwZvro7q7ZetAfzwB_iejihJPOKdnvgglMew&quot;);"></div><div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent p-6 flex flex-col justify-end"><p class="text-white text-label-sm uppercase tracking-widest font-label-md mb-2">What You'll Unlock</p><ul class="text-white space-y-1"><li class="flex items-center gap-2 text-[12px]"><span class="material-symbols-outlined text-[14px]">check</span> AI Resume Analysis</li><li class="flex items-center gap-2 text-[12px]"><span class="material-symbols-outlined text-[14px]">check</span> Career Readiness Score</li><li class="flex items-center gap-2 text-[12px]"><span class="material-symbols-outlined text-[14px]">check</span> Personalized Job Recommendations</li><li class="flex items-center gap-2 text-[12px]"><span class="material-symbols-outlined text-[14px]">check</span> AI Mock Interviews</li><li class="flex items-center gap-2 text-[12px]"><span class="material-symbols-outlined text-[14px]">check</span> Career Roadmaps</li></ul></div></div>
+</aside>
+</div>
+</main>
+<footer class="mt-auto py-8 text-center text-on-surface-variant text-label-sm border-t border-outline-variant/30">
+<p class="">© 2024 CareerBridge. Institutional Grade Career Development Platform.</p>
+</footer>
+<script>
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                document.getElementById(`step-${currentStep}`).classList.replace('active-step', 'hidden-step');
+                currentStep++;
+                
+                // Slight delay for smooth animation sequence
+                setTimeout(() => {
+                    const nextElem = document.getElementById(`step-${currentStep}`);
+                    nextElem.style.display = 'block';
+                    setTimeout(() => nextElem.classList.replace('hidden-step', 'active-step'), 50);
+                    updateUI();
+                }, 200);
+            } else if (currentStep === totalSteps) {
+                completeOnboarding();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                document.getElementById(`step-${currentStep}`).classList.replace('active-step', 'hidden-step');
+                currentStep--;
+                
+                setTimeout(() => {
+                    const prevElem = document.getElementById(`step-${currentStep}`);
+                    prevElem.style.display = 'block';
+                    setTimeout(() => prevElem.classList.replace('hidden-step', 'active-step'), 50);
+                    updateUI();
+                }, 200);
+            }
+        }
+
+        function updateUI() {
+            // Update counter and progress bar
+            document.getElementById('step-counter').innerText = `Step ${currentStep} of ${totalSteps}`;
+            document.getElementById('progress-bar').style.width = `${(currentStep / totalSteps) * 100}%`;
+
+            // Update Back button visibility
+            const backBtn = document.getElementById('back-btn');
+            if (currentStep > 1) {
+                backBtn.classList.remove('opacity-0', 'pointer-events-none');
+                backBtn.onclick = prevStep;
+            } else {
+                backBtn.classList.add('opacity-0', 'pointer-events-none');
+            }
+
+            // Update Next button text
+            const nextBtn = document.getElementById('next-btn');
+            if (currentStep === totalSteps) {
+                nextBtn.querySelector('span:first-child').innerText = 'Finish Profile';
+            } else {
+                nextBtn.querySelector('span:first-child').innerText = 'Continue';
+            }
+        }
+
+        function completeOnboarding() {
+            document.getElementById(`step-${currentStep}`).classList.replace('active-step', 'hidden-step');
+            document.getElementById('onboarding-footer').style.display = 'none';
+            document.getElementById('step-counter').parentElement.parentElement.style.opacity = '0';
+            document.getElementById('progress-bar').parentElement.style.opacity = '0';
+            
+            setTimeout(() => {
+                const successElem = document.getElementById('step-success');
+                successElem.style.display = 'block';
+                setTimeout(() => successElem.classList.replace('hidden-step', 'active-step'), 50);
+            }, 300);
+        }
+
+        // Initialize display states
+        window.onload = () => {
+            for (let i = 2; i <= totalSteps; i++) {
+                document.getElementById(`step-${i}`).style.display = 'none';
+            }
+            document.getElementById('step-success').style.display = 'none';
+        }
+    </script>
+
+
+</body></html>

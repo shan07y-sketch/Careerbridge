@@ -1,0 +1,239 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>CareerBridge | Choose Your Journey</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#72a08e",
+                        "surface-container-highest": "#e2e3e0",
+                        "surface": "#f9faf7",
+                        "secondary-fixed-dim": "#cfc6b0",
+                        "surface-bright": "#f9faf7",
+                        "inverse-primary": "#a1d1be",
+                        "on-secondary-fixed-variant": "#4c4635",
+                        "surface-dim": "#d9dad8",
+                        "secondary-container": "#e9dfc8",
+                        "secondary": "#655e4c",
+                        "tertiary-fixed-dim": "#b6ccc0",
+                        "on-surface": "#1a1c1b",
+                        "on-error-container": "#93000a",
+                        "tertiary-container": "#20332b",
+                        "outline-variant": "#c0c8c3",
+                        "surface-container": "#edeeeb",
+                        "on-tertiary-fixed": "#0c1f18",
+                        "surface-tint": "#3a6757",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#bcedd9",
+                        "on-surface-variant": "#404945",
+                        "background": "#f9faf7",
+                        "on-tertiary-container": "#879b91",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#384b42",
+                        "primary-fixed-dim": "#a1d1be",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#023629",
+                        "inverse-surface": "#2e312f",
+                        "on-background": "#1a1c1b",
+                        "surface-variant": "#e2e3e0",
+                        "tertiary-fixed": "#d2e8db",
+                        "surface-container-high": "#e8e8e6",
+                        "on-secondary-fixed": "#201b0d",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#0b1e16",
+                        "on-secondary-container": "#696250",
+                        "inverse-on-surface": "#f0f1ee",
+                        "on-tertiary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f3f4f1",
+                        "primary": "#001f16",
+                        "on-primary-fixed": "#002117",
+                        "secondary-fixed": "#ece2cb",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#214f40",
+                        "outline": "#717975"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "section-gap": "80px",
+                        "container-max": "1280px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "64px",
+                        "stack-sm": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Manrope"],
+                        "body-md": ["Manrope"],
+                        "body-lg": ["Manrope"],
+                        "label-sm": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "display": ["Manrope"],
+                        "headline-md": ["Manrope"],
+                        "label-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #f9faf7;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .selection-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0, 31, 22, 0.08);
+        }
+        .selection-card.selected {
+            border: 2px solid #023629;
+            background-color: rgba(161, 209, 190, 0.1);
+            box-shadow: 0 10px 30px rgba(2, 54, 41, 0.08);
+            transform: translateY(-2px);
+        }
+        .selection-card.selected .check-mark {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .btn-continue:disabled {
+            background-color: #e2e3e0;
+            color: #717975;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="text-on-surface" style="background-image: radial-gradient(circle at 36.6406% 99.108%, rgba(161, 209, 190, 0.05) 0%, transparent 50%);">
+<!-- TopNavBar -->
+<nav class="bg-surface sticky top-0 z-50 shadow-[0_4px_20px_rgba(2,54,41,0.04)]">
+<div class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-2">
+<span class="text-headline-md font-headline-md font-bold text-primary">CareerBridge</span>
+</div>
+<div class="flex items-center gap-stack-lg">
+
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary-fixed-dim transition-colors py-1" href="#">Sign In</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="min-h-[calc(100vh-160px)] flex items-center justify-center py-section-gap px-margin-mobile md:px-0">
+<div class="w-full max-w-4xl bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(2,54,41,0.04)] p-stack-lg md:p-16 text-center border border-primary/5">
+<!-- Header Section -->
+<header class="mb-12">
+<h1 class="font-headline-lg text-headline-lg md:text-display text-primary mb-4">Choose Your Journey</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto">Select how you'd like to experience CareerBridge.</p>
+</header>
+<!-- Selection Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<!-- Student Card -->
+<button class="selection-card relative flex flex-col items-center p-8 rounded-xl bg-white text-left h-full selected" id="card-student" onclick="selectRole('student')" type="button">
+
+<div class="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="school">school</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-3">Student</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Discover internships, jobs, and AI-powered career guidance.</p>
+</button>
+<!-- Employer Card -->
+<button class="selection-card relative flex flex-col items-center p-8 rounded-xl bg-white text-left h-full" id="card-employer" onclick="selectRole('employer')" type="button">
+
+<div class="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="corporate_fare">corporate_fare</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-3">Employer</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Recruit top student talent and streamline your hiring process.</p>
+</button>
+<!-- University Card -->
+<button class="selection-card relative flex flex-col items-center p-8 rounded-xl bg-white text-left h-full" id="card-university" onclick="selectRole('university')" type="button">
+
+<div class="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="account_balance">account_balance</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-3">University</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage placements and build strategic industry partnerships.</p>
+</button>
+</div>
+<!-- Action Section -->
+<div class="flex flex-col items-center gap-6">
+<button class="btn-continue px-12 py-4 rounded-full font-label-md text-label-md bg-primary text-white bg-primary-container" id="continue-btn">
+                    Continue
+                </button>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                    Already have an account? <a class="text-primary-container font-bold hover:underline" href="#">Sign In</a>
+</p>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface border-t border-outline-variant/10">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin-desktop py-stack-lg max-w-container-max mx-auto gap-4"><div class="font-label-sm text-label-sm text-on-surface-variant opacity-70">
+                © 2026 CareerBridge
+            </div>
+            <div class="flex gap-stack-lg">
+                <a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors opacity-70 hover:opacity-100" href="#">Privacy Policy</a>
+                <a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors opacity-70 hover:opacity-100" href="#">Terms of Service</a>
+                <a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors opacity-70 hover:opacity-100" href="#">Support</a>
+            </div></div>
+</footer>
+<script>
+        function selectRole(role) {
+            // Remove selection from all cards
+            document.querySelectorAll('.selection-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add selection to clicked card
+            const selectedCard = document.getElementById(`card-${role}`);
+            selectedCard.classList.add('selected');
+
+            // Enable continue button
+            const continueBtn = document.getElementById('continue-btn');
+            continueBtn.disabled = false;
+            
+            // Subtle feedback: reset bg then apply
+            continueBtn.classList.remove('bg-surface-variant');
+            continueBtn.classList.add('bg-primary-container');
+            
+            // Log for prototype purpose
+            console.log(`Role selected: ${role}`);
+        }
+
+        // Optional: Atmospheric micro-interaction for background
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            document.body.style.backgroundImage = `radial-gradient(circle at ${x * 100}% ${y * 100}%, rgba(161, 209, 190, 0.05) 0%, transparent 50%)`;
+        });
+    </script>
+
+
+</body></html>

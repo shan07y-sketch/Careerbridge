@@ -1,0 +1,237 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Success | CareerBridge</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed-dim": "#a1d1be",
+                    "tertiary": "#0b1e16",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#d2e8db",
+                    "tertiary-fixed-dim": "#b6ccc0",
+                    "error-container": "#ffdad6",
+                    "surface-container-low": "#f3f4f1",
+                    "primary": "#001f16",
+                    "on-error-container": "#93000a",
+                    "surface-bright": "#f9faf7",
+                    "surface-dim": "#d9dad8",
+                    "secondary-fixed-dim": "#cfc6b0",
+                    "secondary": "#655e4c",
+                    "inverse-primary": "#a1d1be",
+                    "on-tertiary-container": "#879b91",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#696250",
+                    "surface-container-high": "#e8e8e6",
+                    "on-primary-container": "#72a08e",
+                    "primary-fixed": "#bcedd9",
+                    "on-secondary-fixed": "#201b0d",
+                    "on-error": "#ffffff",
+                    "on-surface": "#1a1c1b",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#214f40",
+                    "on-tertiary-fixed-variant": "#384b42",
+                    "inverse-surface": "#2e312f",
+                    "surface-container": "#edeeeb",
+                    "outline-variant": "#c0c8c3",
+                    "background": "#f9faf7",
+                    "surface-variant": "#e2e3e0",
+                    "secondary-fixed": "#ece2cb",
+                    "on-tertiary-fixed": "#0c1f18",
+                    "on-surface-variant": "#404945",
+                    "surface-container-highest": "#e2e3e0",
+                    "secondary-container": "#e9dfc8",
+                    "tertiary-container": "#20332b",
+                    "on-secondary-fixed-variant": "#4c4635",
+                    "outline": "#717975",
+                    "on-background": "#1a1c1b",
+                    "inverse-on-surface": "#f0f1ee",
+                    "surface": "#f9faf7",
+                    "on-tertiary": "#ffffff",
+                    "surface-tint": "#3a6757",
+                    "primary-container": "#023629",
+                    "on-primary-fixed": "#002117"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-max": "1280px",
+                    "stack-sm": "8px",
+                    "stack-lg": "32px",
+                    "section-gap": "80px",
+                    "gutter": "24px",
+                    "unit": "8px",
+                    "margin-desktop": "64px",
+                    "stack-md": "16px",
+                    "margin-mobile": "20px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Manrope"],
+                    "display": ["Manrope"],
+                    "headline-lg-mobile": ["Manrope"],
+                    "label-sm": ["Manrope"],
+                    "label-md": ["Manrope"],
+                    "headline-lg": ["Manrope"],
+                    "body-lg": ["Manrope"],
+                    "body-md": ["Manrope"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #f9faf7;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .confetti-slow {
+            animation: confettiFall 4s linear infinite;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- TopNavBar (Suppressed nav links for transactional flow) -->
+<header class="bg-surface dark:bg-inverse-surface shadow-[0_4px_20px_rgba(2,54,41,0.04)] sticky top-0 z-50">
+<nav class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">
+                CareerBridge
+            </div>
+<div class="flex items-center gap-stack-md">
+<button class="font-label-md text-label-md px-4 py-2 text-on-surface-variant hover:text-primary transition-colors">
+                    Sign In
+                </button>
+</div>
+</nav>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow flex items-center justify-center relative overflow-hidden px-margin-mobile md:px-0">
+<!-- Subtle Background Animation -->
+<div class="absolute inset-0 pointer-events-none opacity-20">
+
+</div>
+<!-- Success Content Card -->
+<div class="fade-in max-w-2xl w-full text-center z-10 py-section-gap">
+<div class="mb-stack-lg inline-flex items-center justify-center w-24 h-24 bg-surface-container-lowest rounded-full shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5">
+<span class="text-6xl">🎉</span>
+</div>
+<h1 class="font-display text-display text-primary mb-stack-md">Welcome to CareerBridge!</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-stack-lg max-w-lg mx-auto">Your AI career profile is ready. We'll now personalize your dashboard using your academic profile, skills and career goals.</p>
+<!-- Action Buttons -->
+<div class="flex flex-col md:flex-row items-center justify-center gap-stack-md pt-stack-md">
+<button class="w-full md:w-auto bg-primary-container text-white px-8 py-4 rounded-xl font-label-md text-label-md hover:opacity-90 transform active:scale-95 transition-all duration-200 shadow-lg shadow-primary-container/10">Go to Dashboard</button>
+<button class="w-full md:w-auto bg-transparent border border-outline text-primary px-8 py-4 rounded-xl font-label-md text-label-md hover:bg-surface-container-low transition-colors duration-200">Edit Profile</button>
+</div>
+<!-- Profile Summary (Bento-style preview) -->
+<div class="mt-section-gap grid grid-cols-1 md:grid-cols-3 gap-stack-md">
+<div class="bg-surface-container-lowest p-stack-md rounded-xl border border-primary/5 shadow-sm">
+<span class="material-symbols-outlined text-primary mb-2">school</span>
+<p class="font-label-sm text-label-sm text-outline uppercase tracking-wider mb-1">Academic</p>
+<p class="font-headline-md text-label-md text-on-surface">Verified Profile</p>
+</div>
+<div class="bg-surface-container-lowest p-stack-md rounded-xl border border-primary/5 shadow-sm">
+<span class="material-symbols-outlined text-primary mb-2">bolt</span>
+<p class="font-label-sm text-label-sm text-outline uppercase tracking-wider mb-1">Skills</p>
+<p class="font-headline-md text-label-md text-on-surface">12 Skills Mapped</p>
+</div>
+<div class="bg-surface-container-lowest p-stack-md rounded-xl border border-primary/5 shadow-sm">
+<span class="material-symbols-outlined text-primary mb-2">target</span>
+<p class="font-label-sm text-label-sm text-outline uppercase tracking-wider mb-1">Goals</p>
+<p class="font-headline-md text-label-md text-on-surface">Career Path Set</p>
+</div>
+</div>
+</div>
+<!-- Decorative Confetti Layer -->
+<div class="absolute inset-0 pointer-events-none" id="confetti-container"></div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface dark:bg-inverse-surface border-t border-outline-variant/10">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin-desktop py-stack-lg max-w-container-max mx-auto">
+<div class="text-label-sm font-label-sm text-on-surface-variant mb-4 md:mb-0">
+                © 2024 CareerBridge. All rights reserved.
+            </div>
+<div class="flex gap-stack-lg">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Help Center</a>
+</div>
+</div>
+</footer>
+<script>
+        // Simple confetti interaction
+        function createConfetti() {
+            const container = document.getElementById('confetti-container');
+            const colors = ['#023629', '#a1d1be', '#bcedd9', '#cfc6b0', '#655e4c'];
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti-slow absolute';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-5vh';
+                confetti.style.width = '8px';
+                confetti.style.height = '8px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0%';
+                confetti.style.animationDelay = (Math.random() * 3) + 's';
+                confetti.style.opacity = '0.7';
+                container.appendChild(confetti);
+
+                // Remove after animation
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        // Trigger on load
+        window.addEventListener('DOMContentLoaded', () => {
+            createConfetti();
+        });
+
+        // Hover interaction for the emoji container
+        const emojiBox = document.querySelector('.mb-stack-lg');
+        emojiBox.addEventListener('mouseenter', () => {
+            emojiBox.classList.add('scale-110', 'transition-transform');
+            createConfetti();
+        });
+        emojiBox.addEventListener('mouseleave', () => {
+            emojiBox.classList.remove('scale-110');
+        });
+    </script>
+
+
+</body></html>

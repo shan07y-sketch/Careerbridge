@@ -1,0 +1,491 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Career Messaging | CareerBridge</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#ece2cb",
+                    "outline": "#717975",
+                    "tertiary-fixed": "#d2e8db",
+                    "secondary-fixed-dim": "#cfc6b0",
+                    "tertiary-container": "#20332b",
+                    "surface-variant": "#e2e3e0",
+                    "secondary-container": "#e9dfc8",
+                    "on-primary-fixed-variant": "#214f40",
+                    "error-container": "#ffdad6",
+                    "inverse-on-surface": "#f0f1ee",
+                    "primary-fixed-dim": "#a1d1be",
+                    "inverse-surface": "#2e312f",
+                    "primary-fixed": "#bcedd9",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "surface-container-low": "#f3f4f1",
+                    "surface-tint": "#3a6757",
+                    "surface-container-highest": "#e2e3e0",
+                    "background": "#f9faf7",
+                    "secondary": "#655e4c",
+                    "surface-dim": "#d9dad8",
+                    "surface-bright": "#f9faf7",
+                    "on-primary-container": "#72a08e",
+                    "tertiary-fixed-dim": "#b6ccc0",
+                    "on-tertiary-fixed-variant": "#384b42",
+                    "error": "#ba1a1a",
+                    "primary-container": "#023629",
+                    "on-surface": "#1a1c1b",
+                    "surface": "#f9faf7",
+                    "on-surface-variant": "#404945",
+                    "outline-variant": "#c0c8c3",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-high": "#e8e8e6",
+                    "inverse-primary": "#a1d1be",
+                    "on-tertiary": "#ffffff",
+                    "primary": "#001f16",
+                    "on-background": "#1a1c1b",
+                    "tertiary": "#0b1e16",
+                    "on-secondary-container": "#696250",
+                    "on-primary-fixed": "#002117",
+                    "surface-container": "#edeeeb",
+                    "on-tertiary-fixed": "#0c1f18",
+                    "on-secondary-fixed-variant": "#4c4635",
+                    "on-error": "#ffffff",
+                    "on-tertiary-container": "#879b91",
+                    "on-secondary-fixed": "#201b0d",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "16px",
+                    "section-gap": "80px",
+                    "margin-desktop": "64px",
+                    "unit": "8px",
+                    "gutter": "24px",
+                    "stack-lg": "32px",
+                    "container-max": "1280px",
+                    "margin-mobile": "20px",
+                    "stack-sm": "8px"
+            },
+            "fontFamily": {
+                    "display": ["Manrope"],
+                    "headline-lg": ["Manrope"],
+                    "headline-md": ["Manrope"],
+                    "label-md": ["Manrope"],
+                    "body-lg": ["Manrope"],
+                    "label-sm": ["Manrope"],
+                    "body-md": ["Manrope"]
+            },
+            "fontSize": {
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f9faf7;
+            font-family: 'Manrope', sans-serif;
+            overflow: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c0c8c3;
+            border-radius: 10px;
+        }
+        .transition-250 {
+            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- Sidebar Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col h-full py-stack-lg bg-surface dark:bg-surface-container shadow-[0_4px_20px_rgba(2,54,41,0.04)] z-50">
+<div class="px-6 mb-8">
+<h1 class="font-display text-headline-md text-primary">CareerBridge</h1>
+<p class="text-label-sm text-outline uppercase tracking-wider">Enterprise</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center px-3 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:text-primary">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:text-primary">work</span>
+<span class="font-label-md text-label-md">Jobs</span>
+</a>
+<!-- Active State: Messages -->
+<a class="flex items-center px-3 py-3 rounded-lg text-primary font-bold border-r-4 border-primary bg-surface-container-high active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined mr-3" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+<span class="font-label-md text-label-md">Messages</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:text-primary">group</span>
+<span class="font-label-md text-label-md">Network</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-150 group" href="#">
+<span class="material-symbols-outlined mr-3 group-hover:text-primary">menu_book</span>
+<span class="font-label-md text-label-md">Resources</span>
+</a>
+</nav>
+<div class="px-3 mt-auto pt-4 border-t border-outline-variant/30">
+<a class="flex items-center px-3 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined mr-3">help</span>
+<span class="font-label-md text-label-md">Help</span>
+</a>
+<div class="mt-4 p-4 rounded-xl bg-primary-container text-on-primary-container"><p class="text-label-sm font-bold mb-3">Messaging Insights</p><div class="space-y-2 mb-4"><div class="flex justify-between text-[10px]"><span class="opacity-80">Unread Messages</span><span class="font-bold">3</span></div><div class="flex justify-between text-[10px]"><span class="opacity-80">Response Rate</span><span class="font-bold">98%</span></div><div class="flex justify-between text-[10px]"><span class="opacity-80">Avg. Response Time</span><span class="font-bold">2h</span></div><div class="flex justify-between text-[10px]"><span class="opacity-80">Upcoming Meetings</span><span class="font-bold">2</span></div></div><button class="w-full py-2 bg-on-primary-container text-primary-container rounded-lg font-bold text-xs hover:opacity-90 transition-all">View Analytics</button></div>
+</div>
+</aside>
+<!-- Top Navigation Bar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-surface flex justify-between items-center px-margin-desktop border-b border-outline-variant/30 z-40">
+<div class="flex items-center space-x-8">
+<h2 class="font-headline-md text-headline-md font-bold text-primary">Messages</h2>
+<nav class="hidden md:flex items-center space-x-6 h-full">
+<a class="text-primary border-b-2 border-primary pb-1 font-body-md text-body-md transition-all active:opacity-80" href="#">All Chats</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md transition-all active:opacity-80" href="#">Unread</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md transition-all active:opacity-80" href="#">Archived</a>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<button class="p-2 text-outline hover:text-primary transition-250">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="bg-primary-container text-on-primary-container px-6 py-2 rounded-full font-label-md hover:opacity-90 transition-all active:scale-95">
+                New Message
+            </button>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Professional headshot of a young professional woman with a friendly smile, dressed in business casual attire, against a soft-focus office background with natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjDEVEXiOiPNYNA4Ofo0LBHfrG63jH3zk7Eh454l3VOb137CDgvb1ODUIfvq5HMrKTnaJmJuruszR887utdTMphEKOu-S2TAdaULgZN-SRHqoJvKj5JNo1ep9yqjEROU5AbMAwIRoYewdwjYxAlRM3aKxXLRuD5erT0vk9A4g4TTlpSCRQsA1gmukSceKd_Jo7G5WRa9BCM6711ffbShlT8yXoGBbtoVzPb2wZgaybDkIqeGQggiPR71nMq50_2zAOr527OuWAj_g">
+</div>
+</div>
+</header>
+<!-- Main Content Canvas (Three-Column Layout) -->
+<main class="ml-64 pt-16 h-screen flex overflow-hidden">
+<!-- Left Panel: Conversation List -->
+<section class="w-80 flex-shrink-0 flex flex-col border-r border-outline-variant/30 bg-surface-container-lowest">
+<div class="p-4 space-y-4">
+<!-- Search Bar -->
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-250" placeholder="Search by recruiter, company, or keyword" type="text">
+</div>
+<!-- Filters (Horizontal Scroll) -->
+<div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar custom-scrollbar">
+<button class="flex-shrink-0 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container font-label-sm">All</button>
+<button class="flex-shrink-0 px-4 py-1.5 rounded-full bg-secondary-container/40 text-secondary font-label-sm hover:bg-secondary-container transition-250">Recruiters</button>
+<button class="flex-shrink-0 px-4 py-1.5 rounded-full bg-secondary-container/40 text-secondary font-label-sm hover:bg-secondary-container transition-250">Mentors</button>
+<button class="flex-shrink-0 px-4 py-1.5 rounded-full bg-secondary-container/40 text-secondary font-label-sm hover:bg-secondary-container transition-250">Pinned</button>
+</div>
+</div>
+<!-- Conversation Items -->
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<!-- Active Conversation -->
+<div class="p-4 bg-secondary-container/30 border-l-4 border-primary flex items-start gap-3 cursor-pointer group transition-250">
+<div class="relative flex-shrink-0">
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-primary-fixed-dim">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a Asian woman with glasses and professional attire, Sarah Chen, in a high-key bright office setting with warm ambient lighting. The style is premium corporate minimalism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwc6Lf-M0cP0Vcbc3NJCkuy3qJPK9FNFwhfD5voTf-zElldhQIwLtMJ32Ade_lsE_p0vDxmuwa9EL1ftnTfpUwjxhfYWHiwRpV2vlKVdlMHb_z6DrmUr20-HqvJUHkbMUiXPrwwJAQCc64qG6dH8cyylVBJfnVjL0ItgpGZcMqKgOWxZpu3m7nGEstxP794RMlb4B3aW8ZVjGmMU24xZhClLmdSl-GYW5hL1sPMXdVaPM2DjlFBgo9gjSbcOy4AS0peEj1B0-wZ8Y">
+</div>
+<div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h4 class="font-label-md text-primary truncate">Sarah Chen</h4>
+<span class="text-[10px] text-outline">10:24 AM</span>
+</div>
+<p class="text-xs text-secondary font-medium truncate">Tech Recruiter @ Stripe</p>
+<p class="text-xs text-on-surface-variant mt-1 line-clamp-1">I've reviewed your portfolio and I'm very impressed with the...</p>
+</div>
+</div>
+<!-- Other Conversations -->
+<div class="p-4 hover:bg-surface-container transition-250 flex items-start gap-3 cursor-pointer border-b border-outline-variant/10">
+<div class="relative flex-shrink-0">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A dignified older man with grey hair and a warm smile, Dr. Julian V., wearing a structured dark blazer in a minimalist academic or professional environment. Soft natural lighting emphasizes trust and experience." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCi-YMv4A9vlXl2L8-c_UZYDxrAgE5JL39xUdCwflAo1kyMr25y-cbluKEqDBbZQfZlaNMYkqplXarPHs43KITZcgMUfiXvW-UV01YWbXGh5um202rVMfjRzW93No_eUwiig1JtKCkxlyeIE6r4IlG198MJEMyRHjrPGcCLWabBCWZKXkNl1Q6es9b_VnXKqzY98b_tfKmHL1hjODGePmNaKfVQRIU2e8DVZqSc4GFiAdxfs3mIa2Dl876j3NRayRWemY7N9d1w1Vs">
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h4 class="font-label-md text-on-surface truncate">Dr. Julian V.</h4>
+<span class="text-[10px] text-outline">Yesterday</span>
+</div>
+<p class="text-xs text-outline truncate">Senior Mentor @ CareerBridge</p>
+<p class="text-xs text-outline mt-1 line-clamp-1">That's a great approach to the case study. Let's discuss...</p>
+</div>
+<div class="flex-shrink-0 self-center">
+<div class="w-2 h-2 bg-primary rounded-full"></div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-container transition-250 flex items-start gap-3 cursor-pointer border-b border-outline-variant/10">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-container-high flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A professional young man with a modern haircut, Marcus Thorne, smiling warmly. He is in a brightly lit, high-end coworking space with glass and wood textures, reflecting a sleek tech corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwK7gcLcdKAtNUAwSXCopB7_e7_1m_sAVNEZ9PfXhX_R595iQsLP8hljQiq1HaRmrXNgZwZdPGZju2ny3YAXIZEEgQT9msIRGD7E7-hvg_zbFW_CPFzptOMXxnBpUXgILJZ1rtHk4s0YPqdCHmPh32JhxqODm9ZGQY-PIpIlKkFdrfCnCKgQLgSN3zlYyKTb5uxQPcNIaz9esg6t3mjtCMTLcU06N1bjT1LkJEZz5JbU7bKldaI0BOBlDiXkmvGe0LQXfDC_KLM1g">
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h4 class="font-label-md text-on-surface truncate">Marcus Thorne</h4>
+<span class="text-[10px] text-outline">Tue</span>
+</div>
+<p class="text-xs text-outline truncate">Design Lead @ Canva</p>
+<p class="text-xs text-outline mt-1 line-clamp-1">Sent you the Figma file for the collaborative project.</p>
+</div>
+</div>
+<!-- More items... -->
+<div class="p-4 hover:bg-surface-container transition-250 flex items-start gap-3 cursor-pointer border-b border-outline-variant/10">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-container-high flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A focused female executive, Elena Rodriguez, in a minimalist high-rise office at sunset. The lighting is golden and soft, creating a premium professional atmosphere. She is wearing a professional suit jacket." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsdToQapphi_FRVz7kBhaVF6nhTTnsqWMXZ7e78OkHNXTwsIVrbzOqX2GDrGsl2ToRqbQVfadgFNZtC-d6ZNwBpOPq7sqLCKwTvvMFk-yIp_C32-L7A8rXjzs4KHLd3wHa0YoCbK6NNZElPFgIpbVobHQqPaVp3C-DYGtZGIDH2HP9YqDydBb6MH8S4TSrks_7RZu9bnjBzf-ImDvgwuWZ9wGUmBi-vrYy0Xa59MnLBDdDEsrUgN-vlV7nNCz-gXkqkq29wcAoZrw">
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline">
+<h4 class="font-label-md text-on-surface truncate">Elena Rodriguez</h4>
+<span class="text-[10px] text-outline">Monday</span>
+</div>
+<p class="text-xs text-outline truncate">VP Engineering @ Adobe</p>
+<p class="text-xs text-outline mt-1 line-clamp-1">Thanks for the referral! I'll keep you posted on the progress.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Center Panel: Chat Window -->
+<section class="flex-1 flex flex-col bg-surface overflow-hidden relative">
+<!-- Chat Header -->
+<div class="px-6 py-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface/90 backdrop-blur-sm z-10">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Close up of Sarah Chen, a professional tech recruiter, with a neutral and focused expression. The background is a clean, minimal white wall with high-end architectural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2SaXdjNCbYUd4LDRMY6nvctwhlV9D9YdT7TAo8xSlwaXndeQWCr60Q_M_qodO9cT0J-xreFW0sPW2LUHf24dIRXWZmME5jzUOx8aqdrP-CV0yEhfeUGV8HGVuKDwxFSQLsdH4u3WiqlEd9KyQiv_S0N7Z-07ru9ED5cIeeiZhkTgT90AQSJjuUFzDAEfYfvIUeLNt5U-SkyvyVqbj8lKwH6zgqNhSuaKMyL1k8hjdhZidSSiT4RWHJI2tc4crglIAnZpZLZOasFw">
+</div>
+<div>
+<div class="flex items-center gap-2"><h3 class="font-headline-md text-[18px] leading-tight">Sarah Chen</h3><span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">verified</span><span class="w-2 h-2 bg-green-500 rounded-full ml-1"></span></div>
+<p class="text-xs text-outline">Tech Recruiter @ Stripe • Online • Responds in 1h</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-lg hover:bg-surface-container-high text-outline hover:text-primary transition-250">
+<span class="material-symbols-outlined">videocam</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-surface-container-high text-outline hover:text-primary transition-250">
+<span class="material-symbols-outlined">call</span>
+</button>
+<div class="w-px h-6 bg-outline-variant/50 mx-2"></div>
+<button class="px-4 py-2 border border-outline-variant rounded-lg text-label-sm font-bold text-primary hover:bg-surface-container transition-250 flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">description</span>Attach Resume</button><button class="px-4 py-2 border border-outline-variant rounded-lg text-label-sm font-bold text-primary hover:bg-surface-container transition-250">View Profile</button>
+</div>
+</div>
+<!-- Message Area -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-surface-container-low/20">
+<div class="flex justify-center">
+<span class="px-4 py-1 rounded-full bg-surface-container-high text-[10px] text-outline font-bold uppercase tracking-widest">Today</span>
+</div>
+<!-- Received Message -->
+<div class="flex items-start gap-3 max-w-[80%]">
+<div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Small thumbnail profile photo of Sarah Chen." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-cv3a4lwmxY1sf0T95WG7w_gXOf_wExwcG1tMnBLNrau4YIjPUanpn9KkCi08M3btsgTz90LjrF810m0U-k9PdNKYA7-0_kGOvwEaC72C5iK6gYbwZtcykCpNjbouStQ7200Ypc4DSlKfD3GLOI3oQT6C3YclK6w26k2k8hKaAh47upboNtdJIKmD54Ge2C8HYcsz1OxIgB4kinFyFLvkq0XvyqoX89TDsUNeugvbcSdYP7B4fA-K-3qDn1PJjhog7Oad4AnpbRA">
+</div>
+<div>
+<div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-outline-variant/10">
+<p class="text-body-md text-on-surface">Hi there! I've reviewed your portfolio and I'm very impressed with the work you've done for the Fintech dashboard. The user flow is exceptionally clean.</p>
+</div>
+<span class="text-[10px] text-outline mt-1 ml-1">10:24 AM</span>
+</div>
+</div>
+<!-- Received Message -->
+<div class="flex items-start gap-3 max-w-[80%]">
+<div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Small thumbnail profile photo of Sarah Chen." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4H7itDsDVVn8ebbGsS-tqH7jjLUKbDQ7xi-wRPbMoPgmMUT9g1-rVShL-y-KUUCDpZWakWGJ-bn7VS0Z5WwrcpbIhVLTx6sXEumNnYxwM-J6_aVIOy7u6S7J0P64NgWFyTD6ltmdRc-pKfGclGIA2eBFjeRpjH4WjQcmV4r_MN8yNkwaVhbz9NzQ8nhevbd2JCS2FaG9IkUAOPqUB7pLUZ6LXIQmchgnrI8BkOr29hx4a4FqPVxCT9vpTj4tqxusmxbeYxLzQWzs">
+</div>
+<div>
+<div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-outline-variant/10">
+<p class="text-body-md text-on-surface">Would you be available for a brief introductory call next Tuesday or Wednesday? We have some interesting Product Design openings that might be a great fit.</p>
+</div>
+<span class="text-[10px] text-outline mt-1 ml-1">10:25 AM</span>
+</div>
+</div>
+<!-- Sent Message -->
+<div class="flex flex-row-reverse items-start gap-3 max-w-[80%] ml-auto">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-on-primary-container border border-on-primary-container/20">
+                        JD
+                    </div>
+<div class="text-right">
+<div class="bg-primary-container p-4 rounded-2xl rounded-tr-none shadow-sm">
+<p class="text-body-md text-on-primary-fixed">Thank you so much, Sarah! I'm glad you liked the Fintech project. Tuesday afternoon works perfectly for me. Shall we say 2:00 PM EST?</p>
+</div>
+<div class="flex justify-end items-center gap-1 mt-1 mr-1">
+<span class="text-[10px] text-outline">10:32 AM</span>
+<span class="material-symbols-outlined text-primary text-[14px]">done_all</span>
+</div>
+</div>
+</div>
+<!-- Typing Indicator -->
+<div class="flex items-center gap-2 text-outline">
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 bg-outline rounded-full animate-bounce"></div>
+<div class="w-1.5 h-1.5 bg-outline rounded-full animate-bounce [animation-delay:0.2s]"></div>
+<div class="w-1.5 h-1.5 bg-outline rounded-full animate-bounce [animation-delay:0.4s]"></div>
+</div>
+<span class="text-[11px] font-medium italic">Sarah is typing...</span>
+</div>
+</div>
+<!-- AI Assistant Module (Docked) -->
+<div class="mx-6 mb-2">
+<div class="bg-white border border-secondary-fixed shadow-sm rounded-xl p-3 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-secondary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<p class="text-xs font-bold text-secondary">AI Writing Assistant</p>
+<div class="flex gap-2 mt-1"><button class="px-3 py-1 rounded-full bg-secondary-container/30 text-[10px] font-bold text-secondary hover:bg-secondary-container/50 transition-250 border border-secondary-fixed/50">Professional Tone</button><button class="px-3 py-1 rounded-full bg-secondary-container/30 text-[10px] font-bold text-secondary hover:bg-secondary-container/50 transition-250 border border-secondary-fixed/50">Grammar Check</button><button class="px-3 py-1 rounded-full bg-secondary-container/30 text-[10px] font-bold text-secondary hover:bg-secondary-container/50 transition-250 border border-secondary-fixed/50">Shorten</button><button class="px-3 py-1 rounded-full bg-secondary-container/30 text-[10px] font-bold text-secondary hover:bg-secondary-container/50 transition-250 border border-secondary-fixed/50">Expand</button><button class="px-3 py-1 rounded-full bg-secondary-container/30 text-[10px] font-bold text-secondary hover:bg-secondary-container/50 transition-250 border border-secondary-fixed/50">Follow-up</button><button class="px-3 py-1 rounded-full bg-secondary-container/30 text-[10px] font-bold text-secondary hover:bg-secondary-container/50 transition-250 border border-secondary-fixed/50">Summarize</button></div>
+</div>
+</div>
+<button class="text-outline hover:text-primary transition-250">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-6 border-t border-outline-variant/30 bg-surface">
+<div class="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-2 focus-within:ring-2 focus-within:ring-primary/20 transition-250">
+<textarea class="w-full bg-transparent border-none focus:ring-0 text-body-md resize-none h-12 custom-scrollbar p-2" placeholder="Type a message..."></textarea>
+<div class="flex justify-between items-center mt-2">
+<div class="flex gap-1"><button class="p-2 hover:bg-surface-container-high rounded-lg text-outline transition-250" title="Emoji"><span class="material-symbols-outlined">sentiment_satisfied</span></button><button class="p-2 hover:bg-surface-container-high rounded-lg text-outline transition-250" title="Images"><span class="material-symbols-outlined">image</span></button><button class="p-2 hover:bg-surface-container-high rounded-lg text-outline transition-250" title="PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button><button class="p-2 hover:bg-surface-container-high rounded-lg text-outline transition-250" title="Resume"><span class="material-symbols-outlined">description</span></button><button class="p-2 hover:bg-surface-container-high rounded-lg text-outline transition-250" title="Portfolio"><span class="material-symbols-outlined">folder_shared</span></button><button class="p-2 hover:bg-surface-container-high rounded-lg text-outline transition-250" title="Voice Message"><span class="material-symbols-outlined">mic</span></button></div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:shadow-lg active:scale-95 transition-all">
+                            Send
+                            <span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Panel: Information & Actions -->
+<section class="w-72 flex-shrink-0 border-l border-outline-variant/30 bg-surface-container-lowest overflow-y-auto custom-scrollbar p-6">
+<!-- Profile Summary -->
+<div class="text-center mb-8">
+<div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-primary/10 mx-auto mb-4 shadow-sm">
+<img class="w-full h-full object-cover" data-alt="High-resolution professional profile picture of Sarah Chen, a Tech Recruiter at Stripe. Bright, clean minimalist office background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCp0SSmeXNuy1XR27XdxBXuTNfgyP4ZEBhLfMs6hJl-XRjq7bCxawAn4y5xHxqFUVfsQCxoUGeZqMqWSIgehhkEbBNSqmiPvEOr48C53SlR4YyPSvL3n0vj_UQj-uMePy8j8KuyATRsfKE4Ku6lggJhZRL3QI4cPu8CclAKlSN22a6a7my1o97qHMlvwsToWXlw8q_S3UvWAthh9oVgYJSQTqLHfgKz3f00WAsLxyJYkvySy0353VELakLYUmCmXkyJeS5BXOavQxk">
+</div>
+<h4 class="font-headline-md text-headline-md text-[20px]">Sarah Chen</h4>
+<p class="text-sm text-outline mt-1">Tech Recruiter @ Stripe</p>
+<div class="flex justify-center gap-4 mt-4">
+<div class="text-center">
+<p class="text-xs font-bold text-primary">5.0</p>
+<p class="text-[10px] text-outline uppercase">Rating</p>
+</div>
+<div class="w-px h-8 bg-outline-variant/50"></div>
+<div class="text-center">
+<p class="text-xs font-bold text-primary">12k+</p>
+<p class="text-[10px] text-outline uppercase">Network</p>
+</div>
+<div class="w-px h-8 bg-outline-variant/50"></div>
+<div class="text-center">
+<p class="text-xs font-bold text-primary">14</p>
+<p class="text-[10px] text-outline uppercase">Mutuals</p>
+</div>
+</div><div class="mt-6 pt-4 border-t border-outline-variant/30 text-left space-y-2"><div class="flex justify-between items-center"><span class="text-[10px] text-outline uppercase font-bold">Open Positions</span><span class="text-xs font-bold text-primary">12 Open Roles</span></div><div class="flex justify-between items-center"><span class="text-[10px] text-outline uppercase font-bold">Hiring Status</span><span class="text-xs font-bold text-green-500">Active</span></div><div class="flex justify-between items-center"><span class="text-[10px] text-outline uppercase font-bold">Response Rate</span><span class="text-xs font-bold text-primary">95%</span></div></div><div class="mt-6 text-left"><h5 class="text-[11px] font-bold text-outline uppercase tracking-widest mb-3">Shared Skills</h5><div class="flex flex-wrap gap-2"><span class="px-2 py-1 bg-surface-container-high rounded text-[10px] font-bold">Product Design</span><span class="px-2 py-1 bg-surface-container-high rounded text-[10px] font-bold">Fintech</span><span class="px-2 py-1 bg-surface-container-high rounded text-[10px] font-bold">Figma</span></div></div>
+</div>
+<!-- Quick Actions -->
+<div class="space-y-3 mb-8">
+<h5 class="text-[11px] font-bold text-outline uppercase tracking-widest mb-4">Quick Actions</h5>
+<button class="w-full py-3 px-4 rounded-xl border border-primary/10 hover:bg-primary-container hover:text-on-primary-container text-primary font-bold text-xs text-left flex items-center gap-3 transition-250 group">
+<span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-250">calendar_today</span>
+                    Schedule Meeting
+                </button>
+<button class="w-full py-3 px-4 rounded-xl border border-primary/10 hover:bg-primary-container hover:text-on-primary-container text-primary font-bold text-xs text-left flex items-center gap-3 transition-250 group">
+<span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-250">description</span>
+                    Share Resume
+                </button>
+<button class="w-full py-3 px-4 rounded-xl border border-primary/10 hover:bg-primary-container hover:text-on-primary-container text-primary font-bold text-xs text-left flex items-center gap-3 transition-250 group">
+<span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-250">verified</span>
+                    Request Referral
+                </button>
+<button class="w-full py-3 px-4 rounded-xl border border-primary/10 hover:bg-primary-container hover:text-on-primary-container text-primary font-bold text-xs text-left flex items-center gap-3 transition-250 group"><span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-250">school</span>Book Mock Interview</button><button class="w-full py-3 px-4 rounded-xl border border-primary/10 hover:bg-primary-container hover:text-on-primary-container text-primary font-bold text-xs text-left flex items-center gap-3 transition-250 group"><span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-250">rate_review</span>Request Resume Review</button></div>
+<!-- Tabs/Lists Area -->
+<div class="space-y-6"><div><h5 class="text-[11px] font-bold text-outline uppercase tracking-widest mb-3">Upcoming Meetings</h5><div class="p-3 rounded-xl bg-surface-container border border-outline-variant/30"><div class="flex justify-between items-start mb-2"><div><p class="text-xs font-bold">Introductory Call</p><p class="text-[10px] text-outline">Tomorrow, 2:00 PM • Zoom</p></div><span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-bold">In 22h</span></div><button class="w-full py-2 bg-primary text-on-primary rounded-lg font-bold text-[10px] hover:opacity-90 transition-all">Join Meeting</button></div></div>
+<!-- Shared Documents -->
+<div>
+<div class="flex justify-between items-center mb-3">
+<h5 class="text-[11px] font-bold text-outline uppercase tracking-widest">Shared Assets</h5>
+<button class="text-[10px] text-primary font-bold hover:underline">See All</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container transition-250 cursor-pointer border border-transparent hover:border-outline-variant/30"><div class="flex items-center gap-3 min-w-0"><div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span></div><div class="min-w-0"><p class="text-xs font-bold truncate">Portfolio_v2_2024.pdf</p><p class="text-[10px] text-outline">Oct 24 • PDF</p></div></div><button class="p-1.5 text-outline hover:text-primary transition-250"><span class="material-symbols-outlined text-[18px]">download</span></button></div>
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-container transition-250 cursor-pointer border border-transparent hover:border-outline-variant/30">
+<div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">link</span>
+</div>
+<div class="min-w-0">
+<p class="text-xs font-bold truncate">Fintech_Case_Study</p>
+<p class="text-[10px] text-outline">behance.net/portfolio</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Mutual Connections -->
+<div>
+<h5 class="text-[11px] font-bold text-outline uppercase tracking-widest mb-3">Mutual Connections</h5>
+<div class="flex -space-x-3 overflow-hidden">
+<img class="inline-block h-10 w-10 rounded-full border-2 border-white" data-alt="Small circle headshot of a professional connection." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjK79jetvT2wtao5xzo0BK246mRp___WayyzhAHk8u1L8Weu5dqWCALahnqvTbr4S2xbW9On-QaCfgpidvAwRwgQWAiG78tS6JVaGeq5ptIaHDJ_kK7ljl5V4AFE9j1_MPPaV21TYl40zjS_kWzLtLZnABvUw4tDMIgmZaHVfpvm_PTPyZCqs4WA_0tTgwMyVPslserZuD5Q5RfMrj4W-Y_E8gAsGAuKFniwK9Lj2kb8jGsjin1vEsW1wMk1tXNxs52ISWynDVXUI">
+<img class="inline-block h-10 w-10 rounded-full border-2 border-white" data-alt="Small circle headshot of a professional connection." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIrw-nW5GgFhiIk_1vqHEDmotIVDGslVRIlVyOuZvcN1yGxXQzb0m3oZSpN5kBNXIASOqxnc9mYV3wlZ61BipU_mQX7SJzAFuirJ038u_PnmYq6CO3GVe5TaTqM5hpw14SFsqHR1h-Z9ELEgeFOihciQiAC6y82HDvE-m0glHYkbfiydfaP5TkyIjWtI9PFhuoNDA1ukUS2g5kHYbgVuMrdyWEZj5V_FxcrtSl7A7pv2rFGYbbzLLujq1YWX2uRJUQLc-HuFLLQzA">
+<img class="inline-block h-10 w-10 rounded-full border-2 border-white" data-alt="Small circle headshot of a professional connection." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtCHx_7Fb0I9VnHm5feqCjz1vp5y8co7giSkdOEHusFSQqwV1W3-N5Er7erKKS8L2Sx3zPq50zOnsLbvkcO-vpaCrSSw_0LhqWOvLW0jbN9tBjfev0t2dp1tYp16d5SydfTgDyuBF_vJlo9ZwpB4ecqjeeASExJ9LiD738XfORUWWbKiGSiEv1bgVL-k-s4fzzMMeUcU4w3P9ZoawYgGJLfPU1XHHi-1V7xWtZ3aiFPDyifUudDe7zNkmcl038wccNFuzBG9F2Ddw">
+<div class="h-10 w-10 rounded-full bg-secondary-container border-2 border-white flex items-center justify-center text-secondary text-[10px] font-bold">+11</div>
+</div>
+<p class="text-[10px] text-outline mt-2">You both know Marcus Thorne, Elena Rodriguez, and 9 others.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Micro-interactions Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Placeholder for chat scroll to bottom
+            const chatArea = document.querySelector('.overflow-y-auto.p-6');
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // Simple hover effect for list items
+            const conversationItems = document.querySelectorAll('.cursor-pointer');
+            conversationItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    conversationItems.forEach(i => i.classList.remove('bg-secondary-container/30', 'border-l-4', 'border-primary'));
+                    item.classList.add('bg-secondary-container/30', 'border-l-4', 'border-primary');
+                });
+            });
+
+            // Input focus glow
+            const textarea = document.querySelector('textarea');
+            textarea.addEventListener('focus', () => {
+                textarea.parentElement.classList.add('border-primary');
+            });
+            textarea.addEventListener('blur', () => {
+                textarea.parentElement.classList.remove('border-primary');
+            });
+        });
+    </script>
+
+
+</body></html>
