@@ -32,6 +32,12 @@ const Settings = lazy(() => import('./pages/student/Settings'));
 const Notifications = lazy(() => import('./pages/student/Notifications'));
 const CompanyProfile = lazy(() => import('./pages/student/CompanyProfile'));
 const InterviewDetails = lazy(() => import('./pages/student/InterviewDetails'));
+const EmployerDashboard = lazy(() => import('./pages/employer/Dashboard'));
+const UniversityDashboard = lazy(() => import('./pages/university/Dashboard'));
+
+// Admin Pages
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 
 // Legal
 const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
@@ -83,12 +89,130 @@ export const App: React.FC = () => {
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                     {/* Public Pathways */}
-                    <Route path="/" element={<Landing />} />
-                    <Route path="/role-selection" element={<RoleSelection />} />
-                    <Route path="/auth" element={<Authentication />} />
-                    <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/auth/reset-password" element={<ResetPassword />} />
-                    <Route path="/auth/verify-email" element={<EmailVerification />} />
+                     <Route path="/" element={<Landing />} />
+                     <Route path="/login" element={<Authentication />} />
+                     <Route path="/role-selection" element={<RoleSelection />} />
+                     <Route path="/auth" element={<Authentication />} />
+                     <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+                     <Route path="/auth/reset-password" element={<ResetPassword />} />
+                     <Route path="/auth/verify-email" element={<EmailVerification />} />
+
+                     {/* Dedicated Admin Login */}
+                     <Route path="/admin/login" element={<AdminLogin />} />
+
+                     {/* Protected Admin Routes */}
+                     <Route 
+                       path="/admin" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/dashboard" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/analytics" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/users" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/students" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/employers" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/universities" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/ai-monitoring" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/audit-logs" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/reports" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/feature-flags" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/notifications" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/settings" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
+                     <Route 
+                       path="/admin/help-center" 
+                       element={
+                         <ProtectedRoute allowedRoles={['admin']}>
+                           <AdminDashboard />
+                         </ProtectedRoute>
+                       } 
+                     />
 
                     {/* Protected Student Pathways */}
                     <Route 
@@ -224,6 +348,26 @@ export const App: React.FC = () => {
                       element={
                         <ProtectedRoute>
                           <SearchResults />
+                        </ProtectedRoute>
+                      } 
+                    />
+
+                    {/* Protected Employer Pathways */}
+                    <Route 
+                      path="/employer/dashboard" 
+                      element={
+                        <ProtectedRoute allowedRoles={['employer']}>
+                          <EmployerDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+
+                    {/* Protected University Pathways */}
+                    <Route 
+                      path="/university/dashboard" 
+                      element={
+                        <ProtectedRoute allowedRoles={['university']}>
+                          <UniversityDashboard />
                         </ProtectedRoute>
                       } 
                     />

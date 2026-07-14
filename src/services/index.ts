@@ -63,6 +63,11 @@ const fetchJson = async (endpoint: string, options: RequestInit = {}, fallbackDa
     });
 
     if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/refresh') {
+      const hasToken = !!localStorage.getItem('accessToken');
+      if (!hasToken) {
+        throw new Error('Session expired or unauthorized');
+      }
+
       if (!isRefreshing) {
         isRefreshing = true;
         try {
@@ -80,20 +85,28 @@ const fetchJson = async (endpoint: string, options: RequestInit = {}, fallbackDa
             isRefreshing = false;
             localStorage.removeItem('accessToken');
             localStorage.removeItem('isAuthenticated');
-            window.location.href = '/login';
+            onRefreshed('');
             throw new Error('Session expired. Please log in again.');
           }
         } catch (refreshErr) {
           isRefreshing = false;
           localStorage.removeItem('accessToken');
           localStorage.removeItem('isAuthenticated');
-          window.location.href = '/login';
+          onRefreshed('');
           throw refreshErr;
         }
       }
 
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         subscribeTokenRefresh((newToken) => {
+          if (!newToken) {
+            if (fallbackData !== undefined) {
+              resolve(fallbackData);
+            } else {
+              reject(new Error('Session expired'));
+            }
+            return;
+          }
           const retriedOptions = {
             ...options,
             headers: {
@@ -153,25 +166,39 @@ export const AuthService = {
     });
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('role', 'student');
+    const userRole = data.user?.role?.toLowerCase() || localStorage.getItem('role') || 'student';
+    localStorage.setItem('role', userRole);
     return mapProfileToStudent(data.user?.studentProfile);
   },
-  register: async (name: string, email: string, university: string, degree: string, gradYear: number): Promise<any> => {
+  register: async (
+    name: string,
+    email: string,
+    university?: string,
+    degree?: string,
+    gradYear?: number,
+    role: string = 'student',
+    companyName?: string
+  ): Promise<any> => {
     const parts = name.split(' ');
     const firstName = parts[0] || 'First';
     const lastName = parts.slice(1).join(' ') || 'Last';
+    const body: any = {
+      email,
+      password: 'Password123!',
+      role: role.toUpperCase(),
+      firstName,
+      lastName
+    };
+    if (role === 'student') {
+      body.universityName = university;
+      body.degree = degree;
+      body.graduationYear = gradYear;
+    } else if (role === 'employer') {
+      body.companyName = companyName || 'Lumina Systems';
+    }
     const data = await fetchJson('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({
-        email,
-        password: 'Password123!',
-        role: 'STUDENT',
-        firstName,
-        lastName,
-        universityName: university,
-        degree,
-        graduationYear: gradYear
-      })
+      body: JSON.stringify(body)
     });
     return data;
   }

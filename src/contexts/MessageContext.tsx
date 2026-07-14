@@ -17,7 +17,7 @@ interface MessageContextType {
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadIdState] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -35,8 +35,13 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   useEffect(() => {
-    fetchThreads();
-  }, [fetchThreads]);
+    if (isAuthenticated) {
+      fetchThreads();
+    } else {
+      setThreads([]);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, fetchThreads]);
 
   const loadMessages = useCallback(async (threadId: string) => {
     try {

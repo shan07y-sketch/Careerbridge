@@ -11,7 +11,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({ 
   const handleLogout = async () => {
     await logout();
     setIsLogoutOpen(false);
-    navigate('/auth');
+    navigate('/');
   };
 
   const navItems = [

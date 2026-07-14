@@ -1,10 +1,10 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactElement;
-  allowedRoles?: ('student' | 'employer' | 'university')[];
+  allowedRoles?: ('student' | 'employer' | 'university' | 'admin')[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
@@ -12,6 +12,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles = ['student'] 
 }) => {
   const { isAuthenticated, isLoading, role } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -24,14 +25,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  if (!isAuthenticated) {
-    // Redirect to auth signin tab
-    return <Navigate to="/auth?role=student" replace />;
-  }
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
-  if (role && !allowedRoles.includes(role)) {
-    // Redirect to 403 Forbidden screen
-    return <Navigate to="/403" replace />;
+  if (isAdminRoute) {
+    if (!isAuthenticated || role !== 'admin') {
+      // Redirect immediately to /login if not authenticated or not an admin
+      return <Navigate to="/login" replace />;
+    }
+  } else {
+    if (!isAuthenticated) {
+      return <Navigate to="/auth?role=student" replace />;
+    }
+
+    if (role && !allowedRoles.includes(role)) {
+      return <Navigate to="/403" replace />;
+    }
   }
 
   return children;

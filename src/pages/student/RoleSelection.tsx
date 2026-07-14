@@ -10,12 +10,7 @@ export const RoleSelection: React.FC = () => {
 
   const handleContinue = () => {
     selectRole(selected);
-    if (selected === 'student') {
-      navigate('/auth');
-    } else {
-      // Prepared for future modules, redirecting to auth/placeholder for now
-      navigate('/auth');
-    }
+    navigate(`/auth?role=${selected}`);
   };
 
   return (

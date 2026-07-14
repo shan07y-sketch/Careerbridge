@@ -26,7 +26,7 @@ export default {
         "outline": '#717975',
         "outline-variant": '#c0c8c3',
         "surface-tint": '#3a6757',
-        "primary": '#001f16',
+        "primary": '#023629',
         "on-primary": '#ffffff',
         "primary-container": '#023629',
         "on-primary-container": '#72a08e',
@@ -64,6 +64,7 @@ export default {
         "lg": "0.5rem",
         "xl": "0.75rem",
         "2xl": "1rem",
+        "3xl": "1.5rem",
         "full": "9999px"
       },
       spacing: {

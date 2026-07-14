@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { Notification } from '../types';
 import { NotificationService } from '../services';
+import { useAuth } from './AuthContext';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -14,6 +15,7 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -29,8 +31,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    if (isAuthenticated) {
+      fetchNotifications();
+    } else {
+      setNotifications([]);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, fetchNotifications]);
 
   const markAsRead = async (id: string) => {
     try {

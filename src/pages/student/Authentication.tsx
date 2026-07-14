@@ -5,11 +5,11 @@ import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
 
 export const Authentication: React.FC = () => {
-  const { login, registerStudent, selectRole } = useAuth();
+  const { login, registerStudent, selectRole, role: contextRole } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const role = (searchParams.get('role') as 'student' | 'employer' | 'university') || 'student';
+  const role = (searchParams.get('role') as 'student' | 'employer' | 'university') || contextRole || 'student';
 
   useEffect(() => {
     selectRole(role);
@@ -26,6 +26,7 @@ export const Authentication: React.FC = () => {
   const [university, setUniversity] = useState('');
   const [degree, setDegree] = useState('');
   const [gradYear, setGradYear] = useState('2026');
+  const [companyName, setCompanyName] = useState('');
   const [agree, setAgree] = useState(false);
 
   // Strength checks
@@ -49,7 +50,16 @@ export const Authentication: React.FC = () => {
     try {
       await login(email, password);
       showToast('Signed in successfully!', 'success');
-      navigate('/student/onboarding');
+      const resolvedRole = localStorage.getItem('role') || role;
+      if (resolvedRole === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (resolvedRole === 'employer') {
+        navigate('/employer/dashboard');
+      } else if (resolvedRole === 'university') {
+        navigate('/university/dashboard');
+      } else {
+        navigate('/student/onboarding');
+      }
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Invalid credentials', 'error');
     } finally {
@@ -59,7 +69,11 @@ export const Authentication: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !university || !degree) {
+    if (role === 'student' && (!name || !email || !university || !degree)) {
+      showToast('Please fill out all required fields', 'error');
+      return;
+    }
+    if (role === 'employer' && (!name || !email || !companyName)) {
       showToast('Please fill out all required fields', 'error');
       return;
     }
@@ -81,7 +95,15 @@ export const Authentication: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      await registerStudent(name, email, university, degree, parseInt(gradYear));
+      await registerStudent(
+        name,
+        email,
+        role === 'student' ? university : undefined,
+        role === 'student' ? degree : undefined,
+        role === 'student' ? parseInt(gradYear) : undefined,
+        role,
+        role === 'employer' ? companyName : undefined
+      );
       showToast('Registration successful! Verify your email.', 'success');
       navigate('/auth/verify-email');
     } catch (err: unknown) {
@@ -97,7 +119,9 @@ export const Authentication: React.FC = () => {
       <header className="bg-white dark:bg-surface-container shadow-[0_4px_20px_rgba(2,54,41,0.04)] w-full top-0 z-50">
         <div className="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
+            <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              {role === 'employer' ? 'corporate_fare' : 'school'}
+            </span>
             <span className="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">CareerBridge</span>
           </div>
           <div className="flex items-center gap-stack-md">
@@ -125,7 +149,9 @@ export const Authentication: React.FC = () => {
           <div className="bg-white dark:bg-surface-container-lowest w-full max-w-[540px] p-8 md:p-10 rounded-[16px] shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 transition-all duration-500">
             <div className="flex flex-col items-center text-center mb-10">
               <div className="w-12 h-12 bg-secondary-container rounded-full flex items-center justify-center mb-4 text-primary">
-                <span className="material-symbols-outlined text-2xl">school</span>
+                <span className="material-symbols-outlined text-2xl">
+                  {role === 'employer' ? 'corporate_fare' : 'school'}
+                </span>
               </div>
               <h1 className="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed mb-2 font-bold text-center">
                 {activeTab === 'signin' 
@@ -325,44 +351,60 @@ export const Authentication: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">University Name</label>
-                  <input 
-                    value={university}
-                    onChange={(e) => setUniversity(e.target.value)}
-                    className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
-                    placeholder="Massachusetts Institute of Technology" 
-                    type="text"
-                    required
-                  />
-                </div>
+                {role === 'student' ? (
+                  <>
+                    <div>
+                      <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">University Name</label>
+                      <input 
+                        value={university}
+                        onChange={(e) => setUniversity(e.target.value)}
+                        className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
+                        placeholder="Massachusetts Institute of Technology" 
+                        type="text"
+                        required
+                      />
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Degree/Program</label>
+                        <input 
+                          value={degree}
+                          onChange={(e) => setDegree(e.target.value)}
+                          className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
+                          placeholder="B.S. Computer Science" 
+                          type="text"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Graduation Year</label>
+                        <select 
+                          value={gradYear}
+                          onChange={(e) => setGradYear(e.target.value)}
+                          className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:ring-primary focus:border-primary text-on-surface dark:text-white"
+                        >
+                          <option value="2024">2024</option>
+                          <option value="2025">2025</option>
+                          <option value="2026">2026</option>
+                          <option value="2027">2027</option>
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                ) : (
                   <div>
-                    <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Degree/Program</label>
+                    <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Company Name</label>
                     <input 
-                      value={degree}
-                      onChange={(e) => setDegree(e.target.value)}
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
                       className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
-                      placeholder="B.S. Computer Science" 
+                      placeholder="Lumina Systems" 
                       type="text"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Graduation Year</label>
-                    <select 
-                      value={gradYear}
-                      onChange={(e) => setGradYear(e.target.value)}
-                      className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:ring-primary focus:border-primary text-on-surface dark:text-white"
-                    >
-                      <option value="2024">2024</option>
-                      <option value="2025">2025</option>
-                      <option value="2026">2026</option>
-                      <option value="2027">2027</option>
-                    </select>
-                  </div>
-                </div>
+                )}
 
                 <label className="flex items-start gap-3 cursor-pointer mt-4">
                   <input 
