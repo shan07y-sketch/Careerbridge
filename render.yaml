@@ -14,10 +14,9 @@
 #   - (optional) set GEMINI_API_KEY on careerbridge-api for real AI
 #   - run the one-time seed from the careerbridge-api Shell (see DEPLOY_NOW.md)
 #
-# NOTE ON URLS: the cross-service URLs below assume the service names resolve
-# to https://careerbridge-api.onrender.com and https://careerbridge-web.onrender.com.
-# If Render appends a suffix because a name is globally taken, update the three
-# URL vars (CORS_ORIGIN, APP_BASE_URL, VITE_API_URL) to the real URLs and redeploy.
+# LIVE URLS (confirmed 2026-07-18 — Render suffixed the API service name):
+#   backend  https://careerbridge-api-uig2.onrender.com
+#   frontend https://careerbridge-web.onrender.com
 # =====================================================================
 
 databases:
@@ -70,7 +69,7 @@ services:
         value: https://careerbridge-web.onrender.com
       # This API's own public origin, used to build absolute resume/share links.
       - key: APP_BASE_URL
-        value: https://careerbridge-api.onrender.com
+        value: https://careerbridge-api-uig2.onrender.com
       - key: AI_PROVIDER
         value: gemini
       - key: GEMINI_MODEL
@@ -93,7 +92,9 @@ services:
     name: careerbridge-web
     runtime: static
     rootDir: .
-    buildCommand: npm ci && npm run build
+    # `npm install`, not `npm ci` — same lock-file-drift issue hit the backend
+    # (Render's npm can resolve differently than the committed lock).
+    buildCommand: npm install && npm run build
     staticPublishPath: dist
     autoDeploy: true
     # SPA routing: every path falls back to index.html so client-side routes work.
@@ -107,4 +108,4 @@ services:
       # Backend ORIGIN (no /api/v1 suffix — the app appends it). Also used for
       # the Socket.IO connection. Must match the backend service URL exactly.
       - key: VITE_API_URL
-        value: https://careerbridge-api.onrender.com
+        value: https://careerbridge-api-uig2.onrender.com

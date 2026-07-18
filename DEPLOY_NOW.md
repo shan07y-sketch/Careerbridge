@@ -32,7 +32,7 @@ Generated JWT secrets and `DATABASE_URL` are wired in automatically.
 
 ## Step 3 — Confirm the service URLs
 The blueprint assumes:
-- backend  → `https://careerbridge-api.onrender.com`
+- backend  → `https://careerbridge-api-uig2.onrender.com`
 - frontend → `https://careerbridge-web.onrender.com`
 
 If Render appended a suffix (only happens if a name was globally taken), open each
@@ -68,7 +68,7 @@ Seeded demo logins are listed in your local run notes (all share one password).
 
 ## Step 6 — Android APK (already built against production URL)
 `CareerBridge.apk` at the repo root is built to talk to
-`https://careerbridge-api.onrender.com`. Once the backend is live at that URL,
+`https://careerbridge-api-uig2.onrender.com`. Once the backend is live at that URL,
 install the APK and it works — no rebuild needed.
 
 If your backend URL differs (Step 3), rebuild:
@@ -83,12 +83,12 @@ cd android && ./gradlew.bat assembleDebug -Dorg.gradle.java.home="C:/Program Fil
 
 ## Step 7 — Verify (against the live backend)
 ```bash
-curl https://careerbridge-api.onrender.com/health          # → 200
-curl https://careerbridge-api.onrender.com/api/v1/ai/health # → provider mode
+curl https://careerbridge-api-uig2.onrender.com/health          # → 200
+curl https://careerbridge-api-uig2.onrender.com/api/v1/ai/health # → provider mode
 ```
 Then open the frontend URL and exercise: login, jobs, apply, mock interview +
 report, messages, employer/university/admin portals. API docs live at
-`https://careerbridge-api.onrender.com/api-docs`.
+`https://careerbridge-api-uig2.onrender.com/api-docs`.
 
 ---
 

@@ -2,6 +2,29 @@ import { env } from './env';
 
 const isDev = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
 
+// CORS_ORIGIN may be a single origin or a comma-separated list. We always also
+// allow the Capacitor WebView origins (https://localhost on Android,
+// capacitor://localhost on iOS) so the native app's API calls aren't blocked,
+// plus the local dev server.
+const allowedOrigins = new Set(
+  [
+    ...env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean),
+    'https://localhost',
+    'capacitor://localhost',
+    'http://localhost:5173',
+  ]
+);
+
+// `origin` callback: reflect the caller's origin when it's allowed. Requests
+// with no Origin header (curl, health checks, native HTTP) are allowed through.
+const corsOrigin = (
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void
+) => {
+  if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+  return callback(new Error(`Origin ${origin} not allowed by CORS`));
+};
+
 export const securityConfig = {
   jwt: {
     accessSecret: env.JWT_ACCESS_SECRET,
@@ -13,7 +36,7 @@ export const securityConfig = {
     saltRounds: 10,
   },
   cors: {
-    origin: env.CORS_ORIGIN,
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
