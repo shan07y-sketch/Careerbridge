@@ -35,9 +35,11 @@ services:
     runtime: node
     plan: free            # free tier sleeps after inactivity; upgrade for always-on
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate && npm run build
-    # Pre-deploy runs migrations against the live DB before traffic switches over.
-    preDeployCommand: npx prisma migrate deploy
+    # Migrations run in the build step (free tier has no separate pre-deploy
+    # phase). `prisma migrate deploy` is idempotent and the DB is reachable
+    # during Render's build, so this safely applies pending migrations before
+    # the new version starts.
+    buildCommand: npm ci && npx prisma generate && npm run build && npx prisma migrate deploy
     startCommand: node dist/index.js
     healthCheckPath: /health
     autoDeploy: true

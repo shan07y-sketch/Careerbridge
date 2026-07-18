@@ -24,7 +24,7 @@ pushed to `origin/master` (github.com/shan07y-sketch/Careerbridge).
 Render will now:
 - create the Postgres 16 database,
 - build the backend (`npm ci && prisma generate && build`),
-- run migrations automatically (`prisma migrate deploy`, pre-deploy),
+- run migrations automatically (`prisma migrate deploy`, part of the build),
 - start the API (`node dist/index.js`, health check `/health`),
 - build & publish the frontend static site.
 
