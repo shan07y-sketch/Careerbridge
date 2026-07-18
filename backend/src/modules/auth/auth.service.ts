@@ -21,12 +21,13 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(body.password, salt);
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Email delivery is mocked outside production (EmailService only logs the
-    // verification link to the server terminal), so requiring click-through
-    // verification in development would make every newly registered account
-    // unable to log in. Auto-verify outside production; in production the
-    // real verify-email flow applies unchanged.
-    const autoVerify = env.NODE_ENV !== 'production';
+    // Email delivery is fully mocked in every environment (EmailService only
+    // logs the verification link to the server terminal — it never actually
+    // sends an email). Requiring click-through verification would therefore
+    // permanently lock every newly registered account out of login, so we
+    // auto-verify all new accounts. Re-enable real verification only once a
+    // real email provider is wired into EmailService.
+    const autoVerify = true;
 
     const user = await AuthRepository.registerUser({
       email: body.email,
@@ -79,9 +80,13 @@ export class AuthService {
       throw new AppError('Invalid email or password credentials.', 401, 'AUTHENTICATION_FAILED');
     }
 
-    if (!user.isVerified) {
-      throw new AppError('Please verify your email address to log in.', 403, 'EMAIL_NOT_VERIFIED');
-    }
+    // Email verification is intentionally not enforced at login: email delivery
+    // is fully mocked (see EmailService), so a verification gate would lock out
+    // every account — including ones registered before auto-verify was enabled.
+    // Re-enable this check once a real email provider is wired up.
+    // if (!user.isVerified) {
+    //   throw new AppError('Please verify your email address to log in.', 403, 'EMAIL_NOT_VERIFIED');
+    // }
 
     // Generate tokens
     const accessToken = jwt.sign(
