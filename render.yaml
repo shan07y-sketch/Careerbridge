@@ -36,7 +36,12 @@ services:
     rootDir: backend
     # `npm install` (not `npm ci`) so Render's npm reconciles the lock file —
     # the committed backend lock drifts from package.json across npm versions.
-    buildCommand: npm install && npx prisma generate && npm run build
+    # `--include=dev` is required because NODE_ENV=production is set below:
+    # npm's legacy behavior skips devDependencies (all the @types/* packages
+    # tsc needs) whenever NODE_ENV=production is set during install, which
+    # otherwise fails the build with TS7016 "Could not find a declaration
+    # file" across the whole codebase.
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
     # Migrations run at startup (free tier has no pre-deploy phase). At boot
     # DATABASE_URL is guaranteed present and the DB is up; `migrate deploy` is
     # idempotent, so this safely applies pending migrations on every deploy.
@@ -94,7 +99,10 @@ services:
     rootDir: .
     # `npm install`, not `npm ci` — same lock-file-drift issue hit the backend
     # (Render's npm can resolve differently than the committed lock).
-    buildCommand: npm install && npm run build
+    # `--include=dev` defensively, since typescript/vite/@types/* are all
+    # devDependencies and Render sets NODE_ENV=production by default for
+    # static sites too, which otherwise makes npm skip installing them.
+    buildCommand: npm install --include=dev && npm run build
     staticPublishPath: dist
     autoDeploy: true
     # SPA routing: every path falls back to index.html so client-side routes work.
