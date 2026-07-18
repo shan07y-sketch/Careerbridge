@@ -10,6 +10,32 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    # A real Postgres instance so `prisma migrate deploy` (and any future
+    # integration tests that hit a real database) can run in CI exactly as
+    # they would in production, instead of only being exercised locally.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: careerbridge_ci
+          POSTGRES_PASSWORD: careerbridge_ci_password
+          POSTGRES_DB: careerbridge_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U careerbridge_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://careerbridge_ci:careerbridge_ci_password@localhost:5432/careerbridge_ci?schema=public
+      NODE_ENV: test
+      JWT_ACCESS_SECRET: ci_test_access_secret_not_used_outside_pipeline_runs
+      JWT_REFRESH_SECRET: ci_test_refresh_secret_not_used_outside_pipeline_runs
+      CORS_ORIGIN: http://localhost:5173
+      REDIS_URL: redis://localhost:6379
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -34,8 +60,22 @@ jobs:
         cd backend
         npm ci
 
-    - name: Compile Backend Build Check
+    - name: Apply Database Migrations
       run: |
         cd backend
         npx prisma generate
+        npx prisma migrate deploy
+
+    # This is the required check the Phase 0 audit flagged as missing: CI
+    # previously only compiled the backend and never ran a single test, and
+    # `npm test` would have failed outright (jest was referenced but never
+    # installed). This step now actually fails the pipeline on a broken test.
+    - name: Run Backend Test Suite
+      run: |
+        cd backend
+        npm test
+
+    - name: Compile Backend Build Check
+      run: |
+        cd backend
         npm run build

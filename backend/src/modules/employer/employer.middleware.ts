@@ -18,5 +18,6 @@ export const restrictToCompany = catchAsync(async (req: EmployerRequest, res: Re
   }
 
   req.companyId = recruiter.companyId;
+  req.recruiterId = recruiter.id;
   next();
 });

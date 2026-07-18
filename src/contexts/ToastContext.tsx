@@ -39,7 +39,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       
       {/* Toast Overlay Container */}
-      <div className="fixed bottom-8 right-8 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+      <div className="fixed bottom-8 inset-x-4 sm:inset-x-auto sm:right-8 z-[9999] flex flex-col gap-3 sm:max-w-sm w-auto sm:w-full pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}

@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Secrets — see .env.compose.example / backend/.env.example for templates
+.env
+.env.*
+!.env.*.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +27,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Android signing secrets (never commit)
+android/keystore.properties
+android/upload-keystore.jks
+
+# --- Deployment / build artifacts (added for production deploy) ---
+# Generated seed JSON is 256MB (one file >100MB) — regenerate with seed:generate.
+backend/scripts/data/
+# Android build outputs & signed/unsigned APKs (rebuilt from source).
+*.apk
+*.aab
+android/app/release/
+# Python bytecode / local sync markers / stray artifacts.
+__pycache__/
+*.pyc
+*.tmp
+.sync_marker*
+_synctest.txt
+.bmp

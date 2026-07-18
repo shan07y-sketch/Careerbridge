@@ -3,6 +3,10 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { JobService, CompanyService, EventService, NetworkService } from '../../services';
 import type { Job, Company, Mentor, Event } from '../../types';
 import { PageLayout } from '../../components/layout/PageLayout';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { Section } from '../../components/ui/Section';
+import { Toolbar, FilterChip } from '../../components/ui/Toolbar';
+import { Button } from '../../components/ui/Button';
 import { JobCard } from '../../components/cards/JobCard';
 import { MentorCard } from '../../components/cards/MentorCard';
 import { CardSkeleton } from '../../components/ui/Skeleton';
@@ -28,8 +32,26 @@ export const SearchResults: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  // Mock Recent Searches
-  const [recentSearches, setRecentSearches] = useState<string[]>(['React Developer', 'MIT', 'Software Engineer', 'Google']);
+  // Recent Searches -- persisted locally from the user's own real search
+  // history (no backend model exists for this yet, so we don't fabricate
+  // entries; this is the user's genuine activity, just stored client-side).
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('cb_recent_searches');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (!query.trim()) return;
+    setRecentSearches(prev => {
+      const next = [query, ...prev.filter(s => s.toLowerCase() !== query.toLowerCase())].slice(0, 6);
+      try { localStorage.setItem('cb_recent_searches', JSON.stringify(next)); } catch { /* ignore storage errors */ }
+      return next;
+    });
+  }, [query]);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -129,112 +151,68 @@ export const SearchResults: React.FC = () => {
 
   const handleClearHistory = () => {
     setRecentSearches([]);
+    try { localStorage.removeItem('cb_recent_searches'); } catch { /* ignore storage errors */ }
   };
 
+  const CATS: { id: SearchCategory; label: string; count: number }[] = [
+    { id: 'all', label: 'All', count: totalMatches },
+    { id: 'jobs', label: 'Jobs', count: filteredJobs.length },
+    { id: 'companies', label: 'Companies', count: filteredCompanies.length },
+    { id: 'mentors', label: 'Mentors', count: filteredMentors.length },
+    { id: 'events', label: 'Events', count: filteredEvents.length },
+  ];
+
   return (
-    <PageLayout>
-      <section className="text-left space-y-2">
-        <h1 className="font-display text-headline-lg text-primary dark:text-primary-fixed">Search Hub</h1>
-        <p className="font-body-lg text-on-surface-variant">
-          {query ? (
-            <>
-              Found <span className="font-bold text-primary dark:text-primary-fixed">{totalMatches} matches</span> for <span className="font-bold text-primary">"{query}"</span>
-            </>
-          ) : (
-            'Search the ecosystem for jobs, mentors, companies, and events.'
-          )}
-        </p>
-      </section>
+    <PageLayout searchPlaceholder="Search jobs, companies, mentors, events…">
+      <PageHeader
+        title="Search"
+        description={query ? `${totalMatches} ${totalMatches === 1 ? 'match' : 'matches'} for “${query}”` : 'Find jobs, mentors, companies and events across CareerBridge.'}
+      />
 
-      {/* Main Results Board */}
       {!query.trim() ? (
-        /* Empty Query / Suggestions State */
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-left">
-          <Card className="col-span-12 lg:col-span-8 p-8 space-y-6">
-            <h3 className="font-headline-md text-primary dark:text-primary-fixed">Popular Search Recommendations</h3>
-            <div className="flex flex-wrap gap-2.5">
-              {['Vite Developer', 'Docker', 'Google Internship', 'MIT Placement', 'Mentoring Session', 'AI Career Prep'].map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => handleRecentClick(tag)}
-                  className="bg-primary-container/5 hover:bg-primary/10 hover:text-primary text-primary dark:text-primary-fixed border border-primary/10 rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer"
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </Card>
-          
-          {recentSearches.length > 0 && (
-            <aside className="col-span-12 lg:col-span-4 bg-white dark:bg-surface-container p-6 rounded-xl border border-primary/5 shadow-sm space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface-variant">Recent Searches</h4>
-                <button onClick={handleClearHistory} className="text-xs text-error font-medium hover:underline">Clear</button>
-              </div>
-              <ul className="space-y-3">
-                {recentSearches.map((term, i) => (
-                  <li key={i}>
-                    <button
-                      onClick={() => handleRecentClick(term)}
-                      className="flex items-center gap-2 text-sm text-on-surface-variant hover:text-primary transition-colors cursor-pointer w-full text-left"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">history</span>
-                      {term}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <Section title="Popular searches">
+              <Card>
+                <div className="flex flex-wrap gap-2.5">
+                  {['Frontend Engineer', 'Internship', 'Docker', 'Product Manager', 'Mentoring', 'Data Science'].map(tag => (
+                    <button key={tag} onClick={() => handleRecentClick(tag)}
+                      className="px-4 h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-label-md font-semibold text-on-surface transition-colors">{tag}</button>
+                  ))}
+                </div>
+              </Card>
+            </Section>
+          </div>
+          <div>
+            <Section title="Recent searches" action={recentSearches.length > 0 ? <Button size="sm" variant="ghost" className="!text-error" onClick={handleClearHistory}>Clear</Button> : undefined}>
+              {recentSearches.length === 0 ? (
+                <Card><p className="text-label-md text-on-surface-variant">Your recent searches will appear here.</p></Card>
+              ) : (
+                <Card className="!p-2">
+                  {recentSearches.map((term, i) => (
+                    <button key={i} onClick={() => handleRecentClick(term)}
+                      className="flex items-center gap-2 w-full p-2.5 rounded-xl hover:bg-surface-container transition-colors text-left text-label-md text-on-surface">
+                      <span className="material-symbols-outlined text-[18px] text-on-surface-variant">history</span>{term}
                     </button>
-                  </li>
-                ))}
-              </ul>
-            </aside>
-          )}
-        </section>
+                  ))}
+                </Card>
+              )}
+            </Section>
+          </div>
+        </div>
       ) : (
-        /* Loaded Search Board */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start text-left">
-          {/* Side Tabs */}
-          <aside className="lg:col-span-3 space-y-2">
-            {[
-              { id: 'all', label: 'All Matches', count: totalMatches, icon: 'grid_view' },
-              { id: 'jobs', label: 'Jobs', count: filteredJobs.length, icon: 'work' },
-              { id: 'companies', label: 'Companies', count: filteredCompanies.length, icon: 'corporate_fare' },
-              { id: 'mentors', label: 'Mentors', count: filteredMentors.length, icon: 'person' },
-              { id: 'events', label: 'Events', count: filteredEvents.length, icon: 'event' }
-            ].map((cat) => {
-              const isActive = activeCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id as SearchCategory)}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-white dark:bg-surface-container text-on-surface-variant hover:bg-surface-container-high border border-primary/5'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px]">{cat.icon}</span>
-                    <span>{cat.label}</span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-surface-container-high text-on-surface-variant'}`}>
-                    {cat.count}
-                  </span>
-                </button>
-              );
-            })}
-          </aside>
+        <div className="space-y-6">
+          <Toolbar filters={CATS.map(c => (
+            <FilterChip key={c.id} active={activeCategory === c.id} onClick={() => setActiveCategory(c.id)} count={c.count}>{c.label}</FilterChip>
+          ))} />
 
-          {/* Results Listings */}
-          <main className="lg:col-span-9 space-y-8">
+          <div className="space-y-8">
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <CardSkeleton />
-                <CardSkeleton />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><CardSkeleton /><CardSkeleton /></div>
             ) : totalMatches === 0 ? (
-              <EmptyState
-                icon="search_off"
-                title="No Results Found"
-                description="We couldn't find any listings matching your search keyword. Try another search or filter."
-              />
+              <EmptyState icon="search_off" title="No results found"
+                description={`Nothing matched “${query}”. Try different keywords, or browse jobs and mentors directly.`}
+                actionLabel="Browse jobs" onAction={() => navigate('/student/jobs')} />
             ) : activeCategory === 'all' ? (
               /* All Results Combined Overview */
               <div className="space-y-10">
@@ -394,11 +372,9 @@ export const SearchResults: React.FC = () => {
                 )}
               </div>
             )}
-          </main>
+          </div>
         </div>
       )}
-
-      <div className="h-10"></div>
     </PageLayout>
   );
 };

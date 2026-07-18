@@ -1,14 +1,21 @@
 version: '3.8'
 
+# All secrets below are read from a `.env` file placed next to this compose
+# file (NOT committed — see `.env.compose.example` for the template). The
+# `:?err` syntax makes `docker-compose up` refuse to start rather than
+# silently fall back to an empty/default value if a secret is missing.
+# This closes the Phase 0 audit finding that shipped real (if low-entropy)
+# secrets directly in this tracked file.
+
 services:
   db:
     image: postgres:16-alpine
     container_name: careerbridge_db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password
-      POSTGRES_DB: careerbridge
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-careerbridge}
     ports:
       - "5432:5432"
     volumes:
@@ -30,11 +37,18 @@ services:
     container_name: careerbridge_backend
     restart: always
     environment:
-      DATABASE_URL: postgresql://postgres:postgres_password@db:5432/careerbridge?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER must be set in .env}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@db:5432/${POSTGRES_DB:-careerbridge}?schema=public
       REDIS_URL: redis://redis:6379
       PORT: 5000
       NODE_ENV: production
-      JWT_ACCESS_SECRET: default_secret_value
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET must be set in .env (generate with: openssl rand -base64 48)}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set in .env (generate with: openssl rand -base64 48)}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
     ports:
       - "5000:5000"
     depends_on:

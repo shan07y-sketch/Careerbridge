@@ -10,5 +10,7 @@ router.get('/', ApplicationsController.getApplications);
 router.post('/', ApplicationsController.applyToJob);
 router.get('/:id', ApplicationsController.getApplicationById);
 router.delete('/:id', ApplicationsController.retractApplication);
+router.patch('/:id/offer/accept', ApplicationsController.acceptOffer);
+router.patch('/:id/offer/decline', ApplicationsController.declineOffer);
 
 export default router;

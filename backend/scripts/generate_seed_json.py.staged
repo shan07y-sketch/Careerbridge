@@ -1,0 +1,919 @@
+import os
+import json
+import uuid
+import math
+import dataclasses
+import datetime
+from decimal import Decimal
+from collections import defaultdict
+
+# Set path and import seed engine and models
+import sys
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/..'))
+
+import seed_engine
+from careerbridge_seed_engine.config import CONFIG, AppConfig
+from careerbridge_seed_engine.reference_data import UNIVERSITY_DATA
+from careerbridge_seed_engine.models import (
+    User, University, Recruiter, Company, Job, StudentProfile,
+    StudentEducation, StudentExperience, StudentProject, StudentCertification,
+    StudentSkill, Resume, Application, Interview, Offer, Message, Notification,
+    ResumeAnalysis, MockInterview, MessageThread,
+    CareerPrediction, CompanyRecommendation, RecruiterRecommendation,
+    NetworkingRecommendation, MentorRecommendation, SalaryPrediction,
+    UserRole, UserStatus
+)
+
+class SeedJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
+
+class MockDepartment:
+    def __init__(self, name):
+        self.name = name
+
+def main():
+    print("Initializing Seed Ingestion Pipeline...")
+    config = CONFIG
+
+    # 1. Setup Universities
+    # Sourced from careerbridge_seed_engine.reference_data.UNIVERSITY_DATA, the
+    # single source of truth for real university names/locations/departments
+    # used across the seed engine (see reference_data.py for the full pool).
+    print("Creating mock universities...")
+    univ_data = list(UNIVERSITY_DATA)
+    used_admin_emails: set[str] = set()
+
+    universities = []
+    univ_users = []
+
+    for i, u in enumerate(univ_data):
+        slug_source = ''.join(ch for ch in u['name'].lower() if ch.isalnum())[:20] or f"univ{i}"
+        email = f"admin.{slug_source}{i}@{(u['name'].split()[-1] if len(u['name'].split()) > 1 else 'univ').lower()}.edu"
+        email = email.lower()
+        if email in used_admin_emails:
+            email = f"admin.{slug_source}{i}.{i}@university.edu"
+        used_admin_emails.add(email)
+        user = User(
+            email=email,
+            password_hash="pbkdf2_sha256$260000$mockhash_for_univ_admin_password", # dummy hash
+            role=UserRole.university,
+            status=UserStatus.active,
+            first_name=u['name'].split()[0],
+            last_name="University"
+        )
+        univ_users.append(user)
+
+        univ = University(
+            name=u['name'],
+            city=u['city'],
+            country=u['country'],
+            departments=tuple(MockDepartment(d) for d in u['dept']),
+            placement_strength="strong",
+            student_population=8000,
+            user=user
+        )
+        universities.append(univ)
+
+    # 2. Run Python Seed Engine Generators
+    print("Running companies generator...")
+    comp_res = seed_engine.generate_companies(config)
+    companies = comp_res.companies
+
+    print("Running recruiters generator...")
+    rec_res = seed_engine.generate_recruiters(companies, config)
+    recruiters = rec_res.recruiters
+    recruiter_users = rec_res.users
+
+    print("Running jobs generator...")
+    job_res = seed_engine.generate_jobs(companies, recruiters, config)
+    jobs = job_res.jobs
+
+    print("Running students generator...")
+    stud_res = seed_engine.generate_students(universities, config)
+    students = stud_res.students
+    student_users = stud_res.users
+    certifications = stud_res.certifications
+    education_records = stud_res.education_records
+    experiences = stud_res.experiences
+    projects = stud_res.projects
+    resumes = stud_res.resumes
+    skills = stud_res.skills
+
+    print("Running applications generator...")
+    app_res = seed_engine.generate_applications(students, companies, recruiters, jobs, config)
+    applications = app_res.applications
+
+    print("Running interviews generator...")
+    int_res = seed_engine.generate_interviews(applications, config)
+    interviews = int_res.interviews
+
+    print("Running offers generator...")
+    off_res = seed_engine.generate_offers(applications, interviews, config)
+    # Offer.applicationId is unique in the Prisma schema (one offer per
+    # application). Enforce that invariant here regardless of whether the
+    # underlying generator samples with or without replacement.
+    _seen_offer_apps = set()
+    _deduped_offers = []
+    for _o in off_res.offers:
+        _app_key = id(_o.application)
+        if _app_key in _seen_offer_apps:
+            continue
+        _seen_offer_apps.add(_app_key)
+        _deduped_offers.append(_o)
+    offers = _deduped_offers
+
+    print("Running messages generator...")
+    msg_res = seed_engine.generate_messages(student_users + recruiter_users, config)
+    messages = msg_res.messages
+
+    print("Running notifications generator...")
+    not_res = seed_engine.generate_notifications(student_users + recruiter_users + [u.user for u in universities], config)
+    notifications = not_res.notifications
+
+    print("Running career_reports generator...")
+    cr_res = seed_engine.generate_career_reports(
+        students, companies, recruiters, jobs, applications, interviews, offers, messages, notifications, config
+    )
+    career_reports = cr_res.reports
+
+    print("Running skill_gaps generator...")
+    sg_res = seed_engine.generate_skill_gaps(
+        students, companies, recruiters, jobs, applications, interviews, offers, career_reports, config
+    )
+    skill_gaps = sg_res.skill_gaps
+
+    print("Running learning_roadmaps generator...")
+    lr_res = seed_engine.generate_learning_roadmaps(
+        students, jobs, companies, recruiters, career_reports, skill_gaps, applications, interviews, offers, config
+    )
+    roadmaps = lr_res.roadmaps
+
+    print("Running resume_analyses generator...")
+    res_an_res = seed_engine.generate_resume_analyses(
+        students, companies, recruiters, jobs, applications, interviews, career_reports, skill_gaps, roadmaps, config
+    )
+    resume_analyses = res_an_res.analyses
+
+    print("Running mock_interviews generator...")
+    mock_int_res = seed_engine.generate_mock_interviews(
+        students, jobs, interviews, resume_analyses, career_reports, skill_gaps, roadmaps, config
+    )
+    mock_interviews = mock_int_res.mock_interviews
+
+    print("Running job_matches generator...")
+    job_match_res = seed_engine.generate_job_matches(
+        students, companies, recruiters, jobs, applications, interviews, offers, career_reports, skill_gaps, roadmaps, resume_analyses, config
+    )
+    job_matches = job_match_res.job_matches
+
+    print("Running ai_recommendations generator...")
+    ai_rec_res = seed_engine.generate_ai_recommendations(
+        students, companies, recruiters, jobs, applications, interviews, offers, messages, notifications, career_reports, skill_gaps, roadmaps, resume_analyses, job_matches, config
+    )
+    ai_recommendations = ai_rec_res.recommendations
+
+    # Manual Career Predictions (maps correctly)
+    career_predictions = [
+        CareerPrediction(student=student, generated_at=datetime.datetime.now(datetime.timezone.utc))
+        for student in students
+    ]
+
+    print("Running salary_predictions generator...")
+    sal_res = seed_engine.generate_salary_predictions(
+        students, companies, recruiters, jobs, applications, interviews, offers, career_reports, skill_gaps, roadmaps, resume_analyses, job_matches, career_predictions, config
+    )
+    salary_predictions = sal_res.salary_predictions
+
+    print("Running company_recommendations generator...")
+    comp_rec_res = seed_engine.generate_company_recommendations(
+        students, companies, recruiters, jobs, applications, interviews, offers, career_reports, skill_gaps, roadmaps, resume_analyses, job_matches, ai_recommendations, career_predictions, salary_predictions, [], config
+    )
+    comp_recommendations = comp_rec_res.company_recommendations
+
+    print("Running recruiter_recommendations generator...")
+    rec_rec_res = seed_engine.generate_recruiter_recommendations(
+        students, companies, recruiters, jobs, applications, interviews, offers, career_reports, skill_gaps, roadmaps, resume_analyses, job_matches, ai_recommendations, career_predictions, salary_predictions, config
+    )
+    rec_recommendations = rec_rec_res.recruiter_recommendations
+
+    print("Running networking_recommendations generator...")
+    net_res = seed_engine.generate_networking_recommendations(
+        students, companies, recruiters, jobs, applications, interviews, offers, messages, career_reports, skill_gaps, roadmaps, resume_analyses, job_matches, rec_recommendations, comp_recommendations, config
+    )
+    net_recommendations = net_res.networking_recommendations
+
+    print("Running mentor_recommendations generator...")
+    ment_res = seed_engine.generate_mentor_recommendations(
+        students, companies, recruiters, jobs, interviews, offers, career_reports, skill_gaps, roadmaps, resume_analyses, job_matches, rec_recommendations, comp_recommendations, net_recommendations, config
+    )
+    mentor_recommendations = ment_res.mentor_recommendations
+
+    print("All generators finished successfully. Beginning database model mapping and serialization...")
+
+    # ==========================================
+    # SERIALIZATION MAPS & LOGIC
+    # ==========================================
+    id_map = {}
+
+    def get_id(obj):
+        if obj is None:
+            return None
+        obj_key = id(obj)
+        if obj_key not in id_map:
+            id_map[obj_key] = str(uuid.uuid4())
+        return id_map[obj_key]
+
+    # Pre-populate mapping for objects that have nested structures or references
+    # Map users first
+    all_users = student_users + recruiter_users + univ_users
+    for u in all_users:
+        get_id(u)
+    for c in companies:
+        get_id(c)
+    for r in recruiters:
+        get_id(r)
+    for u in universities:
+        get_id(u)
+    for j in jobs:
+        get_id(j)
+    for s in students:
+        get_id(s)
+    for r in resumes:
+        get_id(r)
+    for a in applications:
+        get_id(a)
+    for i in interviews:
+        get_id(i)
+
+    # 1. Users
+    serialized_users = []
+    for user in all_users:
+        serialized_users.append({
+            "id": get_id(user),
+            "email": user.email,
+            "passwordHash": user.password_hash or "pbkdf2_sha256$260000$mockhash_for_seeded_users_password",
+            "role": user.role.value.upper(),
+            "isVerified": user.email_verified or True,
+            "createdAt": user.last_login_at or datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+    # 2. Companies
+    serialized_companies = []
+    for comp in companies:
+        serialized_companies.append({
+            "id": get_id(comp),
+            "name": comp.name,
+            "logoUrl": f"https://api.dicebear.com/7.x/identicon/svg?seed={comp.name.replace(' ', '')}",
+            "website": comp.website_url or f"https://www.{comp.slug}.com",
+            "industry": comp.industry or "Technology",
+            "description": comp.description or f"Leading innovator in {comp.industry or 'Technology'}.",
+            "size": comp.company_size or comp.employee_count or 250,
+            "headquarters": f"{comp.headquarters_city or 'San Francisco'}, {comp.headquarters_country or 'United States'}"
+        })
+
+    # 3. Recruiters
+    serialized_recruiters = []
+    for rec in recruiters:
+        serialized_recruiters.append({
+            "id": get_id(rec),
+            "userId": get_id(rec.user),
+            "companyId": get_id(rec.company),
+            "title": rec.title or rec.seniority_level or "Talent Acquisition Specialist",
+            "phone": getattr(rec.user, 'phone', None) or rec.phone or "+1-555-0199"
+        })
+
+    # 4. Universities
+    serialized_universities = []
+    serialized_departments = []
+    dept_map = {} # (univ_id, dept_name) -> dept_id
+
+    for univ in universities:
+        univ_id = get_id(univ)
+        serialized_universities.append({
+            "id": univ_id,
+            "userId": get_id(univ.user),
+            "name": univ.name,
+            "logoUrl": f"https://api.dicebear.com/7.x/initials/svg?seed={univ.name.replace(' ', '')}",
+            "location": f"{univ.city}, {univ.country}"
+        })
+
+        # Create departments
+        depts = getattr(univ, 'departments', [])
+        for d in depts:
+            dept_name = d.name if hasattr(d, 'name') else str(d)
+            dept_id = str(uuid.uuid4())
+            dept_map[(univ_id, dept_name)] = dept_id
+            serialized_departments.append({
+                "id": dept_id,
+                "universityId": univ_id,
+                "name": dept_name
+            })
+
+    # 5. Students
+    serialized_students = []
+    for student in students:
+        univ_id = get_id(student.university)
+        # Find department ID
+        dept_name = student.department.name if hasattr(student.department, 'name') else str(student.department or '')
+        dept_id = dept_map.get((univ_id, dept_name))
+
+        # Preferred work mode mapping
+        work_mode_map = {"onsite": "ON_SITE", "hybrid": "HYBRID", "remote": "REMOTE"}
+        pref_work_mode = work_mode_map.get((student.preferred_work_mode or "").lower(), "REMOTE")
+
+        serialized_students.append({
+            "id": get_id(student),
+            "userId": get_id(student.user),
+            "firstName": student.user.first_name or "First",
+            "lastName": student.user.last_name or "Last",
+            "phone": student.phone or student.user.phone or "+1-555-0100",
+            "avatarUrl": student.user.avatar_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={student.user.email}",
+            "bio": student.bio or f"Ambitious student specializing in {dept_name or 'Computer Science'}.",
+            "currentGpa": float(student.cgpa or 3.5),
+            "universityId": univ_id,
+            "departmentId": dept_id,
+            "graduationYear": student.graduation_year or 2025,
+            "preferredRole": student.preferred_role or "Software Engineer",
+            "preferredWorkMode": pref_work_mode,
+            "preferredLocations": [student.preferred_location or "Remote"]
+        })
+
+    # 6. Student Education Records
+    serialized_education = []
+    for edu in education_records:
+        # Get start / end dates from years
+        start_year = edu.start_year or 2021
+        end_year = edu.end_year or 2025
+        serialized_education.append({
+            "id": str(uuid.uuid4()),
+            "studentProfileId": get_id(edu.student),
+            "institution": edu.institution_name or "IIT Madras",
+            "degree": edu.degree or "B.Tech",
+            "fieldOfStudy": edu.field_of_study or "Computer Science",
+            "startDate": f"{start_year}-08-01T00:00:00Z",
+            "endDate": f"{end_year}-05-31T00:00:00Z" if end_year else None,
+            "gpa": float(edu.grade) if edu.grade and edu.grade.replace('.', '', 1).isdigit() else 3.8
+        })
+
+    # 7. Student Experience Records
+    serialized_experience = []
+    for exp in experiences:
+        serialized_experience.append({
+            "id": str(uuid.uuid4()),
+            "studentProfileId": get_id(exp.student),
+            "companyName": exp.company or "Tech Corp",
+            "roleTitle": exp.title or "Software Intern",
+            "employmentType": exp.employment_type or "Internship",
+            "startDate": exp.start_date.isoformat() if hasattr(exp.start_date, 'isoformat') else "2023-05-15T00:00:00Z",
+            "endDate": exp.end_date.isoformat() if hasattr(exp.end_date, 'isoformat') else ("2023-08-15T00:00:00Z" if not exp.is_current else None),
+            "isCurrent": bool(exp.is_current),
+            "description": exp.description or "Developed and tested web application modules.",
+            "location": exp.location or "Hybrid"
+        })
+
+    # 8. Student Projects
+    serialized_projects = []
+    for proj in projects:
+        serialized_projects.append({
+            "id": str(uuid.uuid4()),
+            "studentProfileId": get_id(proj.student),
+            "title": proj.title or "Personal Portfolio Website",
+            "description": proj.summary or "A fully responsive personal portfolio built with React and Tailwind CSS.",
+            "linkUrl": proj.project_url or "https://myportfolio.dev",
+            "repoUrl": proj.repository_url or "https://github.com/student/portfolio",
+            "startDate": proj.start_date.isoformat() if hasattr(proj.start_date, 'isoformat') else "2023-01-10T00:00:00Z",
+            "endDate": proj.end_date.isoformat() if hasattr(proj.end_date, 'isoformat') else "2023-03-20T00:00:00Z"
+        })
+
+    # 9. Student Certifications
+    serialized_certifications = []
+    for cert in certifications:
+        serialized_certifications.append({
+            "id": str(uuid.uuid4()),
+            "studentProfileId": get_id(cert.student),
+            "name": cert.name or "AWS Certified Developer",
+            "issuingOrg": cert.issued_by or "Amazon Web Services",
+            "issueDate": cert.issue_date.isoformat() if hasattr(cert.issue_date, 'isoformat') else "2023-06-01T00:00:00Z",
+            "expiryDate": cert.expiry_date.isoformat() if hasattr(cert.expiry_date, 'isoformat') else None,
+            "credentialId": cert.credential_id or "AWS-DEC-9923",
+            "credentialUrl": cert.credential_url or "https://aws.amazon.com/verification"
+        })
+
+    # 10. Skills (extract all unique skills)
+    unique_skill_names = set()
+    for s in skills:
+        if s.skill_name:
+            unique_skill_names.add(s.skill_name)
+    # Add skills from jobs too
+    for j in jobs:
+        for sk in (j.required_skills or []):
+            unique_skill_names.add(sk)
+        for sk in (j.preferred_skills or []):
+            unique_skill_names.add(sk)
+
+    serialized_skills = []
+    skill_name_to_id = {}
+    for skill_name in sorted(unique_skill_names):
+        skill_id = str(uuid.uuid4())
+        skill_name_to_id[skill_name] = skill_id
+        serialized_skills.append({
+            "id": skill_id,
+            "name": skill_name
+        })
+
+    # 11. StudentSkills (join table)
+    serialized_student_skills = []
+    for s in skills:
+        if not s.skill_name or not s.student:
+            continue
+        skill_id = skill_name_to_id.get(s.skill_name)
+        if skill_id:
+            prof_val = s.proficiency
+            if isinstance(prof_val, (int, float)):
+                prof_level = int(proj_val) if 'proj_val' in locals() else int(prof_val)
+            else:
+                prof_level = {"expert": 90, "intermediate": 75, "beginner": 50}.get(str(prof_val or "").lower(), 70)
+            serialized_student_skills.append({
+                "studentProfileId": get_id(s.student),
+                "skillId": skill_id,
+                "level": prof_level
+            })
+
+    # 12. Resumes
+    serialized_resumes = []
+    for res in resumes:
+        serialized_resumes.append({
+            "id": get_id(res),
+            "studentProfileId": get_id(res.student),
+            "fileName": res.title or "Resume_Primary.pdf",
+            "fileUrl": "/uploads/resumes/dummy_resume.pdf",
+            "status": "PARSED",
+            "parsedText": res.metadata_json or "Pre-parsed text summary of student portfolio and accomplishments."
+        })
+
+    # 13. Job Categories
+    unique_categories = set(j.category for j in jobs if j.category)
+    serialized_categories = []
+    category_name_to_id = {}
+    for cat in sorted(unique_categories):
+        cat_id = str(uuid.uuid4())
+        category_name_to_id[cat] = cat_id
+        serialized_categories.append({
+            "id": cat_id,
+            "name": cat
+        })
+
+    # 14. Jobs
+    serialized_jobs = []
+    serialized_job_skills = []
+
+    for job in jobs:
+        job_id = get_id(job)
+        cat_id = category_name_to_id.get(job.category)
+        if not cat_id:
+            # fallback or default category
+            cat_id = str(uuid.uuid4())
+            category_name_to_id[job.category] = cat_id
+            serialized_categories.append({"id": cat_id, "name": job.category})
+
+        job_type_map = {"full_time": "FULL_TIME", "internship": "INTERNSHIP", "contract": "CONTRACT", "part_time": "PART_TIME"}
+        work_mode_map = {"onsite": "ON_SITE", "hybrid": "HYBRID", "remote": "REMOTE"}
+
+        serialized_jobs.append({
+            "id": job_id,
+            "companyId": get_id(job.company),
+            "recruiterId": get_id(job.recruiter),
+            "categoryId": cat_id,
+            "title": job.title or "Software Developer",
+            "description": job.description or "Exciting job opportunity in engineering.",
+            "requirements": job.requirements or "Experience with JavaScript and Python.",
+            "benefits": job.benefits or "Full health insurance, flexible work hours, annual performance bonus.",
+            "location": job.office_location or f"{job.location_city or 'San Francisco'}, {job.location_country or 'United States'}",
+            "jobType": job_type_map.get((job.employment_type or "").lower(), "FULL_TIME"),
+            "workMode": work_mode_map.get((job.work_model or "").lower(), "REMOTE"),
+            "salaryMin": float(job.salary_min or 80000),
+            "salaryMax": float(job.salary_max or 120000),
+            "currency": job.currency or "USD",
+            "deadline": job.application_deadline.isoformat() if hasattr(job.application_deadline, 'isoformat') else None,
+            "isPublished": bool(job.is_active)
+        })
+
+        # JobSkills required
+        for sk in (job.required_skills or []):
+            skill_id = skill_name_to_id.get(sk)
+            if skill_id:
+                serialized_job_skills.append({
+                    "jobId": job_id,
+                    "skillId": skill_id
+                })
+
+    # 15. Applications
+    serialized_applications = []
+    for app in applications:
+        app_status_map = {
+            "applied": "APPLIED", "reviewing": "REVIEWING", "screening": "SCREENING",
+            "interviewing": "INTERVIEWING", "offered": "OFFERED", "rejected": "REJECTED",
+            "withdrawn": "WITHDRAWN"
+        }
+        serialized_applications.append({
+            "id": get_id(app),
+            "studentProfileId": get_id(app.student),
+            "jobId": get_id(app.job),
+            "status": app_status_map.get((app.status or "").lower(), "APPLIED"),
+            "coverLetter": app.cover_letter or f"Dear hiring manager, I am writing to express my interest in the {app.job.title} position.",
+            "createdAt": app.applied_at.isoformat() if hasattr(app.applied_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updatedAt": app.last_updated_at.isoformat() if hasattr(app.last_updated_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+    # 16. Interviews
+    serialized_interviews = []
+    for i in interviews:
+        int_status_map = {"scheduled": "SCHEDULED", "completed": "COMPLETED", "cancelled": "CANCELLED", "no_show": "NO_SHOW"}
+        serialized_interviews.append({
+            "id": get_id(i),
+            "applicationId": get_id(i.application),
+            "title": f"{getattr(i, 'interview_type', 'Technical')} Interview - Round {getattr(i, 'interview_round', '1')}",
+            "scheduledAt": i.scheduled_at.isoformat() if hasattr(i.scheduled_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "duration": i.duration_minutes or 45,
+            "locationUrl": i.meeting_link or "https://zoom.us/j/mock_meeting_id",
+            "status": int_status_map.get((i.status or "").lower(), "SCHEDULED"),
+            "feedback": json.dumps(i.feedback_metadata or {})
+        })
+
+    # 17. Offers
+    # NOTE: the Offer prisma model is intentionally lean (title/salary/currency/
+    # startDate/status/extendedAt/respondedAt/withdrawnAt) — it does NOT mirror
+    # the rich python Offer dataclass (base_salary/bonus/stock_options/...).
+    # The rich fields still live in-memory for the career-report generator
+    # (which reads python objects directly), but what we persist to
+    # offers.json must match the Prisma schema exactly so ingest_seed.ts can
+    # upsert it directly into the `Offer` table.
+    #
+    # Status reconciliation with the hiring-pipeline state machine:
+    # every offer here is guaranteed (by OfferGenerator) to be attached to an
+    # application that already has an interview record, i.e. the application
+    # has at minimum reached the INTERVIEWING stage. We map the richer python
+    # offer status vocabulary (pending/accepted/negotiating/rejected/
+    # withdrawn/expired) onto the Prisma OfferStatus enum
+    # (DRAFT/EXTENDED/ACCEPTED/DECLINED/WITHDRAWN/EXPIRED), and force the
+    # linked application's status to at least INTERVIEWING (DRAFT offer, not
+    # yet sent) or OFFERED (any offer that has actually been extended to the
+    # candidate) so the two tables never disagree about pipeline stage.
+    offer_status_map = {
+        "accepted": "ACCEPTED",
+        "negotiating": "EXTENDED",
+        "rejected": "DECLINED",
+        "withdrawn": "WITHDRAWN",
+        "expired": "EXPIRED",
+    }
+    serialized_offers = []
+    application_status_overrides: dict[str, str] = {}
+    for idx, o in enumerate(offers):
+        raw_status = (o.status or "pending").lower()
+        if raw_status == "pending":
+            # A slice of "pending" offers represent offers still being
+            # drafted internally and not yet communicated to the candidate.
+            prisma_status = "DRAFT" if idx % 5 == 0 else "EXTENDED"
+        else:
+            prisma_status = offer_status_map.get(raw_status, "EXTENDED")
+
+        issue_dt = o.issue_date if hasattr(o.issue_date, 'isoformat') else datetime.date.today()
+        issue_iso = datetime.datetime.combine(issue_dt, datetime.time(9, 0)).isoformat() if not hasattr(issue_dt, 'hour') else issue_dt.isoformat()
+
+        decision_meta = getattr(o, 'student_decision_metadata', None) or {}
+        decision_ts = decision_meta.get('decision_timestamp')
+
+        extended_at = None if prisma_status == "DRAFT" else issue_iso
+        responded_at = None
+        withdrawn_at = None
+        if prisma_status in ("ACCEPTED", "DECLINED"):
+            responded_at = decision_ts or issue_iso
+        elif prisma_status == "WITHDRAWN":
+            withdrawn_at = decision_ts or issue_iso
+
+        application_id = get_id(o.application)
+        recruiter_id = get_id(getattr(o, 'recruiter', None) or getattr(o.application, 'recruiter', None))
+        job_title = getattr(getattr(o, 'job', None), 'title', None) or getattr(getattr(o.application, 'job', None), 'title', None) or "Offer"
+        offer_type = getattr(o, 'offer_type', None) or "Full-Time Offer"
+
+        serialized_offers.append({
+            "id": str(uuid.uuid4()),
+            "applicationId": application_id,
+            "createdByRecruiterId": recruiter_id,
+            "title": f"{offer_type}: {job_title}",
+            "salary": float(o.base_salary or 95000),
+            "currency": o.currency or "USD",
+            "startDate": o.joining_date.isoformat() if hasattr(o.joining_date, 'isoformat') else (datetime.date.today() + datetime.timedelta(days=30)).isoformat(),
+            "notes": None,
+            "status": prisma_status,
+            "extendedAt": extended_at,
+            "respondedAt": responded_at,
+            "withdrawnAt": withdrawn_at,
+        })
+
+        # Keep Application.status consistent with the hiring-pipeline state
+        # machine: any application carrying an already-extended offer must
+        # be at least OFFERED; a still-drafting offer implies at least
+        # INTERVIEWING (both are already guaranteed structurally since every
+        # offer here required a prior interview record, but we make the
+        # application row itself reflect that explicitly).
+        application_status_overrides[application_id] = (
+            "OFFERED" if prisma_status != "DRAFT" else "INTERVIEWING"
+        )
+
+    # Reconcile Application.status with any offers just generated so the
+    # Application and Offer tables never contradict each other on pipeline
+    # stage (see comment above the offers loop).
+    if application_status_overrides:
+        for app_row in serialized_applications:
+            override = application_status_overrides.get(app_row["id"])
+            if override:
+                app_row["status"] = override
+
+    # 18. Messages & Conversations
+    # Group messages by participants (student and sender/recipient) to create Conversations
+    convo_groups = defaultdict(list)
+    for m in messages:
+        # Find message thread/participants
+        sender_id = get_id(m.sender)
+        recipient_id = get_id(m.recipient)
+        # Unique tuple for conversation key (sorted so sender/recipient is order-independent)
+        convo_key = tuple(sorted([sender_id, recipient_id]))
+        convo_groups[convo_key].append(m)
+
+    serialized_conversations = []
+    serialized_participants = []
+    serialized_messages = []
+
+    for convo_key, convo_msgs in convo_groups.items():
+        convo_id = str(uuid.uuid4())
+        serialized_conversations.append({
+            "id": convo_id,
+            "createdAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+        # Add participants (Prisma requires student profile link for chat participants)
+        # Note: If a user is a recruiter, we check if they have a student profile fallback or ignore
+        for user_id in convo_key:
+            # Look up student profile corresponding to this userId
+            stud_profile = next((s for s in students if get_id(s.user) == user_id), None)
+            if stud_profile:
+                serialized_participants.append({
+                    "id": str(uuid.uuid4()),
+                    "conversationId": convo_id,
+                    "studentProfileId": get_id(stud_profile),
+                    "joinedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                })
+
+        # Add messages
+        for m in convo_msgs:
+            # Map sender User to StudentProfile
+            sender_profile = next((s for s in students if get_id(s.user) == get_id(m.sender)), None)
+            if not sender_profile:
+                # Recruiter fallback or system messages.
+                # Since Prisma schema's Message.senderId references StudentProfile, we must have a valid sender StudentProfile.
+                # If sender is recruiter, we skip or map to a mock student profile.
+                # For safety, let's map to the first student profile in the conversation
+                sender_profile = next((s for s in students if get_id(s.user) in convo_key), None)
+
+            if sender_profile:
+                serialized_messages.append({
+                    "id": str(uuid.uuid4()),
+                    "conversationId": convo_id,
+                    "senderId": get_id(sender_profile),
+                    "content": m.body or "Hello!",
+                    "status": (m.search_metadata.get('status') or "read").upper() if m.search_metadata else "READ",
+                    "createdAt": m.sent_at.isoformat() if hasattr(m.sent_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat()
+                })
+
+    # 19. Notifications
+    serialized_notifications = []
+    for n in notifications:
+        not_type_map = {
+            "system": "SYSTEM", "application": "APPLICATION", "job": "JOB", "message": "MESSAGE",
+            "interview": "INTERVIEW", "network": "NETWORK", "ai": "AI", "event": "EVENT"
+        }
+        not_priority_map = {"low": "LOW", "medium": "MEDIUM", "high": "HIGH", "urgent": "URGENT"}
+
+        serialized_notifications.append({
+            "id": str(uuid.uuid4()),
+            "senderId": get_id(n.user) if n.user else None, # sender user if applicable
+            "recipientId": get_id(n.user), # recipient user
+            "type": not_type_map.get((n.category or n.notification_type or "").lower(), "SYSTEM"),
+            "priority": not_priority_map.get((n.priority or "").lower(), "MEDIUM"),
+            "title": n.title or "New Notification",
+            "content": n.body or "You have received a new update.",
+            "isRead": bool(n.status == "read" or n.clicked_at or n.opened_at),
+            "linkUrl": n.action_url or None,
+            "createdAt": n.created_at.isoformat() if hasattr(n.created_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+    # 20. Career Insights (mapped from CareerReports, SkillGaps, Roadmaps, AI Recommendations, SalaryPredictions)
+    serialized_insights = []
+    # Index other entities by student for bundling
+    gaps_by_stud = {get_id(x.student): x for x in skill_gaps if x.student}
+    roadmaps_by_stud = {get_id(x.student): x for x in roadmaps if x.student}
+    ai_recs_by_stud = {get_id(x.student): x for x in ai_recommendations if x.student}
+    sal_by_stud = {get_id(x.student): x for x in salary_predictions if x.student}
+    job_matches_by_stud = {get_id(x.student): x for x in job_matches if x.student}
+    comp_recs_by_stud = {get_id(x.student): x for x in comp_recommendations if x.student}
+    rec_recs_by_stud = {get_id(x.student): x for x in rec_recommendations if x.student}
+    net_recs_by_stud = {get_id(x.student): x for x in net_recommendations if x.student}
+    ment_recs_by_stud = {get_id(x.student): x for x in mentor_recommendations if x.student}
+
+    # Cap on how many items of an embedded list (e.g. "top job matches") get
+    # serialized into a single student's AI-insight blob. Without this, a
+    # student's job_matches/company_recommendations/networking_recommendations
+    # each embedded the FULL matched Job/Company/etc. object (multi-KB description
+    # text included) for every match -- at 1200 students this produced a 627MB
+    # career_insights.json (600KB+ per row), which is neither realistic nor
+    # remotely production-safe to store in a `summary` text column. These blobs
+    # are meant to represent a lightweight "top N" insight card, not a full dump.
+    MAX_EMBEDDED_LIST_ITEMS = 15
+    # Beyond this nesting depth, long free-text fields (job descriptions, company
+    # bios, etc.) are truncated rather than inlined in full -- keeps nested
+    # "top N" lists compact without losing the outer-level detail that matters.
+    MAX_NESTED_TEXT_CHARS = 300
+
+    def serialize_helper(obj, _depth=0):
+        if obj is None:
+            return None
+        if isinstance(obj, (int, float, str, bool)):
+            return obj
+        if isinstance(obj, list):
+            return [serialize_helper(x, _depth + 1) for x in obj[:MAX_EMBEDDED_LIST_ITEMS]]
+        if isinstance(obj, dict):
+            return {k: serialize_helper(v, _depth + 1) for k, v in obj.items()}
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        if hasattr(obj, '_fields') or dataclasses.is_dataclass(obj):
+            field_names = obj._fields if hasattr(obj, '_fields') else [f.name for f in dataclasses.fields(obj)]
+            res = {}
+            for f in field_names:
+                val = getattr(obj, f, None)
+                # Avoid serializing direct circular user/student objects to keep payload lightweight
+                if f in ('student', 'user', 'company', 'recruiter', 'job', 'application', 'interview'):
+                    if val is not None:
+                        res[f + 'Id'] = get_id(val)
+                elif _depth >= 2 and isinstance(val, str) and len(val) > MAX_NESTED_TEXT_CHARS:
+                    res[f] = val[:MAX_NESTED_TEXT_CHARS] + '…'
+                else:
+                    res[f] = serialize_helper(val, _depth + 1)
+            return res
+        return str(obj)
+
+    for rep in career_reports:
+        stud_id = get_id(rep.student)
+
+        # Consolidate ALL student career AI metadata into a single rich insight payload!
+        insight_summary = {
+            "career_report": serialize_helper(rep),
+            "skill_gap": serialize_helper(gaps_by_stud.get(stud_id)),
+            "learning_roadmap": serialize_helper(roadmaps_by_stud.get(stud_id)),
+            "ai_recommendations": serialize_helper(ai_recs_by_stud.get(stud_id)),
+            "salary_prediction": serialize_helper(sal_by_stud.get(stud_id)),
+            "job_matches": serialize_helper(job_matches_by_stud.get(stud_id)),
+            "company_recommendations": serialize_helper(comp_recs_by_stud.get(stud_id)),
+            "recruiter_recommendations": serialize_helper(rec_recs_by_stud.get(stud_id)),
+            "networking_recommendations": serialize_helper(net_recs_by_stud.get(stud_id)),
+            "mentor_recommendations": serialize_helper(ment_recs_by_stud.get(stud_id))
+        }
+
+        serialized_insights.append({
+            "id": str(uuid.uuid4()),
+            "studentProfileId": stud_id,
+            "summary": json.dumps(insight_summary),
+            "score": int(rep.overall_employability or 80),
+            "status": "COMPLETED",
+            "modelVersion": "careerbridge-ai-v2",
+            "generatedAt": rep.generated_at.isoformat() if hasattr(rep.generated_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+    # 21. Resume Analyses
+    serialized_resume_analyses = []
+    for an in resume_analyses:
+        stud_id = get_id(an.student)
+        # Find primary resume ID of this student
+        student_resumes = [res for res in resumes if get_id(res.student) == stud_id]
+        resume_id = get_id(student_resumes[0]) if student_resumes else str(uuid.uuid4())
+
+        serialized_resume_analyses.append({
+            "id": str(uuid.uuid4()),
+            "studentProfileId": stud_id,
+            "resumeId": resume_id,
+            "summary": json.dumps(serialize_helper(an)),
+            "score": int(an.ats_score or an.job_match_score or 75),
+            "status": "COMPLETED",
+            "modelVersion": "careerbridge-resume-gpt4",
+            "generatedAt": an.generated_at.isoformat() if hasattr(an.generated_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+    # 22. Mock Interviews and Reports
+    serialized_mock_interviews = []
+    serialized_mock_interview_reports = []
+    for mi in mock_interviews:
+        mi_id = str(uuid.uuid4())
+        serialized_mock_interviews.append({
+            "id": mi_id,
+            "studentProfileId": get_id(mi.student),
+            "jobTitle": mi.target_role or "Software Developer",
+            "durationLimit": 30,
+            "createdAt": mi.created_at.isoformat() if hasattr(mi.created_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+        serialized_mock_interview_reports.append({
+            "id": str(uuid.uuid4()),
+            "mockInterviewId": mi_id,
+            "summary": json.dumps(serialize_helper(mi)),
+            "score": int(mi.overall_score or 80),
+            "status": mi.completion_status or "COMPLETED",
+            "modelVersion": "careerbridge-interview-v1",
+            "generatedAt": mi.created_at.isoformat() if hasattr(mi.created_at, 'isoformat') else datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+
+    # Save credentials for convenience
+    credentials = []
+    for u in all_users:
+        # Use simple password for all seeded users for easy testing
+        credentials.append({
+            "email": u.email,
+            "password": "seeded_user_password123",
+            "role": u.role.value
+        })
+
+    # Write files to backend/scripts/data/
+    out_dir = os.path.abspath(os.path.dirname(__file__) + '/data')
+    os.makedirs(out_dir, exist_ok=True)
+
+    data_files = {
+        "users.json": serialized_users,
+        "companies.json": serialized_companies,
+        "recruiters.json": serialized_recruiters,
+        "universities.json": serialized_universities,
+        "departments.json": serialized_departments,
+        "students.json": serialized_students,
+        "education.json": serialized_education,
+        "experience.json": serialized_experience,
+        "projects.json": serialized_projects,
+        "certifications.json": serialized_certifications,
+        "skills.json": serialized_skills,
+        "student_skills.json": serialized_student_skills,
+        "resumes.json": serialized_resumes,
+        "job_categories.json": serialized_categories,
+        "jobs.json": serialized_jobs,
+        "job_skills.json": serialized_job_skills,
+        "applications.json": serialized_applications,
+        "interviews.json": serialized_interviews,
+        "offers.json": serialized_offers,
+        "conversations.json": serialized_conversations,
+        "participants.json": serialized_participants,
+        "messages.json": serialized_messages,
+        "notifications.json": serialized_notifications,
+        "career_insights.json": serialized_insights,
+        "resume_analyses.json": serialized_resume_analyses,
+        "mock_interviews.json": serialized_mock_interviews,
+        "mock_interview_reports.json": serialized_mock_interview_reports,
+        "credentials.json": credentials
+    }
+
+    # Write dummy document file
+    dummy_pdf_path = os.path.join(out_dir, 'dummy_resume.pdf')
+    with open(dummy_pdf_path, 'w') as f:
+        f.write("%PDF-1.4 Mock PDF Resume Content for CareerBridge Seeding")
+
+    print("\nWriting JSON files to scripts/data/ ...")
+    for name, content in data_files.items():
+        file_path = os.path.join(out_dir, name)
+        with open(file_path, 'w') as f:
+            json.dump(content, f, indent=2, cls=SeedJsonEncoder)
+        print(f"  Successfully wrote {name} with {len(content)} records.")
+
+    print("\nIngestion JSON generation completed successfully!")
+    print("Database summary statistics:")
+    print(f"  Users: {len(serialized_users)}")
+    print(f"  Students: {len(serialized_students)}")
+    print(f"  Companies: {len(serialized_companies)}")
+    print(f"  Recruiters: {len(serialized_recruiters)}")
+    print(f"  Universities: {len(serialized_universities)}")
+    print(f"  Jobs: {len(serialized_jobs)}")
+    print(f"  Applications: {len(serialized_applications)}")
+    print(f"  Interviews: {len(serialized_interviews)}")
+    print(f"  Offers: {len(serialized_offers)}")
+    print(f"  Conversations: {len(serialized_conversations)}")
+    print(f"  Messages: {len(serialized_messages)}")
+    print(f"  Notifications: {len(serialized_notifications)}")
+    print(f"  Career Insights (AI): {len(serialized_insights)}")
+    print(f"  Resume Analyses (AI): {len(serialized_resume_analyses)}")
+    print(f"  Mock Interviews (AI): {len(serialized_mock_interviews)}")
+
+if __name__ == "__main__":
+    main()

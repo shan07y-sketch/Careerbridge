@@ -74,8 +74,8 @@ async function runE2ESuite() {
 
   console.log('\nTest 5: Validating Operational System Health Metrics...');
   const diagnostics = await AdminService.getSystemMonitoring();
-  assert(diagnostics.apiHealth === 'HEALTHY', 'Diagnostics system parses API health');
   assert(diagnostics.databaseStatus !== undefined, 'Diagnostics evaluates database availability');
+  assert(typeof diagnostics.processUptimeSeconds === 'number', 'Diagnostics reports real process uptime');
 
   const totalDuration = Date.now() - startBenchmark;
   console.log('\n==================================================');

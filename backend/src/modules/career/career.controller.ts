@@ -21,4 +21,14 @@ export class CareerController {
       message: 'Student mock interview reports list retrieved.'
     });
   });
+
+  static generateInsight = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { targetRole } = req.body as { targetRole?: string };
+    const insight = await CareerService.generateCareerInsight(req.user!.id, targetRole ?? '');
+    res.status(201).json({
+      success: true,
+      data: insight,
+      message: 'Career readiness insight generated.'
+    });
+  });
 }

@@ -1,25 +1,13 @@
 import { prisma } from '../../config/database';
+import { AppError } from '../../utils/app-error';
 import { eventBus } from '../shared/event-bus';
 
 export class CampusDriveService {
-  private static serializeDriveTitle(universityId: string, title: string): string {
-    return `CAMPUS_DRIVE:${universityId}:${title}`;
-  }
-
-  private static deserializeDriveTitle(fullTitle: string): { universityId: string; title: string } | null {
-    if (!fullTitle.startsWith('CAMPUS_DRIVE:')) return null;
-    const parts = fullTitle.split(':');
-    return {
-      universityId: parts[1],
-      title: parts.slice(2).join(':')
-    };
-  }
-
   static async createDrive(universityId: string, data: { title: string; description: string; location: string; scheduledAt: Date; deadline: Date }) {
-    const fullTitle = this.serializeDriveTitle(universityId, data.title);
-    const drive = await prisma.event.create({
+    const drive = await prisma.placementDrive.create({
       data: {
-        title: fullTitle,
+        universityId,
+        title: data.title,
         description: data.description,
         location: data.location,
         scheduledAt: data.scheduledAt,
@@ -28,45 +16,30 @@ export class CampusDriveService {
     });
 
     eventBus.emit('CampusDriveCreated', { id: drive.id, universityId });
-    return {
-      ...drive,
-      title: data.title
-    };
+    return drive;
   }
 
   static async getDrives(universityId: string) {
-    const events = await prisma.event.findMany({
-      where: {
-        title: { startsWith: `CAMPUS_DRIVE:${universityId}:` },
-        isDeleted: false
-      }
-    });
-
-    return events.map(e => {
-      const parts = this.deserializeDriveTitle(e.title);
-      return {
-        ...e,
-        title: parts ? parts.title : e.title
-      };
+    return prisma.placementDrive.findMany({
+      where: { universityId, isDeleted: false },
+      orderBy: { scheduledAt: 'asc' }
     });
   }
 
-  static async updateDrive(universityId: string, id: string, data: any) {
-    const drive = await prisma.event.findFirst({
-      where: {
-        id,
-        title: { startsWith: `CAMPUS_DRIVE:${universityId}:` }
-      }
-    });
+  static async findDriveInUniversity(universityId: string, id: string) {
+    return prisma.placementDrive.findFirst({ where: { id, universityId, isDeleted: false } });
+  }
 
-    if (!drive) throw new Error('Campus drive not found or unauthorized.');
+  static async updateDrive(universityId: string, id: string, data: Partial<{ title: string; description: string; location: string; scheduledAt: Date; deadline: Date }>) {
+    const existing = await this.findDriveInUniversity(universityId, id);
+    if (!existing) {
+      throw new AppError('Campus drive not found or unauthorized.', 404, 'DRIVE_NOT_FOUND');
+    }
 
-    const fullTitle = data.title ? this.serializeDriveTitle(universityId, data.title) : undefined;
-
-    const result = await prisma.event.update({
+    const result = await prisma.placementDrive.update({
       where: { id },
       data: {
-        title: fullTitle,
+        title: data.title,
         description: data.description,
         location: data.location,
         scheduledAt: data.scheduledAt,
@@ -76,5 +49,15 @@ export class CampusDriveService {
 
     eventBus.emit('CampusDriveUpdated', { id: result.id, universityId });
     return result;
+  }
+
+  static async deleteDrive(universityId: string, id: string) {
+    const existing = await this.findDriveInUniversity(universityId, id);
+    if (!existing) {
+      throw new AppError('Campus drive not found or unauthorized.', 404, 'DRIVE_NOT_FOUND');
+    }
+    await prisma.placementDrive.update({ where: { id }, data: { isDeleted: true, deletedAt: new Date() } });
+    eventBus.emit('CampusDriveDeleted', { id, universityId });
+    return { deleted: true };
   }
 }

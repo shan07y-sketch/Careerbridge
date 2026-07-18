@@ -27,13 +27,18 @@ export const Authentication: React.FC = () => {
   const [degree, setDegree] = useState('');
   const [gradYear, setGradYear] = useState('2026');
   const [companyName, setCompanyName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [uniLocation, setUniLocation] = useState('');
   const [agree, setAgree] = useState(false);
 
-  // Strength checks
+  // Strength checks -- mirror the backend registerSchema EXACTLY
+  // (min 8 chars, an uppercase letter, a lowercase letter, and a digit),
+  // so a password that passes here can never be rejected server-side.
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const hasMinLength = password.length >= 8;
   const hasNumber = /\d/.test(password);
-  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
   const passwordsMatch = password === confirmPassword;
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -48,9 +53,10 @@ export const Authentication: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      await login(email, password);
+      // login() resolves the REAL role from the backend response -- the
+      // account's role in PostgreSQL wins over whatever tab the user was on.
+      const resolvedRole = await login(email, password);
       showToast('Signed in successfully!', 'success');
-      const resolvedRole = localStorage.getItem('role') || role;
       if (resolvedRole === 'admin') {
         navigate('/admin/dashboard');
       } else if (resolvedRole === 'employer') {
@@ -73,7 +79,11 @@ export const Authentication: React.FC = () => {
       showToast('Please fill out all required fields', 'error');
       return;
     }
-    if (role === 'employer' && (!name || !email || !companyName)) {
+    if (role === 'employer' && (!name || !email || !companyName || !industry)) {
+      showToast('Please fill out all required fields', 'error');
+      return;
+    }
+    if (role === 'university' && (!name || !email || !university || !uniLocation)) {
       showToast('Please fill out all required fields', 'error');
       return;
     }
@@ -81,7 +91,7 @@ export const Authentication: React.FC = () => {
       showToast('Please enter a valid email address', 'error');
       return;
     }
-    if (!hasMinLength || !hasNumber || !hasSpecial) {
+    if (!hasMinLength || !hasNumber || !hasUppercase || !hasLowercase) {
       showToast('Password must satisfy security criteria', 'error');
       return;
     }
@@ -95,17 +105,31 @@ export const Authentication: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      await registerStudent(
+      // Send the EXACT payload the backend's registerSchema requires for the
+      // selected role (student: universityName/degree/graduationYear;
+      // employer: companyName+industry; university: universityName+location).
+      const resolvedRole = await registerStudent({
         name,
         email,
-        role === 'student' ? university : undefined,
-        role === 'student' ? degree : undefined,
-        role === 'student' ? parseInt(gradYear) : undefined,
+        password,
         role,
-        role === 'employer' ? companyName : undefined
-      );
-      showToast('Registration successful! Verify your email.', 'success');
-      navigate('/auth/verify-email');
+        universityName: role !== 'employer' ? university : undefined,
+        degree: role === 'student' ? degree : undefined,
+        graduationYear: role === 'student' ? parseInt(gradYear) : undefined,
+        companyName: role === 'employer' ? companyName : undefined,
+        industry: role === 'employer' ? industry : undefined,
+        location: role === 'university' ? uniLocation : undefined
+      });
+      showToast('Account created successfully!', 'success');
+      // The account is registered AND logged in against the real backend at
+      // this point -- route straight into the correct portal by role.
+      if (resolvedRole === 'employer') {
+        navigate('/employer/dashboard');
+      } else if (resolvedRole === 'university') {
+        navigate('/university/dashboard');
+      } else {
+        navigate('/student/onboarding');
+      }
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Registration failed', 'error');
     } finally {
@@ -320,10 +344,16 @@ export const Authentication: React.FC = () => {
                           <span className={hasNumber ? 'text-primary font-medium' : ''}>Contains a digit (0-9)</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`material-symbols-outlined text-[14px] ${hasSpecial ? 'text-primary' : 'text-error'}`}>
-                            {hasSpecial ? 'check_circle' : 'cancel'}
+                          <span className={`material-symbols-outlined text-[14px] ${hasUppercase ? 'text-primary' : 'text-error'}`}>
+                            {hasUppercase ? 'check_circle' : 'cancel'}
                           </span>
-                          <span className={hasSpecial ? 'text-primary font-medium' : ''}>Contains special char</span>
+                          <span className={hasUppercase ? 'text-primary font-medium' : ''}>Contains an uppercase letter (A-Z)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`material-symbols-outlined text-[14px] ${hasLowercase ? 'text-primary' : 'text-error'}`}>
+                            {hasLowercase ? 'check_circle' : 'cancel'}
+                          </span>
+                          <span className={hasLowercase ? 'text-primary font-medium' : ''}>Contains a lowercase letter (a-z)</span>
                         </div>
                       </div>
                     )}
@@ -392,17 +422,55 @@ export const Authentication: React.FC = () => {
                       </div>
                     </div>
                   </>
+                ) : role === 'employer' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Company Name</label>
+                      <input
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
+                        placeholder="Lumina Systems"
+                        type="text"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Industry</label>
+                      <input
+                        value={industry}
+                        onChange={(e) => setIndustry(e.target.value)}
+                        className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
+                        placeholder="Technology"
+                        type="text"
+                        required
+                      />
+                    </div>
+                  </div>
                 ) : (
-                  <div>
-                    <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Company Name</label>
-                    <input 
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
-                      placeholder="Lumina Systems" 
-                      type="text"
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">University Name</label>
+                      <input
+                        value={university}
+                        onChange={(e) => setUniversity(e.target.value)}
+                        className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
+                        placeholder="Massachusetts Institute of Technology"
+                        type="text"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1 ml-1">Location</label>
+                      <input
+                        value={uniLocation}
+                        onChange={(e) => setUniLocation(e.target.value)}
+                        className="w-full bg-surface-container-low dark:bg-surface-container border border-secondary-container dark:border-outline-variant rounded-[12px] px-4 py-2.5 outline-none focus:border-primary text-on-surface dark:text-white"
+                        placeholder="Cambridge, MA"
+                        type="text"
+                        required
+                      />
+                    </div>
                   </div>
                 )}
 

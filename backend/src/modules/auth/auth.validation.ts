@@ -16,7 +16,12 @@ export const registerSchema = z.object({
     companyName: z.string().min(1, 'Company name is required.').optional(),
     industry: z.string().min(1, 'Industry name is required.').optional(),
     universityName: z.string().min(1, 'University name is required.').optional(),
-    location: z.string().min(1, 'Location is required.').optional()
+    location: z.string().min(1, 'Location is required.').optional(),
+    // Student-only optional academic details, collected at signup. They were
+    // previously sent by the frontend but silently stripped by this schema;
+    // now they are part of the contract and persisted (see AuthRepository).
+    degree: z.string().min(1, 'Degree is required.').optional(),
+    graduationYear: z.coerce.number().int().min(1950).max(2100).optional()
   }).refine((data) => {
     if (data.role === 'STUDENT') {
       return !!data.firstName && !!data.lastName;

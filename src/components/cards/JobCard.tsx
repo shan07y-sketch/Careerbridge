@@ -65,7 +65,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onApplySuccess }) => {
 
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start gap-2">
-            <div>
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 {job.urgency === 'high' && (
                   <span className="bg-error-container/20 text-error px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider flex items-center gap-0.5">
@@ -91,10 +91,14 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onApplySuccess }) => {
               </p>
               
               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                <span className="text-[10px] text-on-surface-variant/70">Posted: {job.postedTime}</span>
-                <span className="text-[10px] text-primary dark:text-primary-fixed font-bold flex items-center gap-0.5">
-                  <span className="material-symbols-outlined text-[12px] fill-1">star</span> {job.rating}/5
-                </span>
+                {job.postedTime && (
+                  <span className="text-[10px] text-on-surface-variant/70">Posted: {job.postedTime}</span>
+                )}
+                {job.rating > 0 && (
+                  <span className="text-[10px] text-primary dark:text-primary-fixed font-bold flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[12px] fill-1">star</span> {job.rating}/5
+                  </span>
+                )}
                 {job.applicantsCount && (
                   <span className="text-[10px] text-on-surface-variant/60">
                     • {job.applicantsCount} applicants
@@ -122,9 +126,11 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onApplySuccess }) => {
             <span className="bg-surface-container dark:bg-surface-container-low px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
               {job.type}
             </span>
-            <span className="bg-secondary-container/40 dark:bg-primary-container/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-primary dark:text-primary-fixed">
-              AI Match: {job.matchRate}%
-            </span>
+            {job.matchRate > 0 && (
+              <span className="bg-secondary-container/40 dark:bg-primary-container/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-primary dark:text-primary-fixed">
+                AI Match: {job.matchRate}%
+              </span>
+            )}
             {job.easyApply && (
               <span className="bg-primary/10 dark:bg-primary-fixed/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-primary dark:text-primary-fixed">
                 Easy Apply

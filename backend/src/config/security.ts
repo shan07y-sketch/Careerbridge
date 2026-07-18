@@ -1,5 +1,7 @@
 import { env } from './env';
 
+const isDev = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
+
 export const securityConfig = {
   jwt: {
     accessSecret: env.JWT_ACCESS_SECRET,
@@ -18,7 +20,7 @@ export const securityConfig = {
   },
   rateLimit: {
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: isDev ? 9999999 : 100,
     message: {
       success: false,
       error: {
@@ -30,7 +32,7 @@ export const securityConfig = {
   rateLimits: {
     login: {
       windowMs: 15 * 60 * 1000, // 15 mins
-      max: 5,
+      max: isDev ? 9999999 : 5,
       message: {
         success: false,
         error: {
@@ -41,7 +43,7 @@ export const securityConfig = {
     },
     register: {
       windowMs: 60 * 60 * 1000, // 1 hour
-      max: 10,
+      max: isDev ? 9999999 : 10,
       message: {
         success: false,
         error: {
@@ -52,7 +54,7 @@ export const securityConfig = {
     },
     forgotPassword: {
       windowMs: 60 * 60 * 1000, // 1 hour
-      max: 3,
+      max: isDev ? 9999999 : 3,
       message: {
         success: false,
         error: {
@@ -63,7 +65,7 @@ export const securityConfig = {
     },
     verification: {
       windowMs: 60 * 60 * 1000, // 1 hour
-      max: 5,
+      max: isDev ? 9999999 : 5,
       message: {
         success: false,
         error: {

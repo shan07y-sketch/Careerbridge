@@ -12,7 +12,8 @@ export class ApplicationsRepository {
           }
         },
         stages: true,
-        interviews: true
+        interviews: true,
+        offer: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -29,8 +30,46 @@ export class ApplicationsRepository {
           }
         },
         stages: true,
-        interviews: true
+        interviews: true,
+        offer: true
       }
+    });
+  }
+
+  static async getOfferById(offerId: string) {
+    return prisma.offer.findUnique({
+      where: { id: offerId },
+      include: { application: true }
+    });
+  }
+
+  static async respondToOffer(offerId: string, accept: boolean) {
+    return prisma.$transaction(async (tx) => {
+      const offer = await tx.offer.update({
+        where: { id: offerId },
+        data: {
+          status: accept ? 'ACCEPTED' : 'DECLINED',
+          respondedAt: new Date()
+        }
+      });
+
+      await tx.applicationStage.create({
+        data: {
+          applicationId: offer.applicationId,
+          stageName: accept ? 'Offer Accepted' : 'Offer Declined',
+          status: accept ? 'OFFERED' : 'REJECTED',
+          notes: accept ? 'Candidate accepted the offer.' : 'Candidate declined the offer.'
+        }
+      });
+
+      if (!accept) {
+        await tx.application.update({
+          where: { id: offer.applicationId },
+          data: { status: 'REJECTED' }
+        });
+      }
+
+      return offer;
     });
   }
 

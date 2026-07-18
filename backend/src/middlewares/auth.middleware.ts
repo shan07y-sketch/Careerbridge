@@ -25,9 +25,17 @@ export const authenticate = catchAsync(async (req: AuthenticatedRequest, res, ne
 
   try {
     const decoded = jwt.verify(token, securityConfig.jwt.accessSecret) as any;
+    // JWTs are signed with the Prisma `UserRole` enum value (STUDENT / EMPLOYER /
+    // UNIVERSITY / ADMIN, uppercase). `restrictTo(...)` and every route in this
+    // codebase were written against lowercase role literals ('student', 'employer',
+    // 'university', 'admin'). Without normalizing here, every restrictTo() gate in
+    // the entire app -- admin, employer, and university routes alike -- would
+    // reject 100% of real, database-backed users with 403, because 'ADMIN' !==
+    // 'admin'. This was invisible in tests because they forge JWTs/req.user
+    // directly with lowercase roles, never exercising the real sign/verify path.
     req.user = {
       id: decoded.id,
-      role: decoded.role,
+      role: (typeof decoded.role === 'string' ? decoded.role.toLowerCase() : decoded.role) as 'student' | 'employer' | 'university' | 'admin',
       email: decoded.email,
     };
     next();

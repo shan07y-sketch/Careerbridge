@@ -8,11 +8,18 @@ import applicationsRoutes from '../modules/applications/applications.routes';
 import notificationsRoutes from '../modules/notifications/notifications.routes';
 import messagesRoutes from '../modules/messages/messages.routes';
 import resumeRoutes from '../modules/resume/resume.routes';
+import resumeShareRoutes from '../modules/resume/resume-share.routes';
 import careerRoutes from '../modules/career/career.routes';
 import aiRoutes from '../modules/ai/ai.routes';
 import employerRoutes from '../modules/employer/employer.routes';
 import universityRoutes from '../modules/university/university.routes';
 import adminRoutes from '../modules/admin/admin.routes';
+import networkRoutes from '../modules/network/network.routes';
+import interviewRoutes from '../modules/interview/interview.routes';
+import eventsRoutes from '../modules/events/events.routes';
+import scheduledInterviewRoutes from '../modules/interview/scheduled-interview.routes';
+import sharedRoutes from './shared.routes';
+import ecosystemRoutes from '../modules/ecosystem/ecosystem.routes';
 
 const router = Router();
 
@@ -25,10 +32,17 @@ router.use('/applications', applicationsRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/messages', messagesRoutes);
 router.use('/resume', resumeRoutes);
+router.use('/resume-share', resumeShareRoutes);
 router.use('/career', careerRoutes);
 router.use('/ai', aiRoutes);
 router.use('/employer', employerRoutes);
 router.use('/university', universityRoutes);
 router.use('/admin', adminRoutes);
+router.use('/network', networkRoutes);
+router.use('/interview', interviewRoutes);
+router.use('/interviews', scheduledInterviewRoutes);
+router.use('/events', eventsRoutes);
+router.use('/ecosystem', ecosystemRoutes);
+router.use('/', sharedRoutes);
 
 export default router;

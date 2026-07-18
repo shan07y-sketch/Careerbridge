@@ -9,7 +9,12 @@ import { ToastProvider } from './contexts/ToastContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { MessageProvider } from './contexts/MessageContext';
 
-// Pages - Lazy Loaded for dynamic code splitting
+// Pages - Lazy Loaded for dynamic code splitting.
+// adaptive(desktop, mobile) keeps ONE route per URL and picks the
+// presentation at render time (Capacitor/touch/viewport detection);
+// the unused variant's chunk is never downloaded.
+import { adaptive } from './mobile/adaptive';
+
 const Landing = lazy(() => import('./pages/student/Landing'));
 const RoleSelection = lazy(() => import('./pages/student/RoleSelection'));
 const Authentication = lazy(() => import('./pages/student/Authentication'));
@@ -17,27 +22,29 @@ const ForgotPassword = lazy(() => import('./pages/student/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/student/ResetPassword'));
 const EmailVerification = lazy(() => import('./pages/student/EmailVerification'));
 const Onboarding = lazy(() => import('./pages/student/Onboarding'));
-const Dashboard = lazy(() => import('./pages/student/Dashboard'));
-const Jobs = lazy(() => import('./pages/student/Jobs'));
-const JobDetails = lazy(() => import('./pages/student/JobDetails'));
-const SavedJobs = lazy(() => import('./pages/student/SavedJobs'));
-const Applications = lazy(() => import('./pages/student/Applications'));
-const Profile = lazy(() => import('./pages/student/Profile'));
-const MockInterview = lazy(() => import('./pages/student/MockInterview'));
-const MockInterviewReport = lazy(() => import('./pages/student/MockInterviewReport'));
-const AICareerReport = lazy(() => import('./pages/student/AICareerReport'));
-const Messages = lazy(() => import('./pages/student/Messages'));
-const Network = lazy(() => import('./pages/student/Network'));
-const Settings = lazy(() => import('./pages/student/Settings'));
-const Notifications = lazy(() => import('./pages/student/Notifications'));
+const Dashboard = adaptive(() => import('./pages/student/Dashboard'), () => import('./mobile/pages/student/Dashboard'));
+const Jobs = adaptive(() => import('./pages/student/Jobs'), () => import('./mobile/pages/student/Jobs'));
+const JobDetails = adaptive(() => import('./pages/student/JobDetails'), () => import('./mobile/pages/student/JobDetails'));
+const SavedJobs = adaptive(() => import('./pages/student/SavedJobs'), () => import('./mobile/pages/student/SavedJobs'));
+const Applications = adaptive(() => import('./pages/student/Applications'), () => import('./mobile/pages/student/Applications'));
+const Profile = adaptive(() => import('./pages/student/Profile'), () => import('./mobile/pages/student/Profile'));
+const MockInterview = adaptive(() => import('./pages/student/MockInterview'), () => import('./mobile/pages/student/MockInterview'));
+const MockInterviewReport = adaptive(() => import('./pages/student/MockInterviewReport'), () => import('./mobile/pages/student/MockInterviewReport'));
+const AICareerReport = adaptive(() => import('./pages/student/AICareerReport'), () => import('./mobile/pages/student/CareerCoach'));
+const Messages = adaptive(() => import('./pages/student/Messages'), () => import('./mobile/pages/student/Messages'));
+const Network = adaptive(() => import('./pages/student/Network'), () => import('./mobile/pages/student/Network'));
+const Settings = adaptive(() => import('./pages/student/Settings'), () => import('./mobile/pages/student/Settings'));
+const Notifications = adaptive(() => import('./pages/student/Notifications'), () => import('./mobile/pages/student/Notifications'));
 const CompanyProfile = lazy(() => import('./pages/student/CompanyProfile'));
 const InterviewDetails = lazy(() => import('./pages/student/InterviewDetails'));
-const EmployerDashboard = lazy(() => import('./pages/employer/Dashboard'));
-const UniversityDashboard = lazy(() => import('./pages/university/Dashboard'));
+const EventDetails = lazy(() => import('./pages/student/EventDetails'));
+const MentorProfile = lazy(() => import('./pages/student/MentorProfile'));
+const EmployerDashboard = adaptive(() => import('./pages/employer/Dashboard'), () => import('./mobile/pages/employer/EmployerPortal'));
+const UniversityDashboard = adaptive(() => import('./pages/university/Dashboard'), () => import('./mobile/pages/university/UniversityPortal'));
 
 // Admin Pages
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminPortal = adaptive(() => import('./pages/admin/AdminPortal'), () => import('./mobile/pages/admin/AdminPortal'));
 
 // Legal
 const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
@@ -51,6 +58,8 @@ const ErrorBoundary = lazy(() => import('./pages/student/ErrorBoundary'));
 
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { App as NativeApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { OfflineQueueProvider } from './contexts/OfflineQueueContext';
 import { PushNotificationService } from './services/push-notification.service';
 
@@ -72,8 +81,24 @@ export const App: React.FC = () => {
       console.log('[LIFECYCLE] Native App State Changed:', state.isActive ? 'ACTIVE' : 'BACKGROUND');
     });
 
+    // Android hardware back button: navigate back through the SPA history,
+    // and only exit the app from a history root (e.g. the landing page).
+    const backListener = NativeApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else {
+        NativeApp.exitApp();
+      }
+    });
+
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({ style: Style.Dark }).catch(() => undefined);
+      StatusBar.setBackgroundColor({ color: '#0f172a' }).catch(() => undefined);
+    }
+
     return () => {
       stateListener.then(l => l.remove());
+      backListener.then(l => l.remove());
     };
   }, []);
 
@@ -100,118 +125,14 @@ export const App: React.FC = () => {
                      {/* Dedicated Admin Login */}
                      <Route path="/admin/login" element={<AdminLogin />} />
 
-                     {/* Protected Admin Routes */}
-                     <Route 
-                       path="/admin" 
+                     {/* Protected Admin Routes -- single portal shell handles all sub-views internally */}
+                     <Route
+                       path="/admin/*"
                        element={
                          <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
+                           <AdminPortal />
                          </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/dashboard" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/analytics" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/users" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/students" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/employers" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/universities" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/ai-monitoring" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/audit-logs" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/reports" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/feature-flags" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/notifications" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/settings" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
-                     />
-                     <Route 
-                       path="/admin/help-center" 
-                       element={
-                         <ProtectedRoute allowedRoles={['admin']}>
-                           <AdminDashboard />
-                         </ProtectedRoute>
-                       } 
+                       }
                      />
 
                     {/* Protected Student Pathways */}
@@ -279,13 +200,13 @@ export const App: React.FC = () => {
                         </ProtectedRoute>
                       } 
                     />
-                    <Route 
-                      path="/student/interview-report/rep_1" 
+                    <Route
+                      path="/student/interview-report/:id"
                       element={
                         <ProtectedRoute>
                           <MockInterviewReport />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
                     <Route 
                       path="/student/career-report" 
@@ -340,6 +261,22 @@ export const App: React.FC = () => {
                       element={
                         <ProtectedRoute>
                           <InterviewDetails />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/student/event/:id" 
+                      element={
+                        <ProtectedRoute>
+                          <EventDetails />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/student/mentor/:id" 
+                      element={
+                        <ProtectedRoute>
+                          <MentorProfile />
                         </ProtectedRoute>
                       } 
                     />

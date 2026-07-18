@@ -1,293 +1,305 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Job } from '../../types';
-import { JobService } from '../../services';
+import type { Job, Application, Notification, Interview } from '../../types';
+import { JobService, ApplicationService, NotificationService, InterviewService, StudentEcosystemService, MockInterviewAIService } from '../../services';
+import type { MockInterviewHistoryEntry } from '../../services';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { JobCard } from '../../components/cards/JobCard';
-import { ProgressChart } from '../../components/charts/ProgressChart';
 import { useToast } from '../../contexts/ToastContext';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { Button } from '../../components/ui/Button';
+import { Card, CardHeader } from '../../components/ui/Card';
+import { StatCard } from '../../components/ui/StatCard';
+import { Section, ViewAll } from '../../components/ui/Section';
+import { AttentionCard } from '../../components/ui/AttentionCard';
+import { ActivityFeed, type ActivityItem } from '../../components/ui/ActivityFeed';
+import { TaskList, type TaskItem } from '../../components/ui/TaskList';
+import { ProgressRing } from '../../components/ui/Progress';
+import { Badge } from '../../components/ui/Badge';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { CardSkeleton } from '../../components/ui/Skeleton';
+
+/** Real profile completion, computed from actual Student fields — no fabricated 85%. */
+const computeProfileCompletion = (user: ReturnType<typeof useAuth>['user']): { percent: number; missing: { label: string; icon: string }[] } => {
+  if (!user) return { percent: 0, missing: [] };
+  const checks: { label: string; icon: string; done: boolean }[] = [
+    { label: 'Upload your resume', icon: 'upload_file', done: !!user.resumeUrl },
+    { label: 'Link portfolio or GitHub', icon: 'link', done: !!user.portfolioUrl },
+    { label: 'Set your career goal', icon: 'flag', done: !!user.careerGoal },
+    { label: 'Add your skills', icon: 'psychology', done: (user.skills?.length ?? 0) > 0 },
+    { label: 'Set preferred location', icon: 'location_on', done: !!user.preferredLocation },
+  ];
+  const done = checks.filter(c => c.done).length;
+  return { percent: Math.round((done / checks.length) * 100), missing: checks.filter(c => !c.done) };
+};
+
+const greeting = (): string => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+};
+
+const timeAgo = (iso?: string): string => {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+};
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  
+
   const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
-  const [recentlyViewed, setRecentlyViewed] = useState<Job[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [recentNotifications, setRecentNotifications] = useState<Notification[]>([]);
+  const [upcomingInterview, setUpcomingInterview] = useState<Interview | null>(null);
+  const [mockHistory, setMockHistory] = useState<MockInterviewHistoryEntry[]>([]);
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        const jobs = await JobService.getJobs();
-        // Show first 2 jobs as recommended
-        setRecommendedJobs(jobs.slice(0, 2));
-        // Show next 2 jobs as recently viewed
-        setRecentlyViewed(jobs.slice(2, 4));
-      } catch (err) {
-        console.error('Failed to load dashboard data', err);
-      } finally {
-        setIsLoadingJobs(false);
-      }
-    };
-    loadDashboardData();
+    // Merge ecosystem recommendation scores into the job cards so "AI Match"
+    // reflects the real ranking rather than a placeholder.
+    Promise.all([
+      JobService.getJobs(),
+      StudentEcosystemService.getRecommendations().catch(() => null)
+    ])
+      .then(([jobs, recs]) => {
+        const scores = new Map<string, number>(
+          (recs?.recommendedJobs ?? []).map((r: { id: string; score: number }) => [r.id, r.score])
+        );
+        const ranked = jobs
+          .map(j => (scores.has(j.id) ? { ...j, matchRate: scores.get(j.id)! } : j))
+          .sort((a, b) => (b.matchRate ?? 0) - (a.matchRate ?? 0));
+        setRecommendedJobs(ranked.slice(0, 3));
+      })
+      .catch(err => console.error('Failed to load jobs', err))
+      .finally(() => setIsLoadingJobs(false));
+
+    ApplicationService.getApplications().then(setApplications).catch(() => setApplications([]));
+    NotificationService.getNotifications().then(list => setRecentNotifications(list.slice(0, 4))).catch(() => setRecentNotifications([]));
+    MockInterviewAIService.getHistory()
+      .then(list => setMockHistory(list.filter(h => h.status === 'COMPLETED' && h.reports[0])))
+      .catch(() => setMockHistory([]));
+    InterviewService.getInterviews().then(list => {
+      const upcoming = list
+        .filter(i => i.status === 'scheduled' && new Date(i.dateTime).getTime() > Date.now())
+        .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+      setUpcomingInterview(upcoming[0] ?? null);
+    }).catch(() => setUpcomingInterview(null));
   }, []);
 
-  const handleApplySuccess = () => {
-    showToast('Application updated successfully on dashboard!', 'success');
-  };
+  const profile = computeProfileCompletion(user);
+  const readiness = user?.readinessScore ?? 0;
+
+  const activeApps = applications.filter(a => a.status === 'applied' || a.status === 'interviewing').length;
+  const interviewingApps = applications.filter(a => a.status === 'interviewing').length;
+  const offers = applications.filter(a => a.status === 'offer').length;
+
+  // Countdown to next interview
+  const [countdown, setCountdown] = useState<{ hours: number; mins: number } | null>(null);
+  useEffect(() => {
+    if (!upcomingInterview) { setCountdown(null); return; }
+    const update = () => {
+      const diffMs = new Date(upcomingInterview.dateTime).getTime() - Date.now();
+      if (diffMs <= 0) { setCountdown({ hours: 0, mins: 0 }); return; }
+      setCountdown({ hours: Math.floor(diffMs / 3600000), mins: Math.floor((diffMs % 3600000) / 60000) });
+    };
+    update();
+    const timer = setInterval(update, 60000);
+    return () => clearInterval(timer);
+  }, [upcomingInterview]);
+
+  // Recent activity — real applications + notifications, merged and sorted
+  const activity: ActivityItem[] = useMemo(() => {
+    const appItems: ActivityItem[] = applications.slice(0, 4).map(a => ({
+      id: `app-${a.id}`,
+      icon: a.status === 'offer' ? 'celebration' : a.status === 'interviewing' ? 'videocam' : a.status === 'rejected' ? 'do_not_disturb_on' : 'send',
+      title: <>You applied to <span className="font-semibold">{a.jobTitle}</span> at {a.companyName}</>,
+      meta: `${a.status.charAt(0).toUpperCase() + a.status.slice(1)} · ${timeAgo(a.dateApplied)}`,
+      tone: a.status === 'offer' ? 'success' : a.status === 'rejected' ? 'error' : a.status === 'interviewing' ? 'info' : 'brand',
+      onClick: () => navigate('/student/applications'),
+    }));
+    const notifItems: ActivityItem[] = recentNotifications.slice(0, 3).map(n => ({
+      id: `notif-${n.id}`,
+      icon: n.type === 'interview' ? 'event' : n.type === 'message' ? 'forum' : n.type === 'resume' ? 'description' : 'notifications',
+      title: n.title,
+      meta: n.time,
+      tone: 'neutral',
+      onClick: n.action?.link ? () => navigate(n.action!.link) : () => navigate('/student/notifications'),
+    }));
+    return [...appItems, ...notifItems].slice(0, 5);
+  }, [applications, recentNotifications, navigate]);
+
+  // Next steps — real profile gaps
+  const tasks: TaskItem[] = profile.missing.map((m, i) => ({
+    id: `task-${i}`,
+    label: m.label,
+    icon: m.icon,
+    actionLabel: 'Do it',
+    onAction: () => navigate('/student/profile'),
+  }));
+
+  const firstName = user?.name ? user.name.split(' ')[0] : 'there';
 
   return (
-    <PageLayout fullWidth>
-      <main className="px-8 py-12 min-h-screen text-left bg-[#f9faf7] space-y-stack-lg">
-        
-        {/* Top Hero Layout */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
-          
-          {/* Welcome Card banner */}
-          <div className="lg:col-span-2 bg-primary-container p-8 rounded-2xl text-white flex flex-col justify-center relative overflow-hidden shadow-lg">
-            <div className="absolute -right-20 -top-20 w-64 h-64 bg-on-primary-container/20 rounded-full blur-3xl" />
-            
-            <h2 className="font-display text-headline-lg font-bold mb-2">
-              Good Morning, {user?.name?.split(' ')[0] || 'Alex'}
-            </h2>
-            
-            <div className="flex gap-4 mb-4 text-xs font-bold">
-              <div className="flex items-center gap-1.5">
-                <span className="opacity-70 uppercase tracking-wider">Profile Strength:</span>
-                <span className="text-primary-fixed-dim">{user?.resumeScore || 82}%</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="opacity-70 uppercase tracking-wider">Career Readiness:</span>
-                <span className="text-primary-fixed-dim">{user?.readinessScore || 87}%</span>
-              </div>
-            </div>
-            
-            <p className="font-body-md text-primary-fixed opacity-90 mb-6 max-w-md">
-              Your AI analyzed your profile and found <span className="font-bold underline text-white">4 new matching opportunities</span>. 
-              Resume score is at {user?.resumeScore || 82}%. Next recommendation: Complete SQL for Developers.
-            </p>
-            
-            <div className="flex gap-3 text-xs font-bold">
-              <button 
-                onClick={() => navigate('/student/profile')}
-                className="bg-[#bcedd9] text-[#002117] px-6 py-2.5 rounded-full hover:scale-[1.02] transition-all cursor-pointer border-none"
-              >
-                Improve My Profile
-              </button>
-              <button 
-                onClick={() => navigate('/student/career-report')}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-2.5 rounded-full transition-colors cursor-pointer"
-              >
-                Career Readiness Report
-              </button>
-            </div>
-          </div>
+    <PageLayout searchPlaceholder="Search jobs, companies, skills…">
+      {/* ── TOP: title, context, primary actions ─────────────────────── */}
+      <PageHeader
+        title={`${greeting()}, ${firstName}`}
+        description="Here's what's happening with your job search today."
+        actions={
+          <>
+            <Button variant="outline" onClick={() => navigate('/student/career-report')} leftIcon={<span className="material-symbols-outlined text-[19px]">neurology</span>}>
+              Career report
+            </Button>
+            <Button variant="primary" onClick={() => navigate('/student/jobs')} leftIcon={<span className="material-symbols-outlined text-[19px]">work</span>}>
+              Browse jobs
+            </Button>
+          </>
+        }
+      />
 
-          {/* Readiness Circular Progress Card */}
-          <div className="bg-white p-8 rounded-2xl border border-primary/5 shadow-sm flex flex-col items-center justify-center text-center">
-            <ProgressChart 
-              percent={user?.readinessScore || 87} 
-              size={110} 
-              label="Ready" 
-              className="mb-4"
-            />
-            <p className="font-label-md text-label-md font-bold text-primary">Career Readiness</p>
-            <p className="text-xs text-on-surface-variant mt-1">Excellent progress this week!</p>
-          </div>
-        </section>
+      <div className="space-y-8">
+        {/* ── MIDDLE: focal attention banner ───────────────────────────── */}
+        {upcomingInterview && countdown ? (
+          <AttentionCard
+            icon="videocam"
+            tone="brand"
+            title={`Interview in ${countdown.hours}h ${countdown.mins}m — ${upcomingInterview.jobTitle}`}
+            description={`${upcomingInterview.type} interview with ${upcomingInterview.companyName}. Review your prep before you join.`}
+            actionLabel="Prepare now"
+            onAction={() => navigate('/student/mock-interview')}
+          />
+        ) : profile.percent < 100 ? (
+          <AttentionCard
+            icon="rocket_launch"
+            tone="brand"
+            title={`Your profile is ${profile.percent}% complete`}
+            description="A complete profile gets up to 3× more recruiter views. You're almost there."
+            actionLabel="Finish profile"
+            onAction={() => navigate('/student/profile')}
+          />
+        ) : null}
 
-        {/* Continue Learning Widget */}
-        <section className="bg-white p-6 rounded-2xl border border-primary/5 shadow-sm text-xs text-left flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
-              <span className="material-symbols-outlined text-lg">play_circle</span>
-            </div>
-            <div>
-              <p className="font-bold text-primary">Continue Where You Left Off</p>
-              <p className="text-on-surface-variant font-medium mt-0.5">Lesson: Docker CLI Basics • 80% Completed</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="flex-1 md:w-48 bg-surface-container-high h-2 rounded-full overflow-hidden">
-              <div className="bg-primary h-full w-[80%]" />
-            </div>
-            <button 
-              onClick={() => {
-                showToast('Resuming Docker CLI basics course...', 'info');
-                navigate('/student/career-report');
-              }} 
-              className="px-6 py-2 bg-primary text-white font-bold rounded-xl cursor-pointer border-none text-[11px]"
+        {/* ── MIDDLE: KPIs with context ────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          <StatCard label="Active applications" value={activeApps} icon="send" hint={`${applications.length} total`} onClick={() => navigate('/student/applications')} />
+          <StatCard label="Interviewing" value={interviewingApps} icon="videocam" hint="in progress" onClick={() => navigate('/student/applications')} />
+          <StatCard label="Offers" value={offers} icon="handshake" hint={offers > 0 ? 'Congratulations!' : 'keep going'} onClick={() => navigate('/student/applications')} />
+          <StatCard label="Career readiness" value={`${readiness}%`} icon="trending_up" hint="build to improve" onClick={() => navigate('/student/career-report')} />
+        </div>
+
+        {/* ── MIDDLE/BOTTOM: two-column working area ───────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Primary column: recommendations + activity */}
+          <div className="lg:col-span-2 space-y-8">
+            <Section
+              title="Recommended for you"
+              description="Roles matched to your skills and preferences"
+              action={<ViewAll onClick={() => navigate('/student/jobs')} />}
             >
-              Resume
-            </button>
-          </div>
-        </section>
+              {isLoadingJobs ? (
+                <div className="grid gap-4">{[0, 1].map(i => <CardSkeleton key={i} />)}</div>
+              ) : recommendedJobs.length ? (
+                <div className="grid gap-4">
+                  {recommendedJobs.map(job => (
+                    <JobCard key={job.id} job={job} onApplySuccess={() => showToast('Application submitted.', 'success')} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon="work_off"
+                  title="No recommendations yet"
+                  description="Add your skills and a career goal so we can match you to the right roles from live postings."
+                  actionLabel="Complete profile"
+                  onAction={() => navigate('/student/profile')}
+                />
+              )}
+            </Section>
 
-        {/* Content Columns: Left Main (8 cols), Right Sidebar (4 cols) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
-          
-          {/* Left Column (Main Feed) */}
-          <div className="lg:col-span-8 space-y-6">
-            
-            {/* Recommended Jobs */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-headline-md text-headline-md text-primary font-bold">Recommended Jobs</h3>
-                <Link to="/student/jobs" className="text-primary font-bold text-xs hover:underline">
-                  See All
-                </Link>
+            <Section title="Recent activity" description="What's changed across your job search">
+              <Card>
+                <ActivityFeed items={activity} emptyLabel="Your applications and updates will appear here." />
+              </Card>
+            </Section>
+          </div>
+
+          {/* Secondary column: readiness, next steps, interview */}
+          <div className="space-y-8">
+            <Card>
+              <div className="flex items-center gap-4">
+                <ProgressRing value={readiness} size={72} />
+                <div className="min-w-0">
+                  <h3 className="text-body-md font-semibold text-on-surface">Career readiness</h3>
+                  <p className="text-label-sm text-on-surface-variant mt-0.5">Based on your resume, skills and interview practice.</p>
+                </div>
               </div>
-              
-              <div className="space-y-4">
-                {isLoadingJobs ? (
-                  <div className="h-24 bg-white rounded-2xl animate-pulse" />
-                ) : (
-                  recommendedJobs.map((job) => (
-                    <JobCard 
-                      key={job.id} 
-                      job={job} 
-                      onApplySuccess={handleApplySuccess}
-                    />
-                  ))
+              <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/student/career-report')}>View full report</Button>
+            </Card>
+
+            {tasks.length > 0 && (
+              <Section title="Next steps" description={`${tasks.length} to strengthen your profile`}>
+                <TaskList tasks={tasks} />
+              </Section>
+            )}
+
+            <Card>
+              <CardHeader icon="interpreter_mode" title="AI mock interviews" />
+              {mockHistory.length === 0 ? (
+                <p className="text-label-sm text-on-surface-variant">Practice with the AI interviewer and get a full scored report with a learning roadmap.</p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-headline-md font-bold text-primary">{mockHistory[0].reports[0].score}<span className="text-label-sm text-on-surface-variant">/100</span></span>
+                    <span className="text-label-sm text-on-surface-variant">latest · {mockHistory[0].jobTitle}</span>
+                  </div>
+                  <p className="text-label-sm text-on-surface-variant">
+                    {mockHistory.length} completed
+                    {mockHistory[0].reports[0].interviewReadiness != null ? ` · readiness ${mockHistory[0].reports[0].interviewReadiness}/100` : ''}
+                    {` · best ${Math.max(...mockHistory.map(h => h.reports[0].score))}/100`}
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-2 mt-4">
+                <Button size="sm" variant="primary" className="flex-1" onClick={() => navigate('/student/mock-interview')}>
+                  {mockHistory.length === 0 ? 'Start practicing' : 'New session'}
+                </Button>
+                {mockHistory.length > 0 && (
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/student/interview-report/${mockHistory[0].id}`)}>Last report</Button>
                 )}
               </div>
-            </section>
+            </Card>
 
-            {/* Recently Viewed Jobs */}
-            <section className="space-y-4">
-              <h3 className="font-headline-md text-headline-md text-primary font-bold">Recently Viewed Jobs</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {recentlyViewed.map(job => (
-                  <div 
-                    key={job.id} 
-                    onClick={() => navigate(`/student/jobs/${job.id}`)}
-                    className="bg-white p-5 rounded-2xl border border-primary/5 hover:shadow-md transition-shadow cursor-pointer text-xs text-left space-y-3"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div>
-                        <h4 className="font-bold text-primary text-sm leading-tight group-hover:underline">{job.title}</h4>
-                        <p className="text-on-surface-variant font-medium mt-0.5">{job.companyName} • {job.location}</p>
-                      </div>
-                      <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[8px] font-bold uppercase shrink-0">
-                        {job.matchRate}% Match
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center text-[10px] text-outline font-semibold border-t border-primary/5 pt-2">
-                      <span>{job.salaryRange}</span>
-                      <span>{job.type}</span>
-                    </div>
+            {upcomingInterview && (
+              <Card>
+                <CardHeader icon="event" title="Upcoming interview" />
+                <div className="flex items-center gap-3">
+                  <img src={upcomingInterview.companyLogo} alt="" className="w-11 h-11 rounded-xl object-contain bg-surface-container p-1.5" />
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-on-surface truncate">{upcomingInterview.jobTitle}</p>
+                    <p className="text-label-sm text-on-surface-variant truncate">{upcomingInterview.companyName}</p>
                   </div>
-                ))}
-              </div>
-            </section>
-
-            {/* Recent Activity Feed */}
-            <section className="space-y-4 text-xs text-left">
-              <h3 className="font-headline-md text-headline-md text-primary font-bold">Recent Activity</h3>
-              <div className="bg-white p-6 rounded-2xl border border-primary/5 shadow-sm space-y-4 font-semibold text-on-surface">
-                {[
-                  { desc: 'Stripe recruiter viewed your application for Senior Product Designer.', time: '2 hours ago', icon: 'visibility', color: 'text-primary' },
-                  { desc: 'Elena Rodriguez accepted your connection request.', time: 'Yesterday', icon: 'person_add', color: 'text-secondary' },
-                  { desc: 'Submitted application for Frontend Developer position at Deloitte.', time: '3 days ago', icon: 'send', color: 'text-primary' }
-                ].map((act, i) => (
-                  <div key={i} className="flex gap-3 items-start">
-                    <span className={`material-symbols-outlined text-lg mt-0.5 ${act.color}`}>{act.icon}</span>
-                    <div>
-                      <p>{act.desc}</p>
-                      <p className="text-[10px] text-outline font-medium mt-0.5">{act.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
+                </div>
+                <div className="flex items-center justify-between mt-4">
+                  <Badge tone="info" icon="schedule">
+                    {new Date(upcomingInterview.dateTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </Badge>
+                  <Button size="sm" variant="primary" onClick={() => navigate(`/student/interview/${upcomingInterview.id}`)}>Details</Button>
+                </div>
+              </Card>
+            )}
           </div>
-
-          {/* Right Column (Sidebar Widgets) */}
-          <aside className="lg:col-span-4 space-y-6 text-xs text-left">
-            
-            {/* Profile Completion Card */}
-            <div className="bg-white p-6 rounded-2xl border border-primary/5 shadow-sm space-y-4">
-              <div className="flex justify-between items-center font-bold">
-                <span className="text-primary text-sm">Profile Completion</span>
-                <span className="text-primary">85%</span>
-              </div>
-              <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
-                <div className="bg-primary h-full w-[85%]" />
-              </div>
-              <ul className="space-y-2 text-on-surface-variant font-semibold">
-                <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-green-600 text-sm">check_circle</span>
-                  Resume uploaded and ATS optimized
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-outline text-sm">circle</span>
-                  Link portfolio or GitHub account
-                </li>
-              </ul>
-            </div>
-
-            {/* Interview Countdown Alert */}
-            <div className="bg-[#001f16] text-[#f9faf7] p-6 rounded-2xl shadow-lg relative overflow-hidden">
-              <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary-fixed mb-1">Interview Countdown</h4>
-              <p className="text-sm font-bold">Netflix Technical Interview</p>
-              <div className="flex gap-2 text-center mt-3 text-white">
-                <div className="bg-white/10 px-2 py-1 rounded">
-                  <span className="block font-bold text-sm">18</span>
-                  <span className="text-[8px] uppercase tracking-wider">Hours</span>
-                </div>
-                <div className="bg-white/10 px-2 py-1 rounded">
-                  <span className="block font-bold text-sm">45</span>
-                  <span className="text-[8px] uppercase tracking-wider">Mins</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Daily AI recommendations */}
-            <div className="bg-[#e9dfc8] text-[#4c4635] p-6 rounded-2xl border border-secondary-container/40">
-              <div className="flex items-center gap-2 mb-3 text-secondary">
-                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                <h4 className="font-bold uppercase tracking-wider text-[10px]">AI Focus Recommendation</h4>
-              </div>
-              <p className="font-bold text-sm">Complete SQL for Developers</p>
-              <p className="font-medium mt-1 leading-relaxed">Completing this track can match you with 18 more local engineering positions.</p>
-              <button 
-                onClick={() => navigate('/student/career-report')}
-                className="w-full mt-4 py-2 bg-primary text-white rounded-lg font-bold border-none cursor-pointer text-[10px]"
-              >
-                Go to learning path
-              </button>
-            </div>
-
-            {/* Upcoming Deadlines expiring list */}
-            <div className="bg-white p-6 rounded-2xl border border-primary/5 shadow-sm text-left">
-              <h4 className="font-bold text-primary uppercase tracking-wider mb-4">Upcoming Deadlines</h4>
-              <div className="space-y-4 font-semibold text-on-surface">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p>Senior Designer • Stripe</p>
-                    <p className="text-[10px] text-error font-bold mt-0.5">3 days left</p>
-                  </div>
-                  <span className="material-symbols-outlined text-error text-lg">warning</span>
-                </div>
-
-                <div className="flex justify-between items-center border-t border-primary/5 pt-3">
-                  <div>
-                    <p>Product Lead • Canva</p>
-                    <p className="text-[10px] text-outline mt-0.5">12 days left</p>
-                  </div>
-                  <span className="material-symbols-outlined text-outline text-lg">event</span>
-                </div>
-              </div>
-            </div>
-
-          </aside>
-
         </div>
-      </main>
+      </div>
     </PageLayout>
   );
 };

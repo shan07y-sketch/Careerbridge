@@ -1,288 +1,328 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { PageLayout } from '../../components/layout/PageLayout';
-import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { StatCard } from '../../components/ui/StatCard';
+import { Section } from '../../components/ui/Section';
+import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
+import { ProgressBar, ProgressRing } from '../../components/ui/Progress';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { AttentionCard } from '../../components/ui/AttentionCard';
+import { RowSkeleton } from '../../components/ui/Skeleton';
+import { UploadModal } from '../../components/ui/UploadModal';
+import { exportCareerReportPDF } from '../../utils/exportUtils';
+import { ResumeService } from '../../services';
+import type { ResumeVersion } from '../../services';
+
+const formatBytes = (n: number | null): string => {
+  if (!n) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export const Profile: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [isBioExpanded, setIsBioExpanded] = useState(false);
 
-  const handleUploadResume = () => {
-    // Navigate to settings or trigger upload alert
-    navigate('/student/settings');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadType, setUploadType] = useState<'resume' | 'certificate' | 'portfolio'>('resume');
+  const [resumes, setResumes] = useState<ResumeVersion[]>([]);
+  const [resumesLoading, setResumesLoading] = useState(true);
+  const [showAllVersions, setShowAllVersions] = useState(false);
+
+  const loadResumes = useCallback(async () => {
+    try {
+      setResumesLoading(true);
+      const data = await ResumeService.getHistory();
+      setResumes(data);
+    } catch (err) {
+      console.error('Failed to load resumes', err);
+    } finally {
+      setResumesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadResumes(); }, [loadResumes]);
+
+  const activeResume = resumes.find(r => r.isActive) || resumes[0];
+
+  const completionChecks = [
+    { label: 'Basic details', icon: 'badge', done: !!(user?.name && user?.university && user?.degree) },
+    { label: 'Career goal', icon: 'flag', done: !!user?.careerGoal },
+    { label: 'Skills added', icon: 'psychology', done: (user?.skills?.length ?? 0) > 0 },
+    { label: 'Resume uploaded', icon: 'description', done: !!activeResume },
+    { label: 'Portfolio or GitHub linked', icon: 'link', done: !!user?.portfolioUrl || !!user?.gitHubConnected },
+    { label: 'Preferred location set', icon: 'location_on', done: !!user?.preferredLocation },
+  ];
+  const doneCount = completionChecks.filter(c => c.done).length;
+  const completion = Math.round((doneCount / completionChecks.length) * 100);
+  const missing = completionChecks.filter(c => !c.done);
+
+  const verifications = [
+    { label: 'Email', icon: 'mail', done: !!user?.emailVerified },
+    { label: 'Phone', icon: 'phone', done: !!user?.phoneVerified },
+    { label: 'LinkedIn', icon: 'work', done: !!user?.linkedInConnected },
+    { label: 'GitHub', icon: 'code', done: !!user?.gitHubConnected },
+  ];
+  const verifiedCount = verifications.filter(v => v.done).length;
+
+  const handleResumeUpload = async (file: File) => {
+    await ResumeService.upload(file);
+    await loadResumes();
   };
 
+  const handleUploadSuccess = (fileName: string) => {
+    if (uploadType === 'resume') showToast('Resume uploaded. Your previous version is kept in history.', 'success', fileName);
+    else showToast(`${uploadType === 'certificate' ? 'Certificate' : 'Portfolio'} uploaded successfully.`, 'success', fileName);
+    setIsUploadModalOpen(false);
+  };
+
+  const openUpload = (type: 'resume' | 'certificate' | 'portfolio') => { setUploadType(type); setIsUploadModalOpen(true); };
+
+  const handleShareProfile = async () => {
+    const profileUrl = `${window.location.origin}/student/profile?ref=${user?.id || ''}`;
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      showToast('Profile link copied to clipboard.', 'success', profileUrl);
+    } catch {
+      showToast('Profile link: ' + profileUrl, 'info');
+    }
+  };
+
+  const handleDownload = async (resume: ResumeVersion) => {
+    try { await ResumeService.download(resume.id, resume.fileName); }
+    catch (err) { showToast(err instanceof Error ? err.message : 'Download failed.', 'error'); }
+  };
+
+  const handleDelete = async (resume: ResumeVersion) => {
+    try { await ResumeService.deleteResume(resume.id); showToast('Resume deleted.', 'success'); await loadResumes(); }
+    catch (err) { showToast(err instanceof Error ? err.message : 'Delete failed.', 'error'); }
+  };
+
+  const handleShareResume = async (resume: ResumeVersion) => {
+    try {
+      if (resume.shareEnabled) {
+        await ResumeService.revokeShareLink(resume.id);
+        showToast('Share link revoked.', 'success');
+      } else {
+        const result = await ResumeService.createShareLink(resume.id);
+        await navigator.clipboard.writeText(result.shareUrl).catch(() => {});
+        showToast('Secure share link created and copied. Expires in 7 days.', 'success', result.shareUrl);
+      }
+      await loadResumes();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not update the share link.', 'error');
+    }
+  };
+
+  const initials = (user?.name || 'U').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  const visibleResumes = showAllVersions ? resumes : resumes.slice(0, 3);
+
+  const detail = (label: string, value?: React.ReactNode, icon?: string) => (
+    <div className="flex items-start gap-3">
+      {icon && <span className="material-symbols-outlined text-[20px] text-on-surface-variant mt-0.5">{icon}</span>}
+      <div className="min-w-0">
+        <p className="text-label-sm text-on-surface-variant uppercase tracking-wide">{label}</p>
+        <p className="text-body-md text-on-surface mt-0.5 break-words">{value || <span className="text-on-surface-variant/70">Not set</span>}</p>
+      </div>
+    </div>
+  );
+
   return (
-    <PageLayout fullWidth>
-      <div className="max-w-container-max mx-auto p-4 md:p-margin-desktop space-y-stack-lg">
-        {/* Hero Profile Section */}
-        <section className="bg-white dark:bg-surface-container-lowest rounded-xl p-8 shadow-sm border border-outline-variant/30 relative overflow-hidden text-left">
-          <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-primary-container to-surface-tint opacity-10"></div>
-          <div className="relative z-10 flex flex-col md:flex-row gap-8 items-start md:items-center">
-            <div className="relative shrink-0">
-              <img
-                className="w-32 h-32 rounded-2xl object-cover ring-4 ring-surface shadow-xl border-2 border-primary-fixed"
-                alt={user?.name || 'Alex Rivera'}
-                src={user?.profilePicture}
-              />
-              <div className="absolute -bottom-2 -right-2 bg-primary text-white p-1 rounded-full border-4 border-white shadow-md flex items-center justify-center">
-                <span className="material-symbols-outlined text-[16px] leading-none">check</span>
-              </div>
-            </div>
-            
-            <div className="flex-grow space-y-3 min-w-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-display font-display text-primary dark:text-primary-fixed">{user?.name || 'Alex Rivera'}</h2>
-                <span className="bg-primary text-white px-3 py-1 rounded-full text-label-sm font-bold flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">verified</span>
-                  Open To Work
-                </span>
-              </div>
-              <p className="text-headline-md text-on-surface-variant font-semibold truncate">
-                {user?.careerGoal || 'Software Engineer (Frontend/AI)'}
+    <PageLayout searchPlaceholder="Search…">
+      <PageHeader
+        title="My profile"
+        description="How recruiters see you. Keep it complete and verified to stand out."
+        actions={
+          <>
+            <Button variant="outline" onClick={handleShareProfile} leftIcon={<span className="material-symbols-outlined text-[19px]">share</span>}>Share</Button>
+            <Button variant="outline" onClick={() => user && exportCareerReportPDF(user as any)} leftIcon={<span className="material-symbols-outlined text-[19px]">download</span>}>Career report</Button>
+            <Button variant="primary" onClick={() => navigate('/student/settings')} leftIcon={<span className="material-symbols-outlined text-[19px]">edit</span>}>Edit profile</Button>
+          </>
+        }
+      />
+
+      <div className="space-y-8">
+        <Card className="!p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            {user?.profilePicture
+              ? <img src={user.profilePicture} alt="" className="w-20 h-20 rounded-2xl object-cover" />
+              : <div className="w-20 h-20 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center text-headline-md font-semibold">{initials}</div>}
+            <div className="min-w-0 flex-grow">
+              <h2 className="text-headline-sm font-semibold text-on-surface">{user?.name || 'Your name'}</h2>
+              <p className="text-body-md text-on-surface-variant mt-1">
+                {user?.careerGoal || 'Add a career goal'}{user?.university ? ` · ${user.university}` : ''}
               </p>
-              <div className="flex flex-wrap gap-4 text-on-surface-variant/80 text-sm">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">school</span>
-                  {user?.university || 'Massachusetts Institute of Technology'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">location_on</span>
-                  Expected Graduation: {user?.gradYear || 2026}
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">work</span>
-                  {user?.workMode || 'Hybrid'} format preferred
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <span className="px-3 py-1 bg-surface-container dark:bg-surface-container-low rounded text-label-sm font-semibold">Remote</span>
-                <span className="px-3 py-1 bg-surface-container dark:bg-surface-container-low rounded text-label-sm font-semibold">Hybrid</span>
-                <span className="px-3 py-1 bg-surface-container dark:bg-surface-container-low rounded text-label-sm font-semibold">On-site</span>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {user?.emailVerified && <Badge tone="success" icon="verified">Email verified</Badge>}
+                {user?.workMode && <Badge tone="neutral" icon="work">{user.workMode}</Badge>}
+                {user?.preferredLocation && <Badge tone="neutral" icon="location_on">{user.preferredLocation}</Badge>}
               </div>
             </div>
-            
-            <div className="flex flex-col gap-2 w-full md:w-auto shrink-0">
-              <Button
-                onClick={handleUploadResume}
-                leftIcon={<span className="material-symbols-outlined">description</span>}
-              >
-                Upload CV
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => showToast('Share profile link copied!', 'success')}
-                leftIcon={<span className="material-symbols-outlined">share</span>}
-              >
-                Share Profile
-              </Button>
-            </div>
+            <div className="shrink-0"><ProgressRing value={completion} size={72} /></div>
           </div>
-        </section>
+        </Card>
 
-        {/* Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-left">
-          {/* Left Column (Main Content) */}
-          <div className="lg:col-span-8 space-y-8">
-            
-            {/* Profile Completion Panel */}
-            <section className="bg-primary-fixed/35 dark:bg-primary-container/20 rounded-xl p-6 border border-primary-fixed/50">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-headline-md flex items-center gap-2 text-primary dark:text-primary-fixed">
-                  <span className="material-symbols-outlined">task_alt</span>
-                  Complete Your Profile
-                </h3>
-                <span className="text-label-md font-bold text-primary dark:text-primary-fixed">92% Complete</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-surface-container p-4 rounded-lg flex flex-col justify-between border border-outline-variant hover:border-primary transition-colors">
-                  <p className="text-label-md font-bold mb-2">Upload Resume</p>
-                  <button onClick={handleUploadResume} className="text-primary dark:text-primary-fixed text-label-sm flex items-center gap-1 font-bold hover:underline">
-                    Upload Now <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </button>
-                </div>
-                <div className="bg-white dark:bg-surface-container p-4 rounded-lg flex flex-col justify-between border border-outline-variant hover:border-primary transition-colors">
-                  <p className="text-label-md font-bold mb-2">Add Portfolio</p>
-                  <button onClick={() => navigate('/student/settings')} className="text-primary dark:text-primary-fixed text-label-sm flex items-center gap-1 font-bold hover:underline">
-                    Add Links <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </button>
-                </div>
-                <div className="bg-white dark:bg-surface-container p-4 rounded-lg flex flex-col justify-between border border-outline-variant hover:border-primary transition-colors">
-                  <p className="text-label-md font-bold mb-2">Verify Certs</p>
-                  <button onClick={() => showToast('Certification verification loading...', 'info')} className="text-primary dark:text-primary-fixed text-label-sm flex items-center gap-1 font-bold hover:underline">
-                    Verify Now <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </button>
-                </div>
-              </div>
-            </section>
+        {completion < 100 && (
+          <AttentionCard icon="rocket_launch" tone="brand"
+            title={`Your profile is ${completion}% complete`}
+            description={`Finish ${missing.length} more ${missing.length === 1 ? 'item' : 'items'} — complete profiles get up to 3× more recruiter views.`}
+            actionLabel="Complete profile" onAction={() => navigate('/student/settings')} />
+        )}
 
-            {/* About Me */}
-            <section className="bg-white dark:bg-surface-container-lowest rounded-xl p-6 border border-primary/5 shadow-sm">
-              <h3 className="font-headline-md mb-4 text-primary dark:text-primary-fixed">About Me</h3>
-              <div className="text-body-lg text-on-surface-variant relative leading-relaxed">
-                <p className={`transition-all ${isBioExpanded ? '' : 'line-clamp-4'}`}>
-                  I am a passionate computer science candidate specialized in building robust frontend systems and integrating machine learning pipelines. Pursuing a {user?.degree || 'B.S. in Computer Science'} at {user?.university || 'MIT'}, I focus on human-centric code architecture, micro-interactions, and AI features optimization. I have collaborated in campus hackathons, open-source utilities, and led design sprint groups. I strive to leverage clean typescript constructs to build next-generation web applications.
-                </p>
-                <button 
-                  className="mt-2 text-primary dark:text-primary-fixed font-bold hover:underline"
-                  onClick={() => setIsBioExpanded(!isBioExpanded)}
-                >
-                  {isBioExpanded ? 'Show Less' : 'Read More'}
-                </button>
-              </div>
-            </section>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          <StatCard label="Profile completion" value={`${completion}%`} icon="donut_large" hint={`${doneCount}/${completionChecks.length} done`} />
+          <StatCard label="Career readiness" value={`${user?.readinessScore ?? 0}%`} icon="trending_up" hint="from report" onClick={() => navigate('/student/career-report')} />
+          <StatCard label="Resume score" value={activeResume ? `${user?.resumeScore ?? 0}%` : '—'} icon="description" hint={activeResume ? (user?.resumeScoreEstimated ? 'estimated · AI unavailable' : 'active resume') : 'upload to score'} />
+          <StatCard label="Verifications" value={`${verifiedCount}/4`} icon="verified" hint="build trust" />
+        </div>
 
-            {/* Skills Matrix */}
-            <section className="bg-white dark:bg-surface-container-lowest rounded-xl p-6 border border-primary/5 shadow-sm">
-              <h3 className="font-headline-md mb-6 text-primary dark:text-primary-fixed flex items-center justify-between">
-                Skills Matrix
-                <span className="text-label-sm text-on-surface-variant font-normal">Expertise levels catalog</span>
-              </h3>
-              <div className="flex flex-wrap gap-4">
-                {user?.skills.map((skill) => (
-                  <button 
-                    key={skill.name}
-                    className="group relative flex items-center gap-3 bg-surface-container-low dark:bg-surface-container p-3 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary-fixed dark:hover:bg-primary-container transition-all duration-300 active:scale-95 text-left"
-                  >
-                    <div className="w-8 h-8 rounded bg-white flex items-center justify-center text-primary font-bold text-sm select-none">
-                      {skill.name.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 font-bold text-label-md text-primary dark:text-primary-fixed">
-                        {skill.name}
-                        {skill.level >= 80 && (
-                          <span className="material-symbols-outlined text-[14px] text-blue-500" style={{ fontVariationSettings: "'FILL' 1" }}>
-                            verified
-                          </span>
-                        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <Section title="About" action={<Button size="sm" variant="ghost" onClick={() => navigate('/student/settings')}>Edit</Button>}>
+              <Card>
+                <div className="grid sm:grid-cols-2 gap-5">
+                  {detail('University', user?.university, 'school')}
+                  {detail('Degree', user?.degree, 'menu_book')}
+                  {detail('Graduation year', user?.gradYear, 'calendar_month')}
+                  {detail('Career goal', user?.careerGoal, 'flag')}
+                  {detail('Work mode', user?.workMode, 'work')}
+                  {detail('Preferred location', user?.preferredLocation, 'location_on')}
+                  {detail('Email', user?.email, 'mail')}
+                  {detail('Portfolio', user?.portfolioUrl
+                    ? <a href={user.portfolioUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">{user.portfolioUrl}</a>
+                    : undefined, 'link')}
+                </div>
+              </Card>
+            </Section>
+
+            <Section title="Skills" description={user?.skills?.length ? `${user.skills.length} skills on your profile` : undefined}
+              action={<Button size="sm" variant="ghost" onClick={() => navigate('/student/settings')}>Manage</Button>}>
+              {user?.skills?.length ? (
+                <Card>
+                  <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
+                    {user.skills.map(s => (
+                      <div key={s.name}>
+                        <div className="flex justify-between text-label-md mb-1.5">
+                          <span className="font-semibold text-on-surface">{s.name}</span>
+                          <span className="text-on-surface-variant">{s.level}%</span>
+                        </div>
+                        <ProgressBar value={s.level} />
                       </div>
-                      <p className="text-[10px] text-on-surface-variant uppercase font-bold group-hover:text-primary dark:group-hover:text-primary-fixed">
-                        {skill.level >= 90 ? 'Expert' : skill.level >= 70 ? 'Advanced' : 'Intermediate'} • {skill.level}%
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
+                    ))}
+                  </div>
+                </Card>
+              ) : (
+                <EmptyState icon="psychology" title="No skills added yet"
+                  description="Add the skills you want to be hired for so we can match you to the right roles and highlight gaps."
+                  actionLabel="Add skills" onAction={() => navigate('/student/settings')} />
+              )}
+            </Section>
 
-            {/* Work Experience */}
-            <section className="bg-white dark:bg-surface-container-lowest rounded-xl p-6 border border-primary/5 shadow-sm">
-              <h3 className="font-headline-md mb-6 text-primary dark:text-primary-fixed">Work Experience</h3>
-              <div className="relative pl-8 border-l-2 border-outline-variant dark:border-outline hover:border-primary transition-colors group">
-                <div className="absolute -left-[9px] top-0 w-4 h-4 bg-primary rounded-full group-hover:scale-125 transition-transform"></div>
-                <div className="flex flex-col md:flex-row justify-between items-start mb-2">
-                  <div>
-                    <h4 className="font-bold text-lg text-primary dark:text-primary-fixed">Product Design & Frontend Intern</h4>
-                    <p className="text-label-md font-medium text-on-surface-variant">TechNova Solutions • Internship</p>
-                    <p className="text-label-sm text-outline">Jun 2025 — Aug 2025 (3 mos)</p>
-                  </div>
-                  <div className="flex gap-2 mt-4 md:mt-0">
-                    <button className="text-xs font-bold text-primary dark:text-primary-fixed bg-primary-fixed dark:bg-primary-container px-3 py-1 rounded hover:opacity-90">View Company</button>
-                    <button className="text-xs font-bold text-primary dark:text-primary-fixed border border-primary px-3 py-1 rounded hover:bg-primary-fixed/20">Review Letter</button>
-                  </div>
-                </div>
-                <ul className="list-disc list-inside text-on-surface-variant space-y-2 mb-4 text-body-md">
-                  <li>Redesigned the onboarding flow, increasing user retention by 15% in Q3.</li>
-                  <li>Collaborated with engineering to implement a new design system using React and Tailwind.</li>
-                  <li>Conducted 20+ usability testing sessions and translated findings into UI improvements.</li>
-                </ul>
-              </div>
-            </section>
-
-            {/* Key Projects */}
-            <section className="bg-white dark:bg-surface-container-lowest rounded-xl p-6 border border-primary/5 shadow-sm">
-              <h3 className="font-headline-md mb-6 text-primary dark:text-primary-fixed">Key Projects</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border border-outline-variant dark:border-outline rounded-xl overflow-hidden hover:scale-102 hover:shadow-md transition-all">
-                  <div className="h-40 bg-surface-container dark:bg-surface-container-high relative group flex items-center justify-center text-primary font-bold">
-                    [ EcoTrack App Banner ]
-                    <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity gap-4">
-                      <button className="bg-white p-2 rounded-full shadow-md hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-primary">link</span>
-                      </button>
-                      <button className="bg-white p-2 rounded-full shadow-md hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-primary">code</span>
-                      </button>
-                    </div>
-                    <div className="absolute top-3 left-3 flex gap-2">
-                      <span className="bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Completed</span>
-                      <span className="bg-primary/80 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">94% Match</span>
-                    </div>
-                  </div>
-                  <div className="p-4 text-left">
-                    <h4 className="font-bold text-lg text-primary dark:text-primary-fixed mb-1">EcoTrack Dashboard</h4>
-                    <p className="text-on-surface-variant text-label-sm mb-3">SaaS dashboard for monitoring carbon emissions in supply chains.</p>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <Section title="Documents" description="Resume versions are kept so you never lose an older copy."
+              action={<Button size="sm" variant="primary" onClick={() => openUpload('resume')} leftIcon={<span className="material-symbols-outlined text-[18px]">upload_file</span>}>Upload resume</Button>}>
+              {resumesLoading ? (
+                <Card><RowSkeleton /><RowSkeleton /></Card>
+              ) : resumes.length === 0 ? (
+                <EmptyState icon="upload_file" title="No resume uploaded"
+                  description="Upload your resume to unlock AI matching, an ATS score, and one-click applications."
+                  actionLabel="Upload resume" onAction={() => openUpload('resume')} />
+              ) : (
+                <Card className="!p-0 overflow-hidden">
+                  <ul className="divide-y divide-outline-variant/60">
+                    {visibleResumes.map(r => (
+                      <li key={r.id} className="flex items-center gap-4 p-4">
+                        <span className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-on-surface-variant">description</span>
+                        </span>
+                        <div className="min-w-0 flex-grow">
+                          <div className="flex items-center gap-2">
+                            <p className="text-body-md font-medium text-on-surface truncate">{r.fileName}</p>
+                            {r.isActive && <Badge tone="success">Active</Badge>}
+                            {r.shareEnabled && <Badge tone="info" icon="link">Shared</Badge>}
+                          </div>
+                          <p className="text-label-sm text-on-surface-variant mt-0.5">
+                            v{r.version} · {r.status.toLowerCase()}{r.fileSizeBytes ? ` · ${formatBytes(r.fileSizeBytes)}` : ''} · {new Date(r.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button size="sm" variant="ghost" onClick={() => handleDownload(r)} aria-label="Download"><span className="material-symbols-outlined text-[18px]">download</span></Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleShareResume(r)} aria-label="Share">{r.shareEnabled ? <span className="material-symbols-outlined text-[18px]">link_off</span> : <span className="material-symbols-outlined text-[18px]">share</span>}</Button>
+                          <Button size="sm" variant="ghost" className="!text-error" onClick={() => handleDelete(r)} aria-label="Delete"><span className="material-symbols-outlined text-[18px]">delete</span></Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {resumes.length > 3 && (
+                    <button onClick={() => setShowAllVersions(v => !v)} className="w-full py-3 text-label-md font-semibold text-primary hover:bg-surface-container/50 transition-colors border-t border-outline-variant/60">
+                      {showAllVersions ? 'Show fewer versions' : `Show all ${resumes.length} versions`}
+                    </button>
+                  )}
+                </Card>
+              )}
+            </Section>
           </div>
 
-          {/* Right Column (Sidebar metrics) */}
-          <aside className="lg:col-span-4 space-y-8">
-            {/* AI insights panel */}
-            <Card className="bg-primary text-on-primary shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-surface-tint opacity-20 -mr-8 -mt-8 rounded-full"></div>
-              <h3 className="font-headline-md mb-6 flex items-center gap-2 text-white">
-                <span className="material-symbols-outlined text-inverse-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  auto_awesome
-                </span>
-                AI Profile Rating
-              </h3>
-              
-              <div className="space-y-6">
-                <div>
-                  <p className="text-label-sm opacity-70 mb-3 uppercase tracking-wider">Top Matching Partners</p>
-                  <div className="flex items-center gap-2 bg-white/10 p-3 rounded-lg backdrop-blur-sm justify-around text-black font-bold">
-                    <span className="bg-white px-2.5 py-1 rounded shadow-sm text-xs">Google</span>
-                    <span className="bg-white px-2.5 py-1 rounded shadow-sm text-xs">Microsoft</span>
-                    <span className="bg-white px-2.5 py-1 rounded shadow-sm text-xs">Stripe</span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white/10 p-3 rounded-lg text-left">
-                    <p className="text-[10px] opacity-70 mb-0.5">Mock Readiness</p>
-                    <p className="font-bold text-lg text-inverse-primary">88%</p>
-                  </div>
-                  <div className="bg-white/10 p-3 rounded-lg text-left">
-                    <p className="text-[10px] opacity-70 mb-0.5">Est. Match Base</p>
-                    <p className="font-bold text-lg text-inverse-primary">$135k+</p>
-                  </div>
-                </div>
-              </div>
+          <div className="space-y-8">
+            <Card>
+              <CardHeader icon="checklist" title="Complete your profile" subtitle={`${doneCount} of ${completionChecks.length} done`} />
+              <ul className="space-y-2.5">
+                {completionChecks.map(c => (
+                  <li key={c.label} className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${c.done ? 'bg-success-container text-on-success-container' : 'bg-surface-container text-on-surface-variant'}`}>
+                      <span className="material-symbols-outlined text-[15px]">{c.done ? 'check' : c.icon}</span>
+                    </span>
+                    <span className={`text-label-md ${c.done ? 'text-on-surface-variant line-through' : 'text-on-surface font-medium'}`}>{c.label}</span>
+                  </li>
+                ))}
+              </ul>
+              {completion < 100 && <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/student/settings')}>Finish setup</Button>}
             </Card>
 
-            {/* Profile Activity details */}
-            <Card className="space-y-6">
-              <h3 className="font-headline-md text-primary dark:text-primary-fixed border-b border-outline-variant/30 pb-2">Profile Statistics</h3>
-              <div className="space-y-4">
-                {[
-                  { label: 'Recruiter Views', val: 42, icon: 'visibility', color: 'text-blue-500' },
-                  { label: 'Profile Searches', val: 156, icon: 'search', color: 'text-purple-500' },
-                  { label: 'App Responses', val: '+4', icon: 'mail', color: 'text-green-500 text-green-600 font-bold' },
-                  { label: 'Network Contacts', val: 12, icon: 'group_add', color: 'text-orange-500' }
-                ].map((act) => (
-                  <div key={act.label} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-3">
-                      <span className={`material-symbols-outlined ${act.color.split(' ')[0]}`}>{act.icon}</span>
-                      <span className="font-label-md text-on-surface-variant">{act.label}</span>
-                    </div>
-                    <span className={`font-bold text-base ${act.color.includes('font-bold') ? 'text-green-600' : 'text-primary dark:text-primary-fixed'}`}>{act.val}</span>
-                  </div>
+            <Card>
+              <CardHeader icon="verified_user" title="Verifications" subtitle={`${verifiedCount} of 4 verified`} />
+              <ul className="space-y-2.5">
+                {verifications.map(v => (
+                  <li key={v.label} className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-3 text-label-md text-on-surface">
+                      <span className="material-symbols-outlined text-[19px] text-on-surface-variant">{v.icon}</span>{v.label}
+                    </span>
+                    {v.done
+                      ? <Badge tone="success" icon="check">Verified</Badge>
+                      : <Button size="sm" variant="ghost" onClick={() => navigate('/student/settings')}>Verify</Button>}
+                  </li>
                 ))}
+              </ul>
+            </Card>
+
+            <Card>
+              <CardHeader icon="upload" title="Add documents" subtitle="Certificates & portfolio" />
+              <div className="flex flex-col gap-2">
+                <Button variant="ghost" className="!justify-between" onClick={() => openUpload('certificate')}>Upload a certificate<span className="material-symbols-outlined text-[18px]">add</span></Button>
+                <Button variant="ghost" className="!justify-between" onClick={() => openUpload('portfolio')}>Upload portfolio<span className="material-symbols-outlined text-[18px]">add</span></Button>
               </div>
             </Card>
-          </aside>
+          </div>
         </div>
       </div>
-      <div className="h-10"></div>
+
+      <UploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        title={uploadType === 'resume' ? 'Upload resume' : uploadType === 'certificate' ? 'Upload certificate' : 'Upload portfolio'}
+        acceptedTypes={uploadType === 'resume' ? '.pdf,.doc,.docx' : uploadType === 'certificate' ? '.pdf,.jpg,.png' : '.pdf,.zip,.jpg,.png'}
+        description={uploadType === 'resume' ? 'Upload your resume in PDF, DOC, or DOCX format. Max 5MB.' : uploadType === 'certificate' ? 'Upload your certificate or credential document.' : 'Upload your portfolio archive or preview image.'}
+        onUploadSuccess={handleUploadSuccess}
+        onUpload={uploadType === 'resume' ? handleResumeUpload : undefined}
+      />
     </PageLayout>
   );
 };
+
 export default Profile;

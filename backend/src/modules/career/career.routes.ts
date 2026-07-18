@@ -8,5 +8,6 @@ router.use(authenticate);
 
 router.get('/insights', CareerController.getCareerInsights);
 router.get('/mock-interviews', CareerController.getMockInterviewReports);
+router.post('/insight', CareerController.generateInsight);
 
 export default router;

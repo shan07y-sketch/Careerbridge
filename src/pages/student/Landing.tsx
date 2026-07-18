@@ -538,7 +538,7 @@ export const Landing: React.FC = () => {
                   <div className="w-28 h-28 bg-primary-container text-white rounded-full flex items-center justify-center font-bold text-4xl mb-12 shadow-[0_12px_40px_rgba(2,54,41,0.25)] border-8 border-white">3</div>
                   <h3 className="font-headline-md text-headline-md text-primary mb-5 font-semibold">Build Your Career</h3>
                   <p className="text-on-surface-variant text-body-md leading-relaxed max-w-xs">
-                    Engage directly with premium employers and land the role that starts your journey to professional success.
+                    Engage directly with verified employers and land the role that starts your journey to professional success.
                   </p>
                 </div>
               </div>

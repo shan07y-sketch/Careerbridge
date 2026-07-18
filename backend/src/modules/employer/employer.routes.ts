@@ -2,6 +2,18 @@ import { Router } from 'express';
 import { authenticate, restrictTo } from '../../middlewares/auth.middleware';
 import { restrictToCompany } from './employer.middleware';
 import { EmployerController } from './employer.controller';
+import { validate } from '../../middlewares/validation.middleware';
+import {
+  createJobSchema,
+  updateJobSchema,
+  autosaveJobSchema,
+  bulkJobActionSchema,
+  bulkApplicationActionSchema,
+  createTagSchema,
+  attachTagSchema,
+  bulkTagSchema,
+  createSavedFilterSchema
+} from './employer.validation';
 
 const router = Router();
 
@@ -17,14 +29,67 @@ router.put('/company', EmployerController.updateCompanyProfile);
 router.get('/recruiters', EmployerController.getRecruiters);
 router.post('/recruiters/invite', EmployerController.inviteRecruiter);
 
+router.get('/messages', EmployerController.getConversations);
+router.post('/messages/start', EmployerController.startConversation);
+router.get('/messages/:conversationId', EmployerController.getConversationMessages);
+router.post('/messages/:conversationId', EmployerController.sendConversationMessage);
+
 router.get('/jobs', EmployerController.getJobs);
-router.post('/jobs', EmployerController.createJob);
-router.put('/jobs/:id', EmployerController.updateJob);
+router.post('/jobs', validate(createJobSchema), EmployerController.createJob);
+router.patch('/jobs/bulk-archive', validate(bulkJobActionSchema), EmployerController.bulkArchiveJobs);
+router.patch('/jobs/bulk-close', validate(bulkJobActionSchema), EmployerController.bulkCloseJobs);
+router.put('/jobs/:id', validate(updateJobSchema), EmployerController.updateJob);
+router.patch('/jobs/:id/autosave', validate(autosaveJobSchema), EmployerController.autosaveJob);
+router.post('/jobs/:id/duplicate', EmployerController.duplicateJob);
+router.patch('/jobs/:id/archive', EmployerController.archiveJob);
+router.patch('/jobs/:id/close', EmployerController.closeJob);
+router.patch('/jobs/:id/reopen', EmployerController.reopenJob);
+router.delete('/jobs/:id', EmployerController.deleteJob);
+
+router.get('/job-categories', EmployerController.getJobCategories);
 
 router.get('/applications', EmployerController.getApplications);
+router.get('/applications/queue', EmployerController.getApplicationQueue);
+router.patch('/applications/bulk', validate(bulkApplicationActionSchema), EmployerController.bulkUpdateApplications);
+router.get('/applications/:id', EmployerController.getApplicationDetail);
 router.patch('/applications/:id/stage', EmployerController.updateApplicationStage);
+router.patch('/applications/:id/shortlist', EmployerController.shortlistCandidate);
+router.patch('/applications/:id/reject', EmployerController.rejectCandidate);
+
+router.get('/applications/:id/interview-reports', EmployerController.getSharedInterviewReports);
+router.get('/applications/:id/interview-reports/:interviewId/pdf', EmployerController.downloadSharedInterviewReportPdf);
+
+router.get('/applications/:id/notes', EmployerController.getNotes);
+router.post('/applications/:id/notes', EmployerController.addNote);
+
+router.get('/interviews', EmployerController.getInterviews);
+router.post('/applications/:id/interviews', EmployerController.scheduleInterview);
+router.patch('/interviews/:id', EmployerController.updateInterview);
+
+router.post('/applications/:id/offer', EmployerController.createOffer);
+router.patch('/offers/:id/withdraw', EmployerController.withdrawOffer);
+
+router.get('/tags', EmployerController.getTags);
+router.post('/tags', validate(createTagSchema), EmployerController.createTag);
+router.delete('/tags/:id', EmployerController.deleteTag);
+router.post('/applications/bulk/tags', validate(bulkTagSchema), EmployerController.bulkTagApplications);
+router.post('/applications/:id/tags', validate(attachTagSchema), EmployerController.attachTag);
+router.delete('/applications/:id/tags/:tagId', EmployerController.detachTag);
+
+router.get('/applications/:id/timeline', EmployerController.getApplicationTimeline);
+
+router.get('/saved-filters', EmployerController.getSavedFilters);
+router.post('/saved-filters', validate(createSavedFilterSchema), EmployerController.createSavedFilter);
+router.delete('/saved-filters/:id', EmployerController.deleteSavedFilter);
+
 router.get('/resumes/:id/preview', EmployerController.previewResume);
+router.get('/resumes/:id/download', EmployerController.downloadResume);
 
 router.get('/analytics', EmployerController.getAnalytics);
+
+// Employer AI (Phase 4): candidate evaluation & comparison
+router.post('/applications/:id/ai-evaluate', EmployerController.evaluateCandidate);
+router.get('/applications/:id/ai-evaluation', EmployerController.getLatestCandidateEvaluation);
+router.post('/applications/ai-compare', EmployerController.compareCandidates);
 
 export default router;

@@ -1,16 +1,18 @@
 import { Response } from 'express';
-import path from 'path';
-import fs from 'fs';
 import { catchAsync } from '../../utils/catch-async';
 import { EmployerService } from './employer.service';
+import { ResumeService } from '../resume/resume.service';
 import { EmployerRequest } from './employer.types';
-import { AppError } from '../../utils/app-error';
-import { prisma } from '../../config/database';
 import { ApplicationStatus } from '@prisma/client';
 
 export class EmployerController {
   static getDashboard = catchAsync(async (req: EmployerRequest, res: Response) => {
     const data = await EmployerService.getDashboard(req.user!.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static getInterviews = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getInterviews(req.user!.id);
     res.status(200).json({ success: true, data });
   });
 
@@ -22,6 +24,26 @@ export class EmployerController {
   static updateCompanyProfile = catchAsync(async (req: EmployerRequest, res: Response) => {
     const data = await EmployerService.updateCompanyProfile(req.user!.id, req.body);
     res.status(200).json({ success: true, data, message: 'Company profile updated successfully.' });
+  });
+
+  static getConversations = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getConversations(req.user!.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static getConversationMessages = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getConversationMessages(req.user!.id, req.params.conversationId);
+    res.status(200).json({ success: true, data });
+  });
+
+  static startConversation = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.startConversation(req.user!.id, req.body.studentProfileId);
+    res.status(200).json({ success: true, data });
+  });
+
+  static sendConversationMessage = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.sendMessage(req.user!.id, req.params.conversationId, req.body.content);
+    res.status(201).json({ success: true, data });
   });
 
   static getRecruiters = catchAsync(async (req: EmployerRequest, res: Response) => {
@@ -44,14 +66,108 @@ export class EmployerController {
     res.status(200).json({ success: true, data, message: 'Job details updated.' });
   });
 
+  static autosaveJob = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.autosaveJob(req.user!.id, req.params.id, req.body);
+    res.status(200).json({ success: true, data, message: 'Draft saved.' });
+  });
+
+  static duplicateJob = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.duplicateJob(req.user!.id, req.params.id);
+    res.status(201).json({ success: true, data, message: 'Job duplicated as a new draft.' });
+  });
+
+  static archiveJob = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.archiveJob(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data, message: 'Job archived.' });
+  });
+
+  static closeJob = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.closeJob(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data, message: 'Job closed.' });
+  });
+
+  static reopenJob = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.reopenJob(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data, message: 'Job reopened and published.' });
+  });
+
+  static deleteJob = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const result = await EmployerService.deleteJob(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data: result.job, message: result.message });
+  });
+
+  static bulkArchiveJobs = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.bulkArchiveJobs(req.user!.id, req.body.jobIds);
+    res.status(200).json({ success: true, data, message: `${data.updated.length} job(s) archived.` });
+  });
+
+  static bulkCloseJobs = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.bulkCloseJobs(req.user!.id, req.body.jobIds);
+    res.status(200).json({ success: true, data, message: `${data.updated.length} job(s) closed.` });
+  });
+
   static getJobs = catchAsync(async (req: EmployerRequest, res: Response) => {
     const data = await EmployerService.getJobs(req.user!.id);
     res.status(200).json({ success: true, data });
   });
 
+  static getJobCategories = catchAsync(async (_req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getJobCategories();
+    res.status(200).json({ success: true, data });
+  });
+
+  static bulkUpdateApplications = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const { applicationIds, action, reason } = req.body;
+    const data = await EmployerService.bulkUpdateApplications(req.user!.id, applicationIds, action, reason);
+    res.status(200).json({
+      success: true,
+      data,
+      message: `${data.updated.length} candidate(s) ${action === 'shortlist' ? 'shortlisted' : 'rejected'}.`
+    });
+  });
+
   static getApplications = catchAsync(async (req: EmployerRequest, res: Response) => {
     const data = await EmployerService.getApplications(req.user!.id);
     res.status(200).json({ success: true, data });
+  });
+
+  static getApplicationQueue = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const { search, status, jobId, dateFrom, dateTo, tagIds, sortBy, sortOrder, page, limit } = req.query;
+    const data = await EmployerService.getApplicationQueue(req.user!.id, {
+      search: search as string | undefined,
+      status: status as ApplicationStatus | undefined,
+      jobId: jobId as string | undefined,
+      dateFrom: dateFrom as string | undefined,
+      dateTo: dateTo as string | undefined,
+      tagIds: tagIds ? (Array.isArray(tagIds) ? (tagIds as string[]) : (tagIds as string).split(',')) : undefined,
+      sortBy: sortBy as any,
+      sortOrder: sortOrder as any,
+      page: page ? parseInt(page as string, 10) : undefined,
+      limit: limit ? parseInt(limit as string, 10) : undefined
+    });
+    res.status(200).json({ success: true, data });
+  });
+
+  static getApplicationDetail = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getApplicationDetail(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static getSharedInterviewReports = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getSharedInterviewReports(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static downloadSharedInterviewReportPdf = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const { buffer, fileName } = await EmployerService.getSharedInterviewReportPdf(
+      req.user!.id,
+      req.params.id,
+      req.params.interviewId
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', String(buffer.length));
+    res.status(200).end(buffer);
   });
 
   static updateApplicationStage = catchAsync(async (req: EmployerRequest, res: Response) => {
@@ -65,33 +181,129 @@ export class EmployerController {
     res.status(200).json({ success: true, data, message: 'Candidate pipeline stage updated.' });
   });
 
+  static shortlistCandidate = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.shortlistCandidate(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data, message: 'Candidate shortlisted.' });
+  });
+
+  static rejectCandidate = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.rejectCandidate(req.user!.id, req.params.id, req.body.reason);
+    res.status(200).json({ success: true, data, message: 'Candidate rejected.' });
+  });
+
+  static addNote = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.addNote(req.user!.id, req.params.id, req.body.content);
+    res.status(201).json({ success: true, data, message: 'Note added.' });
+  });
+
+  static getNotes = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getNotes(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static scheduleInterview = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.scheduleInterview(req.user!.id, req.params.id, req.body);
+    res.status(201).json({ success: true, data, message: 'Interview scheduled.' });
+  });
+
+  static updateInterview = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.updateInterview(req.user!.id, req.params.id, req.body);
+    res.status(200).json({ success: true, data, message: 'Interview updated.' });
+  });
+
+  static createOffer = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.createOffer(req.user!.id, req.params.id, req.body);
+    res.status(201).json({ success: true, data, message: 'Offer extended to candidate.' });
+  });
+
+  static withdrawOffer = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.withdrawOffer(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data, message: 'Offer withdrawn.' });
+  });
+
   static getAnalytics = catchAsync(async (req: EmployerRequest, res: Response) => {
     const data = await EmployerService.getAnalytics(req.user!.id);
     res.status(200).json({ success: true, data });
   });
 
+  static getTags = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getTags(req.user!.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static createTag = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.createTag(req.user!.id, req.body.name, req.body.color);
+    res.status(201).json({ success: true, data, message: 'Tag created.' });
+  });
+
+  static deleteTag = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.deleteTag(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data, message: 'Tag deleted.' });
+  });
+
+  static attachTag = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.attachTag(req.user!.id, req.params.id, req.body.tagId);
+    res.status(201).json({ success: true, data, message: 'Tag added to candidate.' });
+  });
+
+  static detachTag = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.detachTag(req.user!.id, req.params.id, req.params.tagId);
+    res.status(200).json({ success: true, data, message: 'Tag removed from candidate.' });
+  });
+
+  static bulkTagApplications = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const { applicationIds, tagId } = req.body;
+    const data = await EmployerService.bulkTagApplications(req.user!.id, applicationIds, tagId);
+    res.status(200).json({ success: true, data, message: `${data.updated.length} candidate(s) tagged.` });
+  });
+
+  static getApplicationTimeline = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getApplicationTimeline(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static getSavedFilters = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getSavedFilters(req.user!.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static createSavedFilter = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.createSavedFilter(req.user!.id, req.body.name, req.body.filters);
+    res.status(201).json({ success: true, data, message: 'Filter saved.' });
+  });
+
+  static deleteSavedFilter = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.deleteSavedFilter(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data, message: 'Saved filter deleted.' });
+  });
+
   static previewResume = catchAsync(async (req: EmployerRequest, res: Response) => {
-    const resume = await prisma.resume.findUnique({
-      where: { id: req.params.id }
-    });
+    const target = await ResumeService.getRecruiterAccessTarget(req.user!.id, req.companyId!, req.params.id);
+    res.setHeader('Content-Type', target.mimeType);
+    res.sendFile(target.absolutePath);
+  });
 
-    if (!resume) {
-      throw new AppError('Resume metadata not found.', 404, 'RESUME_NOT_FOUND');
-    }
+  static downloadResume = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const target = await ResumeService.getRecruiterAccessTarget(req.user!.id, req.companyId!, req.params.id);
+    res.setHeader('Content-Disposition', `attachment; filename="${target.fileName}"`);
+    res.setHeader('Content-Type', target.mimeType);
+    res.sendFile(target.absolutePath);
+  });
 
-    // Resolve relative path under backend/uploads
-    const storagePath = resume.fileUrl.split('/uploads/')[1];
-    if (!storagePath) {
-      throw new AppError('Resume file path not mapped.', 404, 'PATH_NOT_MAPPED');
-    }
+  // Employer AI (Phase 4): candidate evaluation & comparison
 
-    const absolutePath = path.resolve(process.cwd(), 'uploads', storagePath);
-    if (!fs.existsSync(absolutePath)) {
-      throw new AppError('Physical resume file not found.', 404, 'FILE_NOT_FOUND');
-    }
+  static evaluateCandidate = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.evaluateCandidate(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data });
+  });
 
-    // Return the preview file streamed
-    res.setHeader('Content-Type', 'application/pdf');
-    res.sendFile(absolutePath);
+  static getLatestCandidateEvaluation = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.getLatestEvaluation(req.user!.id, req.params.id);
+    res.status(200).json({ success: true, data });
+  });
+
+  static compareCandidates = catchAsync(async (req: EmployerRequest, res: Response) => {
+    const data = await EmployerService.compareCandidates(req.user!.id, req.body.jobId, req.body.applicationIds);
+    res.status(200).json({ success: true, data });
   });
 }

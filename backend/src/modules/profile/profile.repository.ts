@@ -26,8 +26,16 @@ export class ProfileRepository {
         currentGpa: data.currentGpa,
         preferredRole: data.preferredRole,
         preferredWorkMode: data.preferredWorkMode,
-        preferredLocations: data.preferredLocations
-      }
+        preferredLocations: data.preferredLocations,
+        // AI Preferences (Settings tab) -- as any until `prisma generate`
+        // picks up the new columns from the 20260717150000 migration.
+        ...(data.careerPath !== undefined ? { careerPath: data.careerPath } : {}),
+        ...(data.targetCompanies !== undefined ? { targetCompanies: data.targetCompanies } : {}),
+        ...(data.targetSalaryRange !== undefined ? { targetSalaryRange: data.targetSalaryRange } : {}),
+        ...(data.jobTypePreference !== undefined ? { jobTypePreference: data.jobTypePreference } : {}),
+        ...(data.preferredIndustries !== undefined ? { preferredIndustries: data.preferredIndustries } : {}),
+        ...(data.recommendationFrequency !== undefined ? { recommendationFrequency: data.recommendationFrequency } : {})
+      } as any
     });
   }
 
@@ -81,16 +89,8 @@ export class ProfileRepository {
       update: {},
       create: { name: skillName }
     });
-
-    return prisma.studentSkill.upsert({
-      where: {
-        studentProfileId_skillId: {
-          studentProfileId,
-          skillId: skill.id
-        }
-      },
-      update: { level },
-      create: {
+    return prisma.studentSkill.create({
+      data: {
         studentProfileId,
         skillId: skill.id,
         level

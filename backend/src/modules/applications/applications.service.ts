@@ -2,6 +2,8 @@ import { ApplicationsRepository } from './applications.repository';
 import { ProfileRepository } from '../profile/profile.repository';
 import { AppError } from '../../utils/app-error';
 import { eventBus } from '../shared/event-bus';
+import { NotificationsService } from '../notifications/notifications.service';
+import { prisma } from '../../config/database';
 
 export class ApplicationsService {
   static async getApplications(userId: string) {
@@ -39,5 +41,47 @@ export class ApplicationsService {
     const app = await this.getApplicationById(userId, id);
     await ApplicationsRepository.deleteApplication(app.id);
     eventBus.emit('ApplicationWithdrawn', { id: app.id, studentProfileId: app.studentProfileId });
+  }
+
+  /**
+   * Offer acceptance/decline is the student half of the Hiring Pipeline
+   * workflow (the recruiter half -- create/extend/withdraw -- lives in
+   * EmployerService). Only the owning student may respond, and only while
+   * the offer is in EXTENDED status -- this is the moment the whole
+   * Student -> ... -> Offer -> Acceptance product journey resolves.
+   */
+  static async respondToOffer(userId: string, applicationId: string, accept: boolean) {
+    const app = await this.getApplicationById(userId, applicationId);
+    const offer = await ApplicationsRepository.getOfferById((app as any).offer?.id);
+    if (!offer || offer.applicationId !== applicationId) {
+      throw new AppError('No offer found for this application.', 404, 'OFFER_NOT_FOUND');
+    }
+    if (offer.status !== 'EXTENDED') {
+      throw new AppError('This offer is not currently awaiting a response.', 409, 'OFFER_NOT_RESPONDABLE');
+    }
+
+    const updated = await ApplicationsRepository.respondToOffer(offer.id, accept);
+
+    const job = await prisma.job.findUnique({ where: { id: app.jobId }, include: { recruiter: { include: { user: true } } } });
+    if (job?.recruiter?.user?.id) {
+      await NotificationsService.createNotification({
+        recipientId: job.recruiter.user.id,
+        type: 'APPLICATION',
+        title: accept ? 'Offer accepted' : 'Offer declined',
+        content: `A candidate has ${accept ? 'accepted' : 'declined'} the offer for "${job.title}".`,
+        priority: 'HIGH'
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: accept ? 'OFFER_ACCEPTED' : 'OFFER_DECLINED',
+        details: JSON.stringify({ applicationId, offerId: offer.id })
+      }
+    });
+
+    eventBus.emit(accept ? 'OfferAccepted' : 'OfferDeclined', updated);
+    return updated;
   }
 }

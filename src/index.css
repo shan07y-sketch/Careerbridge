@@ -1,10 +1,38 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+@import "./mobile/mobile.css";
+
+/* ===================================================================
+   CareerBridge Design System — "Ink & Evergreen"
+   One design language for all four portals.
+   =================================================================== */
 
 @layer base {
   body {
-    font-family: 'Manrope', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     @apply bg-surface text-on-surface antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  }
+
+  ::selection {
+    background: rgba(20, 69, 61, 0.14);
+    color: #0c332c;
+  }
+
+  /* Accessible, consistent focus treatment everywhere */
+  :focus-visible {
+    outline: 2px solid #14453d;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect users who prefer less motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -16,7 +44,7 @@
   line-height: 1;
 }
 
-/* Custom Scrollbars */
+/* Custom Scrollbars — warm porcelain track, quiet thumb */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -25,25 +53,25 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e3e0;
+  background: #dcd6ca;
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #c0c8c3;
+  background: #c4bdae;
 }
 
-/* Glassmorphism Cards */
+/* Elevated glass panels (topbars, sticky headers) */
 .glass-card {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(2, 54, 41, 0.08);
+  background: rgba(251, 250, 247, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(28, 26, 22, 0.06);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(2, 54, 41, 0.04);
+  box-shadow: 0 8px 30px rgba(28, 26, 22, 0.07);
 }
 
 /* Hide default browser scrollbars but maintain behavior */
@@ -51,8 +79,8 @@
   display: none;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Tab indicator transitions */
@@ -78,23 +106,36 @@
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Skeleton shimmer — warm porcelain sweep (premium perceived speed) */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #efece5 0%,
+    #f8f6f1 40%,
+    #efece5 80%
+  );
+  background-size: 800px 100%;
+  animation: shimmerMove 1.4s linear infinite;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+@keyframes shimmerMove {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
 }
-::-webkit-scrollbar-thumb {
-  background: var(--color-outline-variant, #c0c8c3);
-  border-radius: 10px;
+
+/* Subtle brand gradient wash for hero / feature surfaces */
+.brand-wash {
+  background:
+    radial-gradient(1200px 400px at 100% -10%, rgba(156, 123, 69, 0.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 0%, rgba(20, 69, 61, 0.10), transparent 55%),
+    #14453d;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-outline, #717975);
+
+/* Hairline divider utility (warm) */
+.hairline {
+  border-color: rgba(28, 26, 22, 0.08);
 }
 
 /* Bento Grid */
@@ -106,7 +147,7 @@
 
 /* Custom Shadow */
 .custom-shadow {
-  box-shadow: 0 4px 20px rgba(2, 54, 41, 0.04);
+  box-shadow: 0 1px 2px rgba(28, 26, 22, 0.04), 0 1px 3px rgba(28, 26, 22, 0.05);
 }
 
 /* Funnel Connector */
@@ -120,22 +161,29 @@
   top: 100%;
   width: 2px;
   height: 16px;
-  background: linear-gradient(to bottom, #023629 0%, transparent 100%);
-  opacity: 0.1;
+  background: linear-gradient(to bottom, #14453d 0%, transparent 100%);
+  opacity: 0.18;
 }
 
-/* Notifications Feed Custom Styles */
+/* Notifications Feed priority accents */
 .priority-high {
-  border-left: 4px solid #ba1a1a !important;
+  border-left: 4px solid #b23b32 !important;
 }
 .priority-med {
-  border-left: 4px solid #655e4c !important;
+  border-left: 4px solid #b07a1e !important;
 }
 .priority-low {
-  border-left: 4px solid #72a08e !important;
+  border-left: 4px solid #9c7b45 !important;
 }
 .feed-item:hover .action-buttons {
   opacity: 1;
 }
 
-
+/* Page-level entrance for route content */
+.page-enter {
+  animation: pageRise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes pageRise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

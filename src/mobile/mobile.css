@@ -1,0 +1,57 @@
+/* =====================================================================
+   CareerBridge Mobile — minimal touch layer (imported by index.css).
+   Everything here costs desktop nothing: the classes only appear in
+   mobile pages, which desktop users never download.
+   ===================================================================== */
+
+/* Safe-area insets (notches / gesture bars in the Android WebView) */
+.m-safe-top    { padding-top: env(safe-area-inset-top, 0px); }
+.m-safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Card */
+.m-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(28, 26, 22, 0.07);
+  box-shadow: 0 1px 2px rgba(28, 26, 22, 0.04);
+}
+.m-press { transition: transform 0.12s ease; -webkit-tap-highlight-color: transparent; }
+.m-press:active { transform: scale(0.98); }
+
+/* Skeleton shimmer */
+@keyframes m-shimmer { to { background-position-x: -200%; } }
+.m-skeleton {
+  border-radius: 10px;
+  background: linear-gradient(90deg, #ece8e1 8%, #f6f4f0 24%, #ece8e1 40%);
+  background-size: 200% 100%;
+  animation: m-shimmer 1.1s linear infinite;
+}
+
+/* Bottom sheet slide-up */
+@keyframes m-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.m-sheet { animation: m-sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* Offline banner slide-down */
+@keyframes m-drop { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+.m-banner { animation: m-drop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Voice wave bars (mock interview mic) */
+@keyframes m-wave { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+.m-voice-bar { width: 4px; border-radius: 4px; animation: m-wave 0.9s ease-in-out infinite; }
+.m-voice-bar:nth-child(2) { animation-delay: 0.12s; }
+.m-voice-bar:nth-child(3) { animation-delay: 0.24s; }
+.m-voice-bar:nth-child(4) { animation-delay: 0.36s; }
+.m-voice-bar:nth-child(5) { animation-delay: 0.18s; }
+
+/* AI thinking dots */
+@keyframes m-dot { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+.m-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: m-dot 1.3s ease-in-out infinite; }
+.m-dot:nth-child(2) { animation-delay: 0.2s; }
+.m-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Score ring sweep */
+@keyframes m-ring { from { stroke-dashoffset: var(--ring-c, 264); } to { stroke-dashoffset: var(--ring-o, 66); } }
+.m-ring-animated { animation: m-ring 1s cubic-bezier(0.65, 0, 0.35, 1) 0.2s both; }
+
+/* Full-screen interview stage */
+.m-interview-stage { position: fixed; inset: 0; z-index: 60; background: #0f172a; color: #f1f5f9; }

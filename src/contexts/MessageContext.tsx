@@ -17,7 +17,7 @@ interface MessageContextType {
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, role, isAuthenticated } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadIdState] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,14 +34,18 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
+  // The /messages endpoints are student-scoped; other portals (employer,
+  // university, admin) have their own messaging surfaces and would 404 here.
+  const isStudent = (role ?? '').toLowerCase() === 'student';
+
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && isStudent) {
       fetchThreads();
     } else {
       setThreads([]);
       setIsLoading(false);
     }
-  }, [isAuthenticated, fetchThreads]);
+  }, [isAuthenticated, isStudent, fetchThreads]);
 
   const loadMessages = useCallback(async (threadId: string) => {
     try {

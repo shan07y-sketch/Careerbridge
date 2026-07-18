@@ -1,24 +1,21 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Student } from '../types';
 import { ProfileService, AuthService } from '../services';
+import type { RegisterPayload } from '../services';
+
+type Role = 'student' | 'employer' | 'university' | 'admin';
 
 interface AuthContextType {
   user: Student | null;
   isAuthenticated: boolean;
-  role: 'student' | 'employer' | 'university' | 'admin' | null;
+  role: Role | null;
   isLoading: boolean;
-  login: (email: string, password: string, forceAdmin?: boolean) => Promise<void>;
+  login: (email: string, password: string) => Promise<Role>;
   logout: () => Promise<void>;
-  selectRole: (role: 'student' | 'employer' | 'university' | 'admin') => void;
-  registerStudent: (
-    name: string,
-    email: string,
-    university?: string,
-    degree?: string,
-    gradYear?: number,
-    role?: 'student' | 'employer' | 'university' | 'admin',
-    companyName?: string
-  ) => Promise<void>;
+  selectRole: (role: Role) => void;
+  register: (payload: RegisterPayload) => Promise<Role>;
+  /** @deprecated kept as an alias of register() for older call sites */
+  registerStudent: (payload: RegisterPayload) => Promise<Role>;
   updateUser: (updates: Partial<Student>) => Promise<void>;
 }
 
@@ -26,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Student | null>(null);
-  const [role, setRoleState] = useState<'student' | 'employer' | 'university' | 'admin' | null>(null);
+  const [role, setRoleState] = useState<Role | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -34,16 +31,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       try {
         const savedAuth = localStorage.getItem('isAuthenticated') === 'true';
-        const savedRole = localStorage.getItem('role') as 'student' | 'employer' | 'university' | 'admin' | null;
-        
-        if (savedAuth) {
-          const profile = await ProfileService.getStudentProfile();
+        const hasToken = !!localStorage.getItem('accessToken');
+
+        if (savedAuth && hasToken) {
+          // Restore the session from the backend, not from cached local state:
+          // GET /auth/me works for EVERY role. (The previous code called
+          // /student/profile here, which 403'd for employer, university and
+          // admin accounts -- so those sessions silently died on every page
+          // refresh.) If the access token has expired, fetchJson transparently
+          // rotates it via the httpOnly refresh cookie and retries.
+          const { user: profile, role: resolvedRole } = await AuthService.me();
           setUser(profile);
           setIsAuthenticated(true);
-          setRoleState(savedRole || 'student');
+          setRoleState(resolvedRole as Role);
         }
       } catch (err) {
+        // Refresh token expired/revoked or backend unreachable: clear the
+        // half-dead session instead of leaving the UI looking logged in.
         console.error('Failed to restore auth state', err);
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('role');
       } finally {
         setIsLoading(false);
       }
@@ -51,104 +59,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string, forceAdmin: boolean = false): Promise<void> => {
+  /**
+   * Real API login for every role -- including admin. (Admin used to be a
+   * hardcoded mock triggered by any email containing "admin": it planted a
+   * fake 'mock_admin_token' that made every subsequent API call 401.)
+   * Returns the authenticated role so callers can route immediately without
+   * re-reading localStorage.
+   */
+  const login = async (email: string, password: string): Promise<Role> => {
     setIsLoading(true);
     try {
-      if (email.toLowerCase().includes('admin') || forceAdmin) {
-        // Mock successful administrator profile login
-        const adminProfile: Student = {
-          id: 'admin_sarah',
-          name: 'Sarah Jenkins',
-          email: email || 'admin@careerbridge.com',
-          university: 'CareerBridge Central Office',
-          degree: 'Super Administrator',
-          gradYear: 2026,
-          profilePicture: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCbOejhXbZv_ELJo1RBJWqBxjJB9iywryg2Avf_Ioyd5RWwMvHfQzulsLoLYzVrl4qmPtiKWSsg4TteqNF7rQxcgy8TXd0Rc1nIQVuJXPEM-s_Rg55j2J6_6DtAw2_Q2GcVuDgCrpv9UDHRvnsKWEBzst4YSyTbK-PSRGkqNBxg7Ph_Rlhkw0_y_RDYdHv8RuJm3vca1QK_Tq8s3QKN2ebo-aD04q2LE0MDo2ZsV6KXxN2BZB9t1Fko',
-          careerGoal: 'System Operations Control',
-          workMode: 'On-site',
-          preferredLocation: 'Central Operations Center',
-          skills: [{ name: 'Infrastructure Management', level: 95 }, { name: 'AI Monitoring & Auditing', level: 90 }],
-          resumeScore: 100,
-          readinessScore: 100,
-          linkedInConnected: true,
-          gitHubConnected: true,
-          phoneVerified: true,
-          emailVerified: true
-        };
-        setUser(adminProfile);
-        setIsAuthenticated(true);
-        setRoleState('admin');
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('role', 'admin');
-        localStorage.setItem('accessToken', 'mock_admin_token');
-        return;
-      }
-
       const profile = await AuthService.login(email, password);
+      const resolvedRole = (localStorage.getItem('role') as Role | null) || 'student';
       setUser(profile);
       setIsAuthenticated(true);
-      const savedRole = localStorage.getItem('role') as 'student' | 'employer' | 'university' | 'admin' | null;
-      setRoleState(savedRole || 'student');
+      setRoleState(resolvedRole);
+      return resolvedRole;
     } catch (err) {
-      console.warn('API Authentication failed. Using mock student profile fallback...', err);
-      // Fallback on offline/disconnected modes
-      const profile = await ProfileService.getStudentProfile();
-      setUser(profile);
-      setIsAuthenticated(true);
-      const savedRole = localStorage.getItem('role') as 'student' | 'employer' | 'university' | 'admin' | null;
-      setRoleState(savedRole || 'student');
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('role', savedRole || 'student');
+      // No mock fallback: silently faking a successful login when the real API
+      // call fails used to leave isAuthenticated=true with no real accessToken
+      // -- every later API call then 401'd while the UI looked logged in.
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = async (): Promise<void> => {
+    // Revoke the refresh token server-side and clear the httpOnly cookie
+    // BEFORE clearing local state; best-effort (never blocks local logout).
+    await AuthService.logout();
     setUser(null);
     setIsAuthenticated(false);
     setRoleState(null);
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('role');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('hasOnboarded');
+    sessionStorage.clear();
   };
 
-  const selectRole = (newRole: 'student' | 'employer' | 'university' | 'admin') => {
+  const selectRole = (newRole: Role) => {
     setRoleState(newRole);
     localStorage.setItem('role', newRole);
   };
 
-  const registerStudent = async (
-    name: string,
-    email: string,
-    university?: string,
-    degree?: string,
-    gradYear?: number,
-    role: 'student' | 'employer' | 'university' | 'admin' = 'student',
-    companyName?: string
-  ): Promise<void> => {
+  const register = async (payload: RegisterPayload): Promise<Role> => {
     setIsLoading(true);
     try {
-      await AuthService.register(name, email, university, degree, gradYear, role, companyName);
-      const profile = await AuthService.login(email, 'Password123!');
+      await AuthService.register(payload);
+      // Log in with the password the user actually chose -- registration used
+      // to silently create every account with a shared hardcoded password.
+      const profile = await AuthService.login(payload.email, payload.password);
+      const resolvedRole = (localStorage.getItem('role') as Role | null) || payload.role;
       setUser(profile);
       setIsAuthenticated(true);
-      setRoleState(role);
-      localStorage.setItem('role', role);
+      setRoleState(resolvedRole);
+      return resolvedRole;
     } catch (err) {
-      console.warn('API Registration failed. Using mock updates fallback...', err);
-      const updatedProfile = await ProfileService.updateStudentProfile({
-        name,
-        email,
-        university: role === 'student' ? university : undefined,
-        degree: role === 'student' ? degree : undefined,
-        gradYear: role === 'student' ? gradYear : undefined
-      });
-      setUser(updatedProfile);
-      setIsAuthenticated(true);
-      setRoleState(role);
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('role', role);
+      // No mock fallback: faking success would leave the user believing they
+      // have an account that doesn't actually exist in PostgreSQL.
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         selectRole,
-        registerStudent,
+        register,
+        registerStudent: register,
         updateUser
       }}
     >

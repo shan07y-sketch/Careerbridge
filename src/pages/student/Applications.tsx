@@ -3,9 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import { ApplicationService } from '../../services';
 import type { Application } from '../../types';
 import { PageLayout } from '../../components/layout/PageLayout';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { StatCard } from '../../components/ui/StatCard';
+import { Section } from '../../components/ui/Section';
+import { Toolbar, FilterChip } from '../../components/ui/Toolbar';
+import { Card, CardHeader } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Badge, statusTone } from '../../components/ui/Badge';
+import { ProgressBar } from '../../components/ui/Progress';
 import { useToast } from '../../contexts/ToastContext';
 import { CardSkeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Dialog } from '../../components/ui/Dialog';
+import { exportApplicationsCSV } from '../../utils/exportUtils';
+
+type StatusFilter = 'All' | 'Applied' | 'Interviewing' | 'Offer' | 'Rejected';
+const STATUS_FILTERS: StatusFilter[] = ['All', 'Applied', 'Interviewing', 'Offer', 'Rejected'];
+
+/** Stage progress derived purely from the real application status. */
+const STAGE_ORDER = ['applied', 'interviewing', 'offer'];
+const stageProgress = (status: Application['status']): number => {
+  if (status === 'rejected') return 100;
+  const idx = STAGE_ORDER.indexOf(status);
+  return idx < 0 ? 0 : Math.round(((idx + 1) / STAGE_ORDER.length) * 100);
+};
 
 export const Applications: React.FC = () => {
   const navigate = useNavigate();
@@ -13,559 +34,331 @@ export const Applications: React.FC = () => {
 
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
 
-  // Filter States
-  const [selectedStatus, setSelectedStatus] = useState<string>('All');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'match'>('newest');
-
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4;
+  const itemsPerPage = 5;
 
   const loadApplications = async () => {
     try {
       setIsLoading(true);
+      setError(false);
       const items = await ApplicationService.getApplications();
       setApplications(items);
     } catch (err) {
       console.error('Failed to load applications', err);
+      setError(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadApplications();
-  }, []);
+  useEffect(() => { loadApplications(); }, []);
+  useEffect(() => { setCurrentPage(1); }, [selectedStatus, searchTerm, sortBy]);
 
-  const handleWithdraw = (appId: string) => {
-    setApplications(prev => prev.filter(app => app.id !== appId));
-    showToast('Application withdrawn successfully.', 'success');
+  const [offerActionId, setOfferActionId] = useState<string | null>(null);
+  const [withdrawTargetId, setWithdrawTargetId] = useState<string | null>(null);
+  const [declineTargetId, setDeclineTargetId] = useState<string | null>(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+
+  const confirmWithdraw = async () => {
+    if (!withdrawTargetId) return;
+    setIsWithdrawing(true);
+    try {
+      await ApplicationService.retractApplication(withdrawTargetId);
+      setApplications(prev => prev.filter(app => app.id !== withdrawTargetId));
+      showToast('Application withdrawn successfully.', 'success');
+      setWithdrawTargetId(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not withdraw application.', 'error');
+    } finally {
+      setIsWithdrawing(false);
+    }
   };
 
-  // Filter & Sort Logic
+  const handleAcceptOffer = async (appId: string) => {
+    setOfferActionId(appId);
+    try {
+      await ApplicationService.acceptOffer(appId);
+      showToast('Offer accepted! Congratulations.', 'success');
+      await loadApplications();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not accept offer.', 'error');
+    } finally {
+      setOfferActionId(null);
+    }
+  };
+
+  const confirmDeclineOffer = async () => {
+    if (!declineTargetId) return;
+    setIsDeclining(true);
+    setOfferActionId(declineTargetId);
+    try {
+      await ApplicationService.declineOffer(declineTargetId);
+      showToast('Offer declined.', 'success');
+      setDeclineTargetId(null);
+      await loadApplications();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not decline offer.', 'error');
+    } finally {
+      setIsDeclining(false);
+      setOfferActionId(null);
+    }
+  };
+
+  const pendingOffers = applications.filter(app => app.offer?.status === 'EXTENDED');
+  const upcomingInterviews = applications
+    .flatMap(app => (app.interviews || []).map(iv => ({ ...iv, app })))
+    .filter(iv => iv.status === 'SCHEDULED' && new Date(iv.scheduledAt).getTime() > Date.now())
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+
   const filteredApps = useMemo(() => {
     let result = [...applications];
-
-    // Status Filter
-    if (selectedStatus !== 'All') {
-      result = result.filter(app => app.status === selectedStatus.toLowerCase());
-    }
-
-    // Search Box
+    if (selectedStatus !== 'All') result = result.filter(app => app.status === selectedStatus.toLowerCase());
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
-      result = result.filter(
-        app =>
-          app.jobTitle.toLowerCase().includes(q) ||
-          app.companyName.toLowerCase().includes(q)
-      );
+      result = result.filter(app =>
+        app.jobTitle.toLowerCase().includes(q) || app.companyName.toLowerCase().includes(q));
     }
-
-    // Sort
-    if (sortBy === 'newest') {
-      result.sort((a, b) => b.dateApplied.localeCompare(a.dateApplied));
-    } else if (sortBy === 'match') {
-      result.sort((a, b) => (b.applicationScore || 80) - (a.applicationScore || 80));
-    }
-
+    if (sortBy === 'newest') result.sort((a, b) => b.dateApplied.localeCompare(a.dateApplied));
+    else result.sort((a, b) => (b.applicationScore ?? 0) - (a.applicationScore ?? 0));
     return result;
   }, [applications, selectedStatus, searchTerm, sortBy]);
 
-  // Reset page when filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedStatus, searchTerm, sortBy]);
+  const totalPages = Math.max(1, Math.ceil(filteredApps.length / itemsPerPage));
+  const paginatedApps = useMemo(
+    () => filteredApps.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
+    [filteredApps, currentPage]);
 
-  const paginatedApps = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredApps.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredApps, currentPage]);
-
-  const totalPages = Math.ceil(filteredApps.length / itemsPerPage);
-
-  // Statistics summaries
   const totalApplied = applications.length;
-  const interviewingCount = applications.filter(a => a.status === 'interviewing').length || 2;
-  const offerCount = applications.filter(a => a.status === 'offer').length || 1;
-  const reviewCount = applications.filter(a => a.status === 'applied').length;
-  const rejectedCount = applications.filter(a => a.status === 'rejected').length;
+  const activeCount = applications.filter(a => a.status === 'applied' || a.status === 'interviewing').length;
+  const interviewingCount = applications.filter(a => a.status === 'interviewing').length;
+  const offerCount = applications.filter(a => a.status === 'offer').length;
+  const countFor = (s: StatusFilter) =>
+    s === 'All' ? applications.length : applications.filter(a => a.status === s.toLowerCase()).length;
 
   return (
-    <PageLayout fullWidth>
-      <main className="px-8 py-12 min-h-screen text-left bg-[#f9faf7]">
-        <div className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-8">
-          
-          {/* Left Column: Applications Tracker Feed */}
-          <div className="flex-grow space-y-6 max-w-[1000px]">
-            
-            {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-primary/5">
-              <div>
-                <h2 className="font-display text-headline-lg text-primary mb-2">My Applications</h2>
-                <p className="font-body-lg text-on-surface-variant max-w-xl">Track every application, interview and offer from one place.</p>
-              </div>
+    <PageLayout searchPlaceholder="Search applications…">
+      <PageHeader
+        title="My applications"
+        description="Track every application, interview and offer from one place."
+        actions={
+          <>
+            <Button variant="outline" disabled={filteredApps.length === 0}
+              onClick={() => { exportApplicationsCSV(filteredApps); showToast('Applications exported to CSV.', 'success'); }}
+              leftIcon={<span className="material-symbols-outlined text-[19px]">download</span>}>
+              Export
+            </Button>
+            <Button variant="primary" onClick={() => navigate('/student/jobs')}
+              leftIcon={<span className="material-symbols-outlined text-[19px]">work</span>}>
+              Find jobs
+            </Button>
+          </>
+        }
+      />
 
-              <div className="flex gap-4">
-                <div className="px-6 py-4 bg-white rounded-2xl shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 text-center">
-                  <p className="text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Applied</p>
-                  <p className="text-xl text-primary font-extrabold">{totalApplied}</p>
-                </div>
-                
-                <div className="px-6 py-4 bg-white rounded-2xl shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 text-center">
-                  <p className="text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Interviews</p>
-                  <p className="text-xl text-primary font-extrabold">{interviewingCount}</p>
-                </div>
+      <div className="space-y-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          <StatCard label="Total applied" value={totalApplied} icon="send" hint="all time" />
+          <StatCard label="Active" value={activeCount} icon="pending_actions" hint="in progress" onClick={() => setSelectedStatus('Applied')} />
+          <StatCard label="Interviewing" value={interviewingCount} icon="videocam" hint="scheduled or in review" onClick={() => setSelectedStatus('Interviewing')} />
+          <StatCard label="Offers" value={offerCount} icon="handshake" hint={offerCount > 0 ? 'Congratulations!' : 'keep going'} onClick={() => setSelectedStatus('Offer')} />
+        </div>
 
-                <div className="px-6 py-4 bg-primary text-white rounded-2xl shadow-lg text-center">
-                  <p className="text-[10px] opacity-85 mb-1 uppercase tracking-wider">Offers</p>
-                  <p className="text-xl font-extrabold">{offerCount}</p>
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="xl:col-span-2 space-y-4">
+            <Toolbar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Search by role or company…"
+              filters={STATUS_FILTERS.map(s => (
+                <FilterChip key={s} active={selectedStatus === s} onClick={() => setSelectedStatus(s)} count={countFor(s)}>{s}</FilterChip>
+              ))}
+              actions={
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'newest' | 'match')}
+                  className="h-10 px-3 rounded-xl border border-outline-variant/70 bg-surface-container-lowest text-label-md font-semibold text-on-surface focus:border-primary/40 focus:ring-0 outline-none cursor-pointer"
+                  aria-label="Sort applications">
+                  <option value="newest">Newest</option>
+                  <option value="match">Application score</option>
+                </select>
+              }
+            />
 
-            {/* Summary metrics Grid row */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              
-              <div className="p-4 bg-white rounded-2xl border border-primary/5 shadow-sm text-xs">
-                <span className="material-symbols-outlined text-primary mb-2 text-lg">send</span>
-                <p className="font-bold text-on-surface-variant">Applied</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-bold">{totalApplied}</span>
-                  <span className="text-[10px] text-primary flex items-center font-bold">
-                    <span className="material-symbols-outlined text-xs">trending_up</span> 12%
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-white rounded-2xl border border-primary/5 shadow-sm text-xs">
-                <span className="material-symbols-outlined text-primary mb-2 text-lg">visibility</span>
-                <p className="font-bold text-on-surface-variant">Under Review</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-bold">{reviewCount}</span>
-                  <span className="text-[10px] text-primary flex items-center font-bold">
-                    <span className="material-symbols-outlined text-xs">trending_up</span> 4%
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-white rounded-2xl border border-primary/5 shadow-sm text-xs">
-                <span className="material-symbols-outlined text-secondary mb-2 text-lg">calendar_today</span>
-                <p className="font-bold text-on-surface-variant">Interviews</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-bold">{interviewingCount}</span>
-                  <span className="text-[10px] text-primary flex items-center font-bold">
-                    <span className="material-symbols-outlined text-xs">trending_up</span> 100%
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-white rounded-2xl border border-primary/5 shadow-sm text-xs">
-                <span className="material-symbols-outlined text-primary-container mb-2 text-lg">emoji_events</span>
-                <p className="font-bold text-on-surface-variant">Offers</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-bold">{offerCount}</span>
-                  <span className="text-[10px] text-primary flex items-center font-bold">
-                    <span className="material-symbols-outlined text-xs">trending_flat</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-white rounded-2xl border border-primary/5 shadow-sm text-xs">
-                <span className="material-symbols-outlined text-error mb-2 text-lg">cancel</span>
-                <p className="font-bold text-on-surface-variant">Rejected</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-bold">{rejectedCount}</span>
-                  <span className="text-[10px] text-error flex items-center font-bold">
-                    <span className="material-symbols-outlined text-xs">trending_down</span> 2%
-                  </span>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Filter controls row */}
-            <div className="flex flex-col gap-4 bg-white p-5 rounded-2xl border border-primary/5 shadow-sm">
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
-                <input 
-                  type="text"
-                  placeholder="Search applications by role or company name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:ring-2 focus:ring-primary/20 placeholder:text-on-surface-variant/60 outline-none text-on-surface dark:text-white"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex flex-wrap gap-2">
-                  {['All', 'Applied', 'Interviewing', 'Offer', 'Rejected'].map(status => {
-                    const isActive = selectedStatus === status;
-                    return (
-                      <button
-                        key={status}
-                        onClick={() => setSelectedStatus(status)}
-                        className={`px-4 py-2 rounded-full text-xs font-bold border transition-colors cursor-pointer ${
-                          isActive 
-                            ? 'bg-primary text-white border-transparent' 
-                            : 'bg-white text-on-surface-variant border-primary/5 hover:bg-surface-container-high'
-                        }`}
-                      >
-                        {status}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="text-xs font-bold text-primary">
-                  <select 
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="bg-transparent border-none text-xs font-bold focus:ring-0 cursor-pointer p-1"
-                  >
-                    <option value="newest">Sort by: Newest</option>
-                    <option value="match">AI Match</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Submissions Cards Timeline List */}
             {isLoading ? (
-              <div className="space-y-4">
-                <CardSkeleton />
-                <CardSkeleton />
-              </div>
+              <div className="grid gap-4">{[0, 1, 2].map(i => <CardSkeleton key={i} />)}</div>
+            ) : error ? (
+              <EmptyState icon="cloud_off" title="Couldn't load applications"
+                description="We hit a problem reaching the applications service. Please try again."
+                actionLabel="Retry" onAction={loadApplications} />
             ) : filteredApps.length === 0 ? (
-              <EmptyState 
-                icon="assignment"
-                title="No applications"
-                description={searchTerm ? "No applications match your search query." : "You have no submitted applications in this category."}
-                actionLabel="Discover Jobs"
-                onAction={() => navigate('/student/jobs')}
-              />
+              <EmptyState icon="assignment"
+                title={applications.length === 0 ? 'No applications yet' : 'No applications match your filters'}
+                description={applications.length === 0
+                  ? 'When you apply to a role it appears here with a live status timeline. Browse open jobs to get started.'
+                  : 'Try a different status filter or clear your search.'}
+                actionLabel={applications.length === 0 ? 'Browse jobs' : 'Show all'}
+                onAction={applications.length === 0 ? () => navigate('/student/jobs') : () => { setSelectedStatus('All'); setSearchTerm(''); }} />
             ) : (
               <div className="space-y-4">
                 {paginatedApps.map(app => {
-                  
-                  // progress bar steps calculation
-                  const statusColors = {
-                    applied: 'w-1/4 bg-primary',
-                    interviewing: 'w-1/2 bg-primary',
-                    offer: 'w-full bg-primary',
-                    rejected: 'w-full bg-error'
-                  }[app.status] || 'w-1/4 bg-primary';
-
-                  const timelineSteps = [
-                    { label: 'Applied', date: 'Oct 12', active: true },
-                    { label: 'Review', date: 'Oct 14', active: app.status !== 'applied' },
-                    { label: 'Technical', date: '', active: app.status === 'interviewing' || app.status === 'offer' },
-                    { label: 'HR Round', date: '', active: app.status === 'offer' },
-                    { label: 'Offer', date: '', active: app.status === 'offer' }
-                  ];
-
+                  const timeline = app.timeline && app.timeline.length > 0 ? app.timeline : null;
+                  const isExpanded = expandedAppId === app.id;
                   return (
-                    <div 
-                      key={app.id}
-                      className="bg-white rounded-2xl p-6 shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 hover:shadow-md transition-all text-xs"
-                    >
-                      <div className="flex flex-col md:flex-row gap-6 mb-8 text-left">
-                        <div className="w-16 h-16 rounded-xl bg-surface-container-low flex items-center justify-center p-2 border border-primary/5 shrink-0 overflow-hidden">
-                          {app.companyLogo ? (
-                            <img className="w-full h-full object-contain" alt={app.companyName} src={app.companyLogo} />
-                          ) : (
-                            <span className="material-symbols-outlined text-outline text-2xl">business</span>
-                          )}
+                    <Card key={app.id} className="!p-6">
+                      <div className="flex gap-4">
+                        <div className="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center p-2 shrink-0 overflow-hidden">
+                          {app.companyLogo
+                            ? <img className="w-full h-full object-contain" alt={app.companyName} src={app.companyLogo} />
+                            : <span className="material-symbols-outlined text-on-surface-variant text-2xl">business</span>}
                         </div>
-
-                        <div className="flex-grow">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-headline-md text-primary font-bold text-[18px] leading-tight">{app.jobTitle}</h3>
-                              <p className="text-xs font-semibold text-on-surface-variant mt-0.5">{app.companyName} • London, UK (Remote)</p>
+                        <div className="flex-grow min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="text-body-lg font-semibold text-on-surface truncate">{app.jobTitle}</h3>
+                              <p className="text-label-md text-on-surface-variant mt-0.5 truncate">{app.companyName}</p>
                             </div>
-                            
-                            <div className="flex items-center gap-2 px-3 py-1 bg-primary-fixed text-on-primary-fixed rounded-lg font-bold text-[10px]">
-                              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                              98% AI Match
-                            </div>
+                            <Badge tone={statusTone(app.status)}>{app.status.charAt(0).toUpperCase() + app.status.slice(1)}</Badge>
                           </div>
-
-                          <div className="flex gap-4 mt-4 font-semibold text-on-surface-variant">
-                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">payments</span> £85,000 - £110,000</span>
-                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">schedule</span> Applied {app.dateApplied}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Interactive Progress timeline tracker HUD */}
-                      <div className="relative flex items-center justify-between mb-8 px-4">
-                        <div className="absolute left-8 right-8 h-0.5 bg-surface-container-highest top-4 -z-10" />
-                        <div className={`absolute left-8 h-0.5 top-4 -z-10 transition-all duration-300 ${statusColors}`} style={{ width: '80%' }} />
-                        
-                        {timelineSteps.map((step, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1 text-center w-20">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                              step.active 
-                                ? 'bg-primary text-white font-bold' 
-                                : 'bg-surface-container-highest text-outline font-semibold'
-                            }`}>
-                              {step.active ? (
-                                <span className="material-symbols-outlined text-sm">check</span>
-                              ) : null}
-                            </div>
-                            <p className={`text-[10px] uppercase font-bold ${step.active ? 'text-primary' : 'text-on-surface-variant opacity-70'}`}>
-                              {step.label}
-                            </p>
-                            {step.date && (
-                              <p className="text-[9px] text-on-surface-variant opacity-70">{step.date}</p>
+                          <div className="flex flex-wrap items-center gap-4 mt-2 text-label-sm text-on-surface-variant">
+                            <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span>Applied {app.dateApplied}</span>
+                            {typeof app.applicationScore === 'number' && (
+                              <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">bolt</span>{app.applicationScore}% match</span>
+                            )}
+                            {app.expectedResponseDate && (
+                              <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">event_upcoming</span>Response by {app.expectedResponseDate}</span>
                             )}
                           </div>
-                        ))}
+                        </div>
                       </div>
 
-                      {/* Collapsible Details Drawer */}
-                      {expandedAppId === app.id && (
-                        <div className="mt-6 pt-6 border-t border-primary/5 grid grid-cols-1 md:grid-cols-2 gap-6 text-left animate-fade-in">
-                          <div className="space-y-4">
+                      <div className="mt-4">
+                        <ProgressBar value={stageProgress(app.status)} tone={app.status === 'rejected' ? 'bg-error' : 'bg-primary'} />
+                      </div>
+
+                      {isExpanded && (
+                        <div className="mt-5 pt-5 border-t border-outline-variant/60 space-y-4 animate-fade-in">
+                          {timeline ? (
                             <div>
-                              <p className="text-[10px] text-outline uppercase font-bold tracking-wider">Recruiter Activity & Notes</p>
-                              <div className="bg-surface-container-low p-3 rounded-lg mt-1 font-semibold text-on-surface leading-relaxed">
-                                <p className="text-primary font-bold">Recruiter: Sarah Jenkins</p>
-                                <p className="text-on-surface-variant mt-1 text-[11px]">"Strong match on TypeScript and React. Checked ATS formatting index: 92%. Awaiting technical assessment response."</p>
-                              </div>
+                              <p className="text-label-sm font-semibold text-on-surface-variant uppercase tracking-wide mb-3">Status timeline</p>
+                              <ol className="space-y-3">
+                                {timeline.map((step, idx) => (
+                                  <li key={idx} className="flex gap-3">
+                                    <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${step.active ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}>
+                                      <span className="material-symbols-outlined text-[15px]">{step.active ? 'check' : 'radio_button_unchecked'}</span>
+                                    </span>
+                                    <div>
+                                      <p className="text-label-md font-semibold text-on-surface">{step.stage}{step.date ? <span className="text-on-surface-variant font-normal"> · {step.date}</span> : null}</p>
+                                      {step.description && <p className="text-label-sm text-on-surface-variant mt-0.5">{step.description}</p>}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ol>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-3 text-[11px] font-bold">
-                              <div className="p-3 bg-surface-container-low rounded-lg">
-                                <p className="text-[9px] uppercase text-outline">Expected Response</p>
-                                <p className="text-primary mt-1">Oct 28 (5 days left)</p>
-                              </div>
-                              <div className="p-3 bg-surface-container-low rounded-lg">
-                                <p className="text-[9px] uppercase text-outline">Resume Viewed</p>
-                                <p className="text-green-600 mt-1 flex items-center gap-0.5">
-                                  <span className="material-symbols-outlined text-xs">check_circle</span> Yes
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            <div>
-                              <p className="text-[10px] text-outline uppercase font-bold tracking-wider">Interview Preparation</p>
-                              <div className="bg-primary/5 p-3 rounded-lg mt-1 space-y-2">
-                                <div className="flex justify-between font-bold">
-                                  <span>Prep Progress</span>
-                                  <span className="text-primary">81% Complete</span>
-                                </div>
-                                <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                                  <div className="bg-primary h-full w-[81%]" />
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 text-[11px] font-bold">
-                              <div className="p-3 bg-surface-container-low rounded-lg">
-                                <p className="text-[9px] uppercase text-outline">Missing Documents</p>
-                                <p className="text-on-surface-variant mt-1 font-semibold">None (All Clear)</p>
-                              </div>
-                              <div className="p-3 bg-[#e9dfc8] text-[#4c4635] rounded-lg">
-                                <p className="text-[9px] uppercase text-secondary">AI Recommendation</p>
-                                <p className="text-secondary mt-1">Complete SQL quiz</p>
-                              </div>
-                            </div>
-                          </div>
+                          ) : (
+                            <p className="text-label-md text-on-surface-variant">No detailed timeline recorded for this application yet.</p>
+                          )}
+                          {app.recruiterName && (
+                            <p className="text-label-md text-on-surface-variant">Recruiter: <span className="font-semibold text-on-surface">{app.recruiterName}</span></p>
+                          )}
+                          {app.missingDocuments && app.missingDocuments.length > 0 && (
+                            <p className="text-label-md text-warning">Missing documents: {app.missingDocuments.join(', ')}</p>
+                          )}
                         </div>
                       )}
 
-                      {/* Bottom action triggers */}
-                      <div className="flex gap-3 mt-6 pt-4 border-t border-primary/5">
-                        <button 
-                          onClick={() => setExpandedAppId(expandedAppId === app.id ? null : app.id)}
-                          className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold cursor-pointer border-none text-[11px]"
-                        >
-                          {expandedAppId === app.id ? 'Hide Details' : 'View Tracker Details'}
-                        </button>
-                        <button 
-                          onClick={() => navigate(`/student/jobs/${app.jobId}`)}
-                          className="px-6 py-2.5 bg-surface-container-high text-primary rounded-xl font-bold cursor-pointer border-none text-[11px]"
-                        >
-                          Job Description
-                        </button>
-                        <button 
-                          onClick={() => navigate('/student/messages')}
-                          className="px-6 py-2.5 bg-secondary-container/40 text-primary rounded-xl font-bold cursor-pointer border-none text-[11px]"
-                        >
-                          Message Recruiter
-                        </button>
-                        <button 
-                          onClick={() => handleWithdraw(app.id)}
-                          className="px-6 py-2.5 text-error rounded-xl font-bold hover:bg-error/5 transition-colors ml-auto cursor-pointer bg-transparent border-none text-[11px]"
-                        >
-                          Withdraw
-                        </button>
+                      <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-outline-variant/60">
+                        <Button size="sm" variant="secondary" onClick={() => setExpandedAppId(isExpanded ? null : app.id)}>
+                          {isExpanded ? 'Hide details' : 'View details'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => navigate(`/student/jobs/${app.jobId}`)}>Job description</Button>
+                        <Button size="sm" variant="ghost" onClick={() => navigate('/student/messages')}>Message recruiter</Button>
+                        <Button size="sm" variant="ghost" className="!text-error ml-auto" onClick={() => setWithdrawTargetId(app.id)}>Withdraw</Button>
                       </div>
-
-                    </div>
+                    </Card>
                   );
                 })}
 
-                {/* Pagination Controls */}
                 {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-4 pt-8 text-xs font-bold">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="px-4 py-2 bg-white rounded-xl border border-primary/5 shadow-sm text-on-surface-variant hover:text-primary disabled:opacity-50 transition-colors cursor-pointer"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-on-surface-variant">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="px-4 py-2 bg-white rounded-xl border border-primary/5 shadow-sm text-on-surface-variant hover:text-primary disabled:opacity-50 transition-colors cursor-pointer"
-                    >
-                      Next
-                    </button>
+                  <div className="flex justify-center items-center gap-4 pt-6">
+                    <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}>Previous</Button>
+                    <span className="text-label-md font-semibold text-on-surface-variant">Page {currentPage} of {totalPages}</span>
+                    <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}>Next</Button>
                   </div>
                 )}
               </div>
             )}
-
           </div>
 
-          {/* Right Column: Side Intelligence Panel */}
-          <aside className="w-80 space-y-6 hidden xl:block shrink-0 text-xs text-left">
-            
-            {/* Upcoming Interviews schedule */}
-            <div className="bg-white p-6 rounded-2xl border border-primary/5 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h4 className="font-bold text-primary uppercase tracking-widest text-[11px]">Interviews</h4>
-                <span className="px-2 py-1 bg-primary/10 text-primary rounded text-[9px] font-bold">2 TODAY</span>
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-surface-container-low rounded-xl border-l-4 border-primary">
-                  <p className="text-[10px] text-primary font-bold mb-1">DesignStream</p>
-                  <p className="font-bold text-sm mb-3">Technical Presentation</p>
-                  
-                  <div className="flex items-center gap-3 text-on-surface-variant font-semibold mb-4">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">event</span> Today</span>
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">alarm</span> 14:00</span>
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">videocam</span> Zoom</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-4 font-bold text-primary">
-                    <div className="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
-                      <div className="bg-primary h-full w-[81%]" />
-                    </div>
-                    <span className="text-[9px]">Readiness: 81%</span>
-                  </div>
-
-                  <button 
-                    onClick={() => showToast('Opening Zoom presentation console...', 'success')}
-                    className="w-full py-2 bg-primary text-white rounded-lg font-bold cursor-pointer border-none text-[11px]"
-                  >
-                    Join Meeting
-                  </button>
+          {/* Side panel — real, backend-derived data only */}
+          <div className="space-y-8">
+            <Section title="Pending offers" description={pendingOffers.length ? `${pendingOffers.length} awaiting your decision` : undefined}>
+              {pendingOffers.length === 0 ? (
+                <Card><p className="text-label-md text-on-surface-variant">No offers awaiting a decision right now.</p></Card>
+              ) : (
+                <div className="space-y-3">
+                  {pendingOffers.map(app => (
+                    <Card key={app.id} className="!p-4 border-primary/30">
+                      <p className="text-label-md font-semibold text-on-surface truncate">{app.offer?.title}</p>
+                      <p className="text-label-sm text-on-surface-variant truncate mt-0.5">
+                        {app.companyName}{app.offer?.salary ? ` · ${app.offer?.currency} ${app.offer.salary.toLocaleString()}` : ''}
+                      </p>
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" variant="primary" className="flex-1" disabled={offerActionId === app.id} onClick={() => handleAcceptOffer(app.id)}>
+                          {offerActionId === app.id ? 'Working…' : 'Accept'}
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1" disabled={offerActionId === app.id} onClick={() => setDeclineTargetId(app.id)}>Decline</Button>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
+              )}
+            </Section>
 
-                <div className="p-4 bg-white rounded-xl border border-primary/5 font-bold">
-                  <p className="text-on-surface-variant mb-1">Innovate Corp</p>
-                  <p className="text-primary text-sm mb-3">Culture Fit Interview</p>
-                  <div className="flex items-center gap-3 text-on-surface-variant font-semibold">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">event</span> Tomorrow</span>
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">alarm</span> 10:30</span>
-                  </div>
+            <Section title="Upcoming interviews" description={upcomingInterviews.length ? `${upcomingInterviews.length} scheduled` : undefined}>
+              {upcomingInterviews.length === 0 ? (
+                <Card><p className="text-label-md text-on-surface-variant">No interviews scheduled yet. They'll show here once a recruiter books one.</p></Card>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingInterviews.slice(0, 4).map(iv => (
+                    <Card key={iv.id} className="!p-4">
+                      <p className="text-label-sm text-primary font-semibold">{iv.app.companyName}</p>
+                      <p className="text-label-md font-semibold text-on-surface mt-0.5">{iv.title}</p>
+                      <div className="flex items-center gap-3 mt-2 text-label-sm text-on-surface-variant flex-wrap">
+                        <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-[15px]">event</span>{new Date(iv.scheduledAt).toLocaleDateString()}</span>
+                        <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-[15px]">alarm</span>{new Date(iv.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
+              )}
+            </Section>
+
+            <Card>
+              <CardHeader icon="explore" title="Keep building" subtitle="Strengthen your candidacy" />
+              <div className="flex flex-col gap-2">
+                <Button variant="ghost" className="!justify-between" onClick={() => navigate('/student/mock-interview')}>Practice a mock interview<span className="material-symbols-outlined text-[18px]">arrow_forward</span></Button>
+                <Button variant="ghost" className="!justify-between" onClick={() => navigate('/student/profile')}>Review your profile<span className="material-symbols-outlined text-[18px]">arrow_forward</span></Button>
+                <Button variant="ghost" className="!justify-between" onClick={() => navigate('/student/career-report')}>Open career report<span className="material-symbols-outlined text-[18px]">arrow_forward</span></Button>
               </div>
-            </div>
-
-            {/* Today's Career Tip card */}
-            <div className="bg-primary-container text-white rounded-2xl p-6 relative overflow-hidden text-left">
-              <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-8xl opacity-10 rotate-12">tips_and_updates</span>
-              <p className="opacity-70 mb-2 uppercase tracking-wider text-[10px] font-bold">Today's Tip</p>
-              <h4 className="font-bold text-sm mb-3">Quantify your impact.</h4>
-              <p className="opacity-80 leading-relaxed mb-4 font-medium">
-                Instead of "Managed social media," try "Increased social media engagement by 40% through targeted content strategy."
-              </p>
-              <button 
-                onClick={() => showToast('Opening professional development tips resources...', 'info')}
-                className="font-bold underline underline-offset-4 cursor-pointer bg-transparent border-none text-white text-[11px]"
-              >
-                Read full guide
-              </button>
-            </div>
-
-            {/* Pending actions checklist items */}
-            <div className="bg-white p-6 rounded-2xl border border-primary/5 shadow-sm">
-              <h4 className="font-bold text-primary uppercase tracking-widest mb-6 text-[11px]">Pending Actions</h4>
-              
-              <div className="space-y-4">
-                <div 
-                  onClick={() => showToast('Offer accepted! Compiling hiring contract packages...', 'success')}
-                  className="flex items-center gap-4 group cursor-pointer p-2 rounded-xl border-2 border-primary/20 bg-primary/5"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary text-white flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-xl">edit_note</span>
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-primary truncate">Accept Offer</p>
-                      <span className="px-1.5 py-0.5 bg-error text-white text-[8px] font-bold rounded uppercase shrink-0">Due Today</span>
-                    </div>
-                    <p className="text-[10px] text-on-surface-variant font-semibold truncate">CloudNexus deadline in 2 hours</p>
-                  </div>
-                  <span className="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity text-sm shrink-0">arrow_forward_ios</span>
-                </div>
-
-                <div 
-                  onClick={() => showToast('Uploading portfolio documentation file...', 'info')}
-                  className="flex items-center gap-4 group cursor-pointer p-2 rounded-xl border border-transparent hover:bg-surface-container"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-secondary-container/40 flex items-center justify-center text-primary shrink-0">
-                    <span className="material-symbols-outlined text-xl">description</span>
-                  </div>
-                  <div className="flex-grow min-w-0 font-bold">
-                    <p className="text-primary truncate">Upload Portfolio</p>
-                    <p className="text-[10px] text-on-surface-variant font-medium truncate mt-0.5">Required for DesignStream application</p>
-                  </div>
-                  <span className="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 transition-opacity text-sm shrink-0">arrow_forward_ios</span>
-                </div>
-              </div>
-            </div>
-
-            {/* AI suggestions box */}
-            <div className="bg-white p-6 rounded-2xl border-2 border-primary/5 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-primary">auto_awesome</span>
-                <h4 className="font-bold text-primary uppercase tracking-widest text-[11px]">AI Suggestions</h4>
-              </div>
-
-              <div className="flex flex-col gap-2 font-bold text-on-surface">
-                <button onClick={() => navigate('/student/network')} className="flex items-center justify-between w-full p-3 bg-surface-container-low hover:bg-primary/5 rounded-xl transition-colors cursor-pointer border-none text-[11px] text-left">
-                  <span>Practice SQL</span>
-                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </button>
-                <button onClick={() => navigate('/student/resume-analyzer')} className="flex items-center justify-between w-full p-3 bg-surface-container-low hover:bg-primary/5 rounded-xl transition-colors cursor-pointer border-none text-[11px] text-left">
-                  <span>Resume Analysis</span>
-                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </button>
-                <button onClick={() => navigate('/student/mock-interview')} className="flex items-center justify-between w-full p-3 bg-surface-container-low hover:bg-primary/5 rounded-xl transition-colors cursor-pointer border-none text-[11px] text-left">
-                  <span>Mock Interview</span>
-                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </button>
-              </div>
-            </div>
-
-          </aside>
-
+            </Card>
+          </div>
         </div>
-      </main>
+      </div>
+
+      <Dialog isOpen={!!withdrawTargetId} onClose={() => setWithdrawTargetId(null)}
+        title="Withdraw this application?"
+        description="The recruiter will be notified and this cannot be undone. You'll need to reapply if you change your mind."
+        confirmLabel="Withdraw application" confirmVariant="error" onConfirm={confirmWithdraw} isLoading={isWithdrawing} />
+
+      <Dialog isOpen={!!declineTargetId} onClose={() => setDeclineTargetId(null)}
+        title="Decline this offer?"
+        description="This cannot be undone. The recruiter will be notified that you've declined."
+        confirmLabel="Decline offer" confirmVariant="error" onConfirm={confirmDeclineOffer} isLoading={isDeclining} />
     </PageLayout>
   );
 };

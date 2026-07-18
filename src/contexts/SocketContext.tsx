@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { API_ORIGIN } from '../services/index';
 import { io, Socket } from 'socket.io-client';
 
 interface SocketContextType {
@@ -37,7 +38,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
 
-    const socket = io('http://localhost:5000', {
+    const socket = io(API_ORIGIN, {
       auth: { token },
       transports: ['websocket'],
       autoConnect: true,

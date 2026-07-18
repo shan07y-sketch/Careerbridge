@@ -11,6 +11,9 @@ export interface FileUploadPayload {
 export interface IStorageProvider {
   saveFile(file: Express.Multer.File): Promise<FileUploadPayload>;
   deleteFile(storagePath: string): Promise<void>;
+  /** Absolute filesystem path (or provider-specific readable stream source) for a stored file, used for downloads/previews. */
+  getAbsolutePath(storagePath: string): string;
+  fileExists(storagePath: string): boolean;
 }
 
 export class LocalDiskStorageProvider implements IStorageProvider {
@@ -25,7 +28,7 @@ export class LocalDiskStorageProvider implements IStorageProvider {
   async saveFile(file: Express.Multer.File): Promise<FileUploadPayload> {
     const uniqueName = `${Date.now()}_${file.originalname}`;
     const targetPath = path.join(this.uploadDir, uniqueName);
-    
+
     fs.writeFileSync(targetPath, file.buffer);
 
     return {
@@ -42,6 +45,14 @@ export class LocalDiskStorageProvider implements IStorageProvider {
       fs.unlinkSync(targetPath);
     }
   }
+
+  getAbsolutePath(storagePath: string): string {
+    return path.join(this.uploadDir, storagePath);
+  }
+
+  fileExists(storagePath: string): boolean {
+    return fs.existsSync(this.getAbsolutePath(storagePath));
+  }
 }
 
 export class StorageService {
@@ -57,5 +68,20 @@ export class StorageService {
 
   static async deleteFile(storagePath: string): Promise<void> {
     return this.provider.deleteFile(storagePath);
+  }
+
+  static getAbsolutePath(storagePath: string): string {
+    return this.provider.getAbsolutePath(storagePath);
+  }
+
+  static fileExists(storagePath: string): boolean {
+    return this.provider.fileExists(storagePath);
+  }
+
+  /** Storage path is the part of fileUrl after '/uploads/' -- centralizing this parsing here removes the last places that reached into StorageService's internal URL convention directly. */
+  static extractStoragePath(fileUrl: string): string | null {
+    const marker = '/uploads/';
+    const idx = fileUrl.indexOf(marker);
+    return idx === -1 ? null : fileUrl.slice(idx + marker.length);
   }
 }

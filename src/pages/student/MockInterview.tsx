@@ -1,39 +1,126 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../../components/layout/PageLayout';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { Card, CardHeader } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import { Dialog } from '../../components/ui/Dialog';
 import { useToast } from '../../contexts/ToastContext';
+import { MockInterviewAIService, ApplicationService } from '../../services';
+import type {
+  StartMockInterviewResult,
+  SubmitMockAnswerResult,
+  MockInterviewType,
+  MockInterviewDifficulty,
+  MockInterviewHistoryEntry
+} from '../../services';
+import type { Application } from '../../types';
+import { createSpeechSynthesizer, createSpeechTranscriber } from '../../utils/speech';
+import type { SpeechSynthesizer, SpeechTranscriber } from '../../utils/speech';
+import { InterviewObserver } from '../../utils/interviewObserver';
+
+type Phase = 'setup' | 'live' | 'submitting' | 'ending';
+type AnswerMode = 'idle' | 'listening' | 'review';
+
+interface ActiveQuestion {
+  index: number;
+  text: string;
+  type: string;
+  difficulty: string;
+  expectedSkills: string[];
+}
+
+const INTERVIEW_TYPES: { key: MockInterviewType; label: string; icon: string; blurb: string }[] = [
+  { key: 'MIXED', label: 'Mixed', icon: 'all_inclusive', blurb: 'HR + technical + behavioral + aptitude' },
+  { key: 'TECHNICAL', label: 'Technical', icon: 'terminal', blurb: 'Deep-dives on your stack and projects' },
+  { key: 'HR', label: 'HR', icon: 'handshake', blurb: 'Motivation, fit and career goals' },
+  { key: 'BEHAVIORAL', label: 'Behavioral', icon: 'psychology', blurb: 'STAR stories from real experience' },
+  { key: 'APTITUDE', label: 'Aptitude', icon: 'neurology', blurb: 'Reasoning, estimation and judgment' }
+];
+
+const DIFFICULTIES: { key: MockInterviewDifficulty; label: string; blurb: string }[] = [
+  { key: 'EASY', label: 'Easy', blurb: 'Warm-up pace' },
+  { key: 'MEDIUM', label: 'Medium', blurb: 'Realistic screen' },
+  { key: 'HARD', label: 'Hard', blurb: 'On-site pressure' }
+];
 
 export const MockInterview: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  // Screen layout states
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isReportVisible, setIsReportVisible] = useState(false);
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  // ------------------------------------------------------------- setup ----
+  const [phase, setPhase] = useState<Phase>('setup');
+  const [interviewType, setInterviewType] = useState<MockInterviewType>('MIXED');
+  const [difficulty, setDifficulty] = useState<MockInterviewDifficulty>('MEDIUM');
+  const [numQuestions, setNumQuestions] = useState(6);
+  const [jobTitle, setJobTitle] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [selectedApplicationJobId, setSelectedApplicationJobId] = useState('');
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [history, setHistory] = useState<MockInterviewHistoryEntry[]>([]);
+  const [starting, setStarting] = useState(false);
+
+  // -------------------------------------------------------------- live ----
+  const [mockInterviewId, setMockInterviewId] = useState<string | null>(null);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [activeQuestion, setActiveQuestion] = useState<ActiveQuestion | null>(null);
+  const [lastFeedback, setLastFeedback] = useState<SubmitMockAnswerResult | null>(null);
+  const [planEstimated, setPlanEstimated] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [answerMode, setAnswerMode] = useState<AnswerMode>('idle');
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [typedAnswer, setTypedAnswer] = useState('');
+  const [useTextFallback, setUseTextFallback] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [isEndingConfirmOpen, setIsEndingConfirmOpen] = useState(false);
 
-  // Setup options states
-  const [interviewType, setInterviewType] = useState<'Technical' | 'HR' | 'Behavioral' | 'System Design' | 'Group Discussion'>('Technical');
-  const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
-  const [duration, setDuration] = useState<'15 min' | '30 min' | '60 min'>('30 min');
-  const [targetCompany, setTargetCompany] = useState<'Google' | 'Microsoft' | 'Amazon'>('Microsoft');
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const videoChunksRef = useRef<Blob[]>([]);
+  const answerStartedAtRef = useRef<number | null>(null);
+  const synthRef = useRef<SpeechSynthesizer | null>(null);
+  const transcriberRef = useRef<SpeechTranscriber | null>(null);
+  const observerRef = useRef<InterviewObserver | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
-  // Simulated recording duration countup
-  const [recSeconds, setRecSeconds] = useState(0);
+  const sttSupported = createSpeechTranscriber().isSupported;
+
   useEffect(() => {
-    let interval: any;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setRecSeconds(prev => prev + 1);
-      }, 1000);
+    synthRef.current = createSpeechSynthesizer();
+    (async () => {
+      const [apps, past] = await Promise.all([
+        ApplicationService.getApplications().catch(() => [] as Application[]),
+        MockInterviewAIService.getHistory().catch(() => [] as MockInterviewHistoryEntry[])
+      ]);
+      setApplications(apps);
+      setHistory(past.filter((h: MockInterviewHistoryEntry) => h.status === 'COMPLETED').slice(0, 5));
+    })();
+    return () => {
+      synthRef.current?.cancel();
+      transcriberRef.current?.stop();
+      observerRef.current?.stop();
+      mediaStreamRef.current?.getTracks().forEach(t => t.stop());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (answerMode === 'listening') {
+      interval = setInterval(() => setRecSeconds(prev => prev + 1), 1000);
     } else {
       setRecSeconds(0);
     }
-    return () => clearInterval(interval);
-  }, [isRecording]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [answerMode]);
 
   const formatRecTime = (sec: number) => {
     const mm = String(Math.floor(sec / 60)).padStart(2, '0');
@@ -41,575 +128,595 @@ export const MockInterview: React.FC = () => {
     return `${mm}:${ss}`;
   };
 
-  const questions = {
-    Technical: [
-      "Can you explain the difference between a process and a thread in operating systems?",
-      "How would you optimize rendering performance in a React 19 application with nested lists?",
-      "Describe a time you had to resolve a complex CSS layout issue on a production app.",
-      "What is the time complexity of lookup operations in a self-balancing binary search tree?",
-      "Explain the concept of event bubbling and how event delegation resolves performance bottlenecks."
-    ],
-    HR: [
-      "Tell me about a time you had to collaborate with a difficult stakeholder.",
-      "Why do you want to join our engineering division at this stage in your career?",
-      "What are your greatest professional strengths and where do you seek growth?",
-      "How do you prioritize competing deadlines in a fast-paced release environment?",
-      "Where do you see yourself in five years in terms of technology leadership?"
-    ],
-    Behavioral: [
-      "Describe a situation where you made a mistake on a production release. How did you resolve it?",
-      "Tell me about a time you had a difference of opinion with a product manager.",
-      "Explain a scenario where you had to learn a completely new framework on a tight schedule.",
-      "Tell me about a time you took the lead on a technical project without explicit directions.",
-      "Describe how you handled a situation where a teammate was not pulling their weight."
-    ],
-    'System Design': [
-      "How would you design a highly available notification delivery system for millions of users?",
-      "Explain how you would structure a real-time collaborative whiteboarding document backend.",
-      "What caching strategy would you use for a global news feed system with hot keys?",
-      "Design a rate limiter that supports tier-based API usage plans.",
-      "How do you design a database schema for an international ride-sharing platform?"
-    ],
-    'Group Discussion': [
-      "How do we balance technical debt refactoring with delivering user features?",
-      "Should companies invest in building custom AI models or consume third-party API solutions?",
-      "How do we address security and privacy concerns in LLM integrations?",
-      "What is the impact of remote work on engineering culture and pair programming?",
-      "How do we ensure digital accessibility is integrated into the early product design phase?"
-    ]
-  }[interviewType];
+  // -------------------------------------------------------- observations --
 
-  const handleStartSession = () => {
-    setIsPlaying(true);
-    setIsReportVisible(false);
-    setCurrentQuestionIdx(0);
-    showToast('Mock Interview started! Speak clearly into your microphone.', 'success');
-  };
+  const reportObservation = useCallback((type: string, detail?: string) => {
+    const id = sessionIdRef.current;
+    if (id) void MockInterviewAIService.addObservation(id, type, detail);
+  }, []);
 
-  const handleRecordToggle = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      showToast('Answer recorded successfully. Analysing responses...', 'success');
-    } else {
-      setIsRecording(true);
-      showToast('Microphone active. Record your answer now.', 'info');
+  // --------------------------------------------------------------- voice --
+
+  const speakQuestion = useCallback(async (text: string) => {
+    const synth = synthRef.current;
+    if (!synth?.isSupported) return;
+    setIsSpeaking(true);
+    await synth.speak(text);
+    setIsSpeaking(false);
+  }, []);
+
+  const applyQuestion = useCallback(
+    (q: { index: number; text: string; type: string; difficulty: string; expectedSkills: string[] }) => {
+      setActiveQuestion(q);
+      setLastFeedback(null);
+      setAnswerMode('idle');
+      setLiveTranscript('');
+      setInterimTranscript('');
+      setTypedAnswer('');
+      void speakQuestion(q.text);
+    },
+    [speakQuestion]
+  );
+
+  // -------------------------------------------------------------- camera --
+
+  const requestMedia = async (): Promise<MediaStream | null> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      mediaStreamRef.current = stream;
+      setCameraError(null);
+      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
+      return stream;
+    } catch {
+      setCameraError('Camera access was declined — the interview continues without camera observations.');
+      reportObservation('camera_denied');
+      try {
+        const audioOnly = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = audioOnly;
+        return audioOnly;
+      } catch {
+        setUseTextFallback(true);
+        showToast('Microphone unavailable — you can type your answers instead.', 'info');
+        return null;
+      }
     }
   };
 
-  const handleNextQuestion = () => {
-    if (isRecording) setIsRecording(false);
-    if (currentQuestionIdx < questions.length - 1) {
-      setCurrentQuestionIdx(prev => prev + 1);
-    } else {
+  // --------------------------------------------------------------- start --
+
+  const handleStartSession = async () => {
+    if (!selectedApplicationJobId && !jobTitle.trim()) {
+      showToast('Pick one of your applications or enter a job title to practice for.', 'error');
+      return;
+    }
+    setStarting(true);
+    try {
+      const result: StartMockInterviewResult = await MockInterviewAIService.startInterview({
+        interviewType,
+        difficulty,
+        numQuestions,
+        jobId: selectedApplicationJobId || undefined,
+        jobTitle: jobTitle.trim() || undefined,
+        companyName: companyName.trim() || undefined
+      });
+      setMockInterviewId(result.mockInterviewId);
+      sessionIdRef.current = result.mockInterviewId;
+      setTotalQuestions(result.totalQuestions);
+      setPlanEstimated(result.planEstimated);
+
+      const stream = await requestMedia();
+      setPhase('live');
+      if (!sttSupported) setUseTextFallback(true);
+
+      observerRef.current = new InterviewObserver({
+        video: videoPreviewRef.current,
+        stream,
+        onObservation: (type, detail) => reportObservation(type, detail)
+      });
+      observerRef.current.start();
+
+      applyQuestion({
+        index: result.questionIndex,
+        text: result.question,
+        type: result.questionType,
+        difficulty: result.questionDifficulty,
+        expectedSkills: result.expectedSkills
+      });
+      showToast('Interview started — the AI interviewer will read each question aloud.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not start the mock interview.', 'error');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  // ------------------------------------------------------------ answering --
+
+  const startAnswering = () => {
+    if (!activeQuestion) return;
+    synthRef.current?.cancel();
+    setIsSpeaking(false);
+    answerStartedAtRef.current = Date.now();
+    observerRef.current?.markActivity();
+
+    if (useTextFallback) {
+      setAnswerMode('listening');
+      return;
+    }
+
+    // Speech-to-text for the real transcript.
+    const transcriber = createSpeechTranscriber();
+    transcriberRef.current = transcriber;
+    setLiveTranscript('');
+    setInterimTranscript('');
+    transcriber.start(
+      update => {
+        setLiveTranscript(update.finalTranscript);
+        setInterimTranscript(update.interimTranscript);
+        observerRef.current?.markActivity();
+      },
+      message => {
+        showToast(`${message} Switching to typed answers.`, 'info');
+        setUseTextFallback(true);
+        setAnswerMode('listening');
+      }
+    );
+
+    // Record audio/video clips as evidence alongside the transcript.
+    const stream = mediaStreamRef.current;
+    if (stream) {
+      audioChunksRef.current = [];
+      videoChunksRef.current = [];
+      const audioTracks = stream.getAudioTracks();
+      const videoTracks = stream.getVideoTracks();
+      if (audioTracks.length > 0) {
+        const audioRecorder = new MediaRecorder(new MediaStream(audioTracks));
+        audioRecorder.ondataavailable = e => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+        audioRecorderRef.current = audioRecorder;
+        audioRecorder.start();
+      }
+      if (videoTracks.length > 0) {
+        const videoRecorder = new MediaRecorder(new MediaStream(videoTracks));
+        videoRecorder.ondataavailable = e => {
+          if (e.data.size > 0) videoChunksRef.current.push(e.data);
+        };
+        videoRecorderRef.current = videoRecorder;
+        videoRecorder.start();
+      }
+    }
+    setAnswerMode('listening');
+  };
+
+  const stopAnswering = () => {
+    if (useTextFallback) {
+      setAnswerMode('review');
+      return;
+    }
+    const finalText = transcriberRef.current?.stop() ?? '';
+    transcriberRef.current = null;
+    audioRecorderRef.current?.stop();
+    videoRecorderRef.current?.stop();
+    setLiveTranscript(finalText);
+    setInterimTranscript('');
+    setAnswerMode('review');
+    if (!finalText.trim()) {
+      showToast('No speech was recognized — you can type your answer instead.', 'info');
+    }
+  };
+
+  const submitAnswer = async () => {
+    if (!mockInterviewId || !activeQuestion) return;
+    const transcript = (useTextFallback ? typedAnswer : liveTranscript || typedAnswer).trim();
+    if (!transcript) {
+      showToast('Say or type your answer before submitting.', 'error');
+      return;
+    }
+    const durationSec = answerStartedAtRef.current ? (Date.now() - answerStartedAtRef.current) / 1000 : undefined;
+    setPhase('submitting');
+    try {
+      // Recorder stop events have flushed by the time submit runs (user
+      // clicked review first); package whatever evidence clips exist.
+      const audioBlob = audioChunksRef.current.length > 0 ? new Blob(audioChunksRef.current, { type: 'audio/webm' }) : null;
+      const videoBlob = videoChunksRef.current.length > 0 ? new Blob(videoChunksRef.current, { type: 'video/webm' }) : null;
+      audioChunksRef.current = [];
+      videoChunksRef.current = [];
+
+      const result = await MockInterviewAIService.submitAnswer(mockInterviewId, activeQuestion.index, {
+        transcript,
+        answerMethod: useTextFallback || !liveTranscript ? 'text' : 'voice',
+        durationSec,
+        audioBlob,
+        videoBlob
+      });
+      setLastFeedback(result);
+      setAnswerMode('idle');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not evaluate your answer.', 'error');
+    } finally {
+      setPhase('live');
+    }
+  };
+
+  const handleContinue = () => {
+    if (!lastFeedback) return;
+    if (lastFeedback.isLastQuestion) {
       setIsEndingConfirmOpen(true);
+      return;
+    }
+    applyQuestion({
+      index: lastFeedback.nextQuestionIndex!,
+      text: lastFeedback.nextQuestion!,
+      type: lastFeedback.nextQuestionType!,
+      difficulty: lastFeedback.nextQuestionDifficulty ?? 'medium',
+      expectedSkills: lastFeedback.nextExpectedSkills ?? []
+    });
+  };
+
+  const handleConfirmEnd = async () => {
+    if (!mockInterviewId) return;
+    setIsEndingConfirmOpen(false);
+    setPhase('ending');
+    synthRef.current?.cancel();
+    transcriberRef.current?.stop();
+    observerRef.current?.stop();
+    try {
+      await MockInterviewAIService.endInterview(mockInterviewId);
+      mediaStreamRef.current?.getTracks().forEach(t => t.stop());
+      showToast('Report generated from your interview.', 'success');
+      navigate(`/student/interview-report/${mockInterviewId}`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not generate the final report.', 'error');
+      setPhase('live');
     }
   };
 
-  const handleConfirmEnd = () => {
-    setIsEndingConfirmOpen(false);
-    setIsPlaying(false);
-    setIsReportVisible(true);
-    showToast('Scorecard compiled! Review your metrics below.', 'success');
-  };
+  const inputClass =
+    'w-full h-11 px-3.5 rounded-xl border border-outline-variant/70 bg-surface-container-lowest text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:border-primary/40 focus:ring-0 focus:shadow-focus-brand outline-none transition-all';
+
+  // ---------------------------------------------------------------- view --
 
   return (
     <PageLayout>
-      <main className="text-left max-w-container-max mx-auto space-y-stack-lg">
-        {/* Page Header */}
-        <div>
-          <h2 className="font-display text-headline-lg text-primary">AI Mock Interview</h2>
-          <p className="font-body-lg text-body-lg text-on-surface-variant">Practice interviews with real-world AI feedback.</p>
-        </div>
+      <PageHeader
+        title="AI mock interview"
+        description="A personalized, adaptive interview built from your profile, resume and target job — with voice, camera observations and a full report."
+      />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-          
-          {/* Left Column: Setup / Live Video Workspace / Scorecard */}
-          <div className="col-span-12 lg:col-span-8 space-y-section-gap">
-            
-            {/* Setup view */}
-            {!isPlaying && !isReportVisible && (
-              <section className="bg-white p-stack-lg rounded-xl shadow-[0_4px_20px_rgba(2,54,41,0.04)] border border-primary/5 space-y-8">
-                <div className="flex items-center gap-stack-sm">
-                  <span className="material-symbols-outlined text-primary">tune</span>
-                  <h3 className="font-headline-md text-headline-md text-primary">Interview Setup</h3>
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <label className="font-label-md text-label-md block mb-3 text-on-surface-variant">Interview Type</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {(['Technical', 'HR', 'Behavioral', 'System Design', 'Group Discussion'] as const).map(type => {
-                        const isSel = interviewType === type;
-                        const icons = {
-                          Technical: 'code',
-                          HR: 'person',
-                          Behavioral: 'psychology',
-                          'System Design': 'account_tree',
-                          'Group Discussion': 'groups'
-                        }[type];
-                        return (
-                          <button
-                            key={type}
-                            onClick={() => setInterviewType(type)}
-                            className={`flex flex-col items-center gap-2 p-5 rounded-xl transition-all border-2 cursor-pointer ${
-                              isSel 
-                                ? 'border-primary bg-primary-container/10 text-primary' 
-                                : 'border-outline-variant hover:border-primary/40 text-on-surface-variant'
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-2xl">{icons}</span>
-                            <span className="font-label-md text-xs">{type}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="font-label-md text-label-md block mb-3 text-on-surface-variant">Difficulty Level</label>
-                      <div className="flex flex-wrap gap-2">
-                        {(['Easy', 'Medium', 'Hard'] as const).map(lvl => {
-                          const isSel = difficulty === lvl;
-                          return (
-                            <button
-                              key={lvl}
-                              onClick={() => setDifficulty(lvl)}
-                              className={`px-5 py-2 rounded-full font-label-md text-xs border cursor-pointer transition-colors ${
-                                isSel 
-                                  ? 'bg-primary-container text-white border-transparent' 
-                                  : 'bg-secondary-container/20 text-on-secondary-container border-transparent hover:border-primary/20'
-                              }`}
-                            >
-                              {lvl}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="font-label-md text-label-md block mb-3 text-on-surface-variant">Duration</label>
-                      <div className="flex flex-wrap gap-2">
-                        {(['15 min', '30 min', '60 min'] as const).map(dur => {
-                          const isSel = duration === dur;
-                          return (
-                            <button
-                              key={dur}
-                              onClick={() => setDuration(dur)}
-                              className={`px-5 py-2 rounded-full font-label-md text-xs border cursor-pointer transition-colors ${
-                                isSel 
-                                  ? 'bg-primary text-white border-transparent' 
-                                  : 'bg-secondary-container/20 text-on-secondary-container border-transparent hover:border-primary/20'
-                              }`}
-                            >
-                              {dur}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-label-md text-label-md block mb-3 text-on-surface-variant">Target Company</label>
-                    <div className="flex flex-wrap gap-4 items-center">
-                      {[
-                        { id: 'Google', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDU_wLc7-g4jS7OizyPBInFC7ACpzbsjHnOfgUBhYB2XNYt0Zh-8v21riodLa1YRn9118kLBIJ6vVWbKh9F5GLz7S54c3ULscu-slZZEVq2GKh8LC9-CqsxlcE8q2UtKUhiKMu0IRDINSIUzyEMpkUqhkZFJJX9aFwHDEcyMhVTG_PWGCsjq1A97QbDO-9LOYIsq2phw-hrRJdHRpuOec9McttXERuUh0_zIP0OmpZJtTXF_ZwFjhcCCGyuDVnEDQtKRGak72MMNFw' },
-                        { id: 'Microsoft', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBY6knHLcUMKe3l47iQYHmFLZGBldmMYSYayz_YqR4684i2PN-M6CyES8EVozgROxdD2nFJdVv25xAzTh1-oeqL2E9WgEdp15LZCOJDJWL6cc6ZefkMy0wtx49zGBh4G7NVOvDsYSXyNmO-UKTH-skVZ2Qbf69yJkyHpZACOUoqV9p5n0Ztv_0d3LoavFj8rsQpCX4zwOW1oXC-EIgbaXx0ySro3JdxPb1ASyP-wDNVf6UjSTkHP9kwSBuqDF4qOMeJ5GdAcmF-LgE' },
-                        { id: 'Amazon', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDpw9QGlt1QhgKfTOKGrnbM9yro6Q9IqSgHyghWIhm9mK73b7sw-Zi7EJDSbehuBJnCvnS2NVQ9Xdj7dhaMjz7rO9LluZF4Xa72j5ppEMi3jUey8YUpPem01Kx1qTz48G3TxgbzpPlZX_7Y-pjpfD3azy_k8oWtbV9_OGZ5ZSvsBsTea1ZUJZPd7FqhT6IJyul_dUMTgNu8Xt89sSwWAq_r52PnOW1lhATx_W7asXiejgvniCEKKpAnhsde_6HkwJq0PvCB9MLz64U' }
-                      ].map(company => {
-                        const isSel = targetCompany === company.id;
-                        return (
-                          <button
-                            key={company.id}
-                            onClick={() => setTargetCompany(company.id as any)}
-                            className={`w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center p-2 cursor-pointer transition-all ${
-                              isSel ? 'border-2 border-primary scale-105' : 'border border-transparent hover:border-primary/20'
-                            }`}
-                          >
-                            <img className="w-full h-full object-contain" alt={company.id} src={company.logo} />
-                          </button>
-                        );
-                      })}
-                      <button 
-                        onClick={() => showToast('Enter custom company name.', 'info')}
-                        className="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center p-2 border border-transparent hover:border-primary cursor-pointer text-on-surface-variant"
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {phase === 'setup' && (
+            <Card>
+              <CardHeader icon="tune" title="Interview setup" subtitle="The AI prepares unique questions from your profile, resume, skills and this role" />
+              <div className="space-y-6">
+                <div>
+                  <span className="text-label-md font-semibold text-on-surface block mb-2">Interview type</span>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                    {INTERVIEW_TYPES.map(t => (
+                      <button
+                        key={t.key}
+                        onClick={() => setInterviewType(t.key)}
+                        className={`p-3 rounded-xl text-left transition-colors border ${
+                          interviewType === t.key
+                            ? 'bg-primary text-on-primary border-primary'
+                            : 'bg-surface-container text-on-surface-variant border-transparent hover:bg-surface-container-high'
+                        }`}
                       >
-                        <span className="material-symbols-outlined">add</span>
+                        <span className="material-symbols-outlined text-[20px] block mb-1">{t.icon}</span>
+                        <span className="text-label-md font-semibold block">{t.label}</span>
+                        <span className={`text-[10px] leading-tight block mt-0.5 ${interviewType === t.key ? 'text-on-primary/80' : ''}`}>{t.blurb}</span>
                       </button>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={handleStartSession}
-                    className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-opacity-95 transition-all active:scale-95 shadow-lg cursor-pointer border-none text-xs uppercase tracking-wider"
-                  >
-                    Start Interview
-                  </button>
-                </div>
-              </section>
-            )}
-
-            {/* Live Video Workspace */}
-            {isPlaying && (
-              <section className="relative bg-tertiary rounded-2xl overflow-hidden aspect-video shadow-2xl">
-                <style>{`
-                  .active-ring {
-                      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-                  }
-                  @keyframes pulse-ring {
-                      0%, 100% { transform: scale(1); opacity: 0.8; }
-                      50% { transform: scale(1.1); opacity: 0.4; }
-                  }
-                  .glass-card {
-                      background: rgba(255, 255, 255, 0.15);
-                      backdrop-filter: blur(12px);
-                      border: 1px solid rgba(255, 255, 255, 0.1);
-                  }
-                `}</style>
-
-                {/* AI Avatar animated visual */}
-                <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[#001f16]">
-                  <div className="relative z-10 w-48 h-48 rounded-full border-4 border-primary-fixed/20 flex items-center justify-center">
-                    <div className="w-40 h-40 rounded-full bg-primary-container active-ring flex items-center justify-center">
-                      <span className="material-symbols-outlined text-on-primary-container text-[64px]" style={{ fontVariationSettings: "'FILL' 1" }}>smart_toy</span>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Status indicator bar overlay */}
-                <div className="absolute top-4 left-4 right-4 flex justify-between z-20">
-                  <div className="flex gap-2 text-xs">
-                    <div className="glass-card px-4 py-1.5 rounded-full flex items-center gap-2 text-white font-bold">
-                      <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
-                      REC {formatRecTime(recSeconds)}
-                    </div>
-                    <div className="glass-card px-4 py-1.5 rounded-full flex items-center gap-2 text-white font-bold">
-                      <span className="material-symbols-outlined text-primary-fixed text-sm">videocam</span>
-                      Cam: On
-                    </div>
-                  </div>
-                  <div className="glass-card px-4 py-1.5 rounded-full flex items-center gap-2 text-white text-xs font-bold">
-                    Progress: {currentQuestionIdx + 1}/{questions.length}
-                  </div>
-                </div>
-
-                {/* Active question popup */}
-                <div className="absolute bottom-[80px] left-8 right-8 z-20">
-                  <div className="glass-card p-4 rounded-xl text-center bg-black/40 backdrop-blur-md border border-white/10 text-white">
-                    <p className="font-display text-sm font-semibold leading-relaxed">
-                      "{questions[currentQuestionIdx]}"
-                    </p>
+                <div>
+                  <span className="text-label-md font-semibold text-on-surface block mb-2">Difficulty</span>
+                  <div className="flex flex-wrap gap-2">
+                    {DIFFICULTIES.map(d => (
+                      <button
+                        key={d.key}
+                        onClick={() => setDifficulty(d.key)}
+                        className={`px-4 py-2.5 rounded-xl text-label-md font-semibold transition-colors ${
+                          difficulty === d.key ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        {d.label}
+                        <span className={`block text-[10px] font-normal ${difficulty === d.key ? 'text-on-primary/80' : ''}`}>{d.blurb}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* simulated waveform graphics */}
-                {isRecording && (
-                  <div className="absolute bottom-[100px] left-1/2 -translate-x-1/2 flex items-end gap-1 h-8 z-30 pointer-events-none">
-                    <div className="w-1 bg-[#a1d1be] h-4 animate-[bounce_1s_infinite]" />
-                    <div className="w-1 bg-[#a1d1be] h-8 animate-[bounce_1.2s_infinite] [animation-delay:0.2s]" />
-                    <div className="w-1 bg-[#a1d1be] h-6 animate-[bounce_0.8s_infinite] [animation-delay:0.4s]" />
-                    <div className="w-1 bg-[#a1d1be] h-3 animate-[bounce_1.1s_infinite] [animation-delay:0.1s]" />
-                    <div className="w-1 bg-[#a1d1be] h-7 animate-[bounce_0.9s_infinite] [animation-delay:0.3s]" />
-                    <div className="w-1 bg-[#a1d1be] h-5 animate-[bounce_1.3s_infinite] [animation-delay:0.5s]" />
+                {applications.length > 0 && (
+                  <label className="block">
+                    <span className="text-label-md font-semibold text-on-surface">Practice for one of your applications <span className="text-on-surface-variant font-normal">(recommended)</span></span>
+                    <select
+                      value={selectedApplicationJobId}
+                      onChange={e => setSelectedApplicationJobId(e.target.value)}
+                      className={`mt-1.5 ${inputClass}`}
+                    >
+                      <option value="">— No, use a custom job title —</option>
+                      {applications.map(app => (
+                        <option key={app.id} value={app.jobId}>
+                          {app.jobTitle} · {app.companyName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {!selectedApplicationJobId && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="text-label-md font-semibold text-on-surface">Job title</span>
+                      <input type="text" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Frontend Engineer" className={`mt-1.5 ${inputClass}`} />
+                    </label>
+                    <label className="block">
+                      <span className="text-label-md font-semibold text-on-surface">Company <span className="text-on-surface-variant font-normal">(optional)</span></span>
+                      <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="e.g. Novatech Systems" className={`mt-1.5 ${inputClass}`} />
+                    </label>
                   </div>
                 )}
 
-                {/* Controls container */}
+                <div>
+                  <span className="text-label-md font-semibold text-on-surface block mb-2">Number of questions</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[4, 6, 8, 10].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setNumQuestions(n)}
+                        className={`w-11 h-11 rounded-xl text-label-md font-semibold transition-colors ${
+                          numQuestions === n ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={handleStartSession}
+                  disabled={starting}
+                  leftIcon={<span className="material-symbols-outlined text-[19px]">{starting ? 'hourglass_top' : 'play_arrow'}</span>}
+                >
+                  {starting ? 'Preparing your personalized interview…' : 'Start interview'}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {(phase === 'live' || phase === 'submitting' || phase === 'ending') && activeQuestion && (
+            <>
+              <section className="relative bg-tertiary rounded-2xl overflow-hidden aspect-video shadow-2xl">
+                <video ref={videoPreviewRef} autoPlay muted playsInline className="absolute inset-0 w-full h-full object-cover bg-[#001f16]" />
+
+                <div className="absolute top-4 left-4 right-4 flex justify-between z-20">
+                  <div className="flex gap-2 text-xs">
+                    {answerMode === 'listening' && (
+                      <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full flex items-center gap-2 text-white font-bold">
+                        <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
+                        {useTextFallback ? 'ANSWERING' : 'LISTENING'} {formatRecTime(recSeconds)}
+                      </div>
+                    )}
+                    {isSpeaking && (
+                      <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full flex items-center gap-2 text-white font-bold">
+                        <span className="material-symbols-outlined text-[14px] animate-pulse">graphic_eq</span>
+                        Interviewer speaking…
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full flex items-center gap-2 text-white text-xs font-bold">
+                    Question {activeQuestion.index + 1}/{totalQuestions}
+                    <span className="opacity-60">·</span>
+                    <span className="uppercase">{activeQuestion.difficulty}</span>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-[86px] left-6 right-6 z-20">
+                  <div className="p-4 rounded-xl text-center bg-black/40 backdrop-blur-md border border-white/10 text-white">
+                    <p className="text-[10px] uppercase tracking-wider text-primary-fixed/80 mb-1 font-bold">{activeQuestion.type}</p>
+                    <p className="font-display text-sm font-semibold leading-relaxed">"{activeQuestion.text}"</p>
+                    <button
+                      onClick={() => void speakQuestion(activeQuestion.text)}
+                      className="mt-2 text-[10px] uppercase tracking-wide font-bold text-primary-fixed/90 hover:text-white bg-white/10 rounded-full px-3 py-1 cursor-pointer border-none inline-flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">replay</span> Repeat question
+                    </button>
+                  </div>
+                </div>
+
                 <div className="absolute bottom-0 w-full bg-black/40 backdrop-blur-md py-3 flex justify-center items-center gap-4 z-20">
-                  <button 
+                  <button
                     onClick={() => setIsEndingConfirmOpen(true)}
                     className="p-3 rounded-full bg-error/20 text-error hover:bg-error hover:text-white transition-all cursor-pointer border-none flex items-center justify-center"
-                    title="End Session"
+                    title="End interview"
                   >
                     <span className="material-symbols-outlined text-lg">call_end</span>
                   </button>
 
-                  <button 
-                    onClick={handleRecordToggle}
-                    className={`px-8 py-3 rounded-full font-bold text-xs flex items-center gap-2 transition-transform hover:scale-105 cursor-pointer border-none ${
-                      isRecording ? 'bg-error text-white' : 'bg-primary text-white'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-sm">{isRecording ? 'stop' : 'mic'}</span>
-                    {isRecording ? 'Stop Recording' : 'Record Answer'}
-                  </button>
-
-                  <button 
-                    onClick={handleNextQuestion}
-                    className="p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer border-none flex items-center justify-center"
-                    title="Next Question"
-                  >
-                    <span className="material-symbols-outlined text-lg">skip_next</span>
-                  </button>
+                  {!lastFeedback && answerMode === 'idle' && (
+                    <button
+                      onClick={startAnswering}
+                      disabled={phase !== 'live'}
+                      className="px-8 py-3 rounded-full font-bold text-xs flex items-center gap-2 bg-primary text-white transition-transform hover:scale-105 cursor-pointer border-none disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-sm">{useTextFallback ? 'keyboard' : 'mic'}</span>
+                      {useTextFallback ? 'Type Answer' : 'Answer by Voice'}
+                    </button>
+                  )}
+                  {!lastFeedback && answerMode === 'listening' && (
+                    <button
+                      onClick={stopAnswering}
+                      className="px-8 py-3 rounded-full font-bold text-xs flex items-center gap-2 bg-error text-white cursor-pointer border-none hover:scale-105 transition-transform"
+                    >
+                      <span className="material-symbols-outlined text-sm">stop</span> Done Answering
+                    </button>
+                  )}
+                  {!lastFeedback && answerMode === 'review' && (
+                    <button
+                      onClick={() => void submitAnswer()}
+                      disabled={phase === 'submitting'}
+                      className="px-8 py-3 rounded-full font-bold text-xs flex items-center gap-2 bg-primary text-white cursor-pointer border-none hover:scale-105 transition-transform disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-sm">send</span>
+                      {phase === 'submitting' ? 'Evaluating…' : 'Submit Answer'}
+                    </button>
+                  )}
+                  {lastFeedback && (
+                    <button
+                      onClick={handleContinue}
+                      disabled={phase === 'ending'}
+                      className="px-8 py-3 rounded-full font-bold text-xs flex items-center gap-2 bg-primary text-white cursor-pointer border-none hover:scale-105 transition-transform disabled:opacity-50"
+                    >
+                      {lastFeedback.isLastQuestion ? 'Finish & Generate Report' : 'Next Question'}
+                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </button>
+                  )}
                 </div>
               </section>
-            )}
 
-            {/* Scorecard Results Dashboard */}
-            {isReportVisible && (
-              <section className="space-y-6">
-                
-                {/* Scorecard card details */}
-                <div className="bg-white p-8 rounded-xl shadow-lg border border-primary/10">
-                  <div className="flex justify-between items-center mb-8 border-b border-primary/5 pb-4">
-                    <div>
-                      <h3 className="font-headline-md text-headline-md text-primary font-bold">Interview Report</h3>
-                      <p className="text-xs text-on-surface-variant font-semibold">Session ID: #88291 • Type: {interviewType}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-4xl font-extrabold text-primary">88</div>
-                      <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">Overall Score</p>
-                    </div>
-                  </div>
+              {cameraError && <p className="text-xs text-on-surface-variant px-2">{cameraError}</p>}
+              {planEstimated && (
+                <div className="px-2"><Badge tone="warning" icon="info">Estimated – AI unavailable: questions were generated by the offline engine.</Badge></div>
+              )}
 
-                  <div className="grid grid-cols-3 gap-4 mb-8">
-                    <div className="p-4 bg-surface-container-low rounded-lg text-left">
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-1">Confidence</p>
-                      <div className="text-xl font-bold text-primary">92%</div>
-                    </div>
-                    <div className="p-4 bg-surface-container-low rounded-lg text-left">
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-1">Communication</p>
-                      <div className="text-xl font-bold text-primary">85%</div>
-                    </div>
-                    <div className="p-4 bg-surface-container-low rounded-lg text-left">
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-1">Technical</p>
-                      <div className="text-xl font-bold text-primary">87%</div>
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6 mb-8 text-xs leading-relaxed">
-                    <div>
-                      <h4 className="text-[10px] font-bold text-primary uppercase tracking-wider mb-3">Strengths</h4>
-                      <ul className="space-y-2 text-on-surface-variant font-semibold">
-                        <li className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
-                          Clear articulation of OS core parameters.
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
-                          Excellent structural description of thread memory models.
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h4 className="text-[10px] font-bold text-error uppercase tracking-wider mb-3">Weaknesses</h4>
-                      <ul className="space-y-2 text-on-surface-variant font-semibold">
-                        <li className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-error text-sm">error</span>
-                          speaking rate slightly fast during concurrency answers.
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-error text-sm">error</span>
-                          Missed detail on context switching latency metrics.
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Actions buttons */}
-                  <div className="flex gap-4">
-                    <button 
-                      onClick={() => {
-                        setIsReportVisible(false);
-                        setIsPlaying(false);
-                      }}
-                      className="flex-1 py-3 bg-primary text-white rounded-lg font-bold text-xs uppercase cursor-pointer border-none hover:opacity-95"
-                    >
-                      Next Mock Interview
-                    </button>
-                    <button 
-                      onClick={() => navigate('/student/jobs')}
-                      className="flex-1 py-3 border border-primary text-primary rounded-lg font-bold text-xs uppercase cursor-pointer bg-white hover:bg-surface-container"
-                    >
-                      View Recommended Jobs
-                    </button>
-                  </div>
-                </div>
-
-                {/* Transcripts history box */}
-                <div className="bg-white p-8 rounded-xl border border-primary/5 text-xs text-left">
-                  <h3 className="font-headline-md text-headline-md text-primary font-bold mb-6 border-b border-primary/5 pb-3">Interview Transcript</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="p-4 bg-surface-container-low rounded-lg border-l-4 border-primary">
-                      <p className="font-bold text-primary mb-1 text-[10px] uppercase tracking-wider">Question</p>
-                      <p className="text-on-surface font-semibold">"Can you explain the difference between a process and a thread?"</p>
-                    </div>
-
-                    <div className="p-4 bg-white rounded-lg border border-outline-variant/30">
-                      <p className="font-bold text-on-surface-variant mb-1 text-[10px] uppercase tracking-wider">Your Answer</p>
-                      <p className="text-on-surface font-medium leading-relaxed">
-                        "A process is an independent execution unit with its own memory space, while a thread is a subset of a process that shares memory resources with other threads in the same process."
-                      </p>
-                    </div>
-
-                    <div className="p-4 bg-primary-container/5 rounded-lg border border-primary/5">
-                      <p className="font-bold text-primary flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-sm">psychology</span>
-                        AI Feedback
-                      </p>
-                      <p className="text-on-surface italic font-medium leading-relaxed">
-                        "Excellent definition. You correctly identified the memory sharing aspect. To improve, mention that threads are lighter weight to create than processes and cause less context switching overhead."
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-              </section>
-            )}
-
-          </div>
-
-          {/* Right Column: Sidebar */}
-          <aside className="col-span-12 lg:col-span-4 space-y-6">
-            
-            {/* Live AI evaluation panel */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-primary/5 text-xs">
-              <div className="flex items-center gap-2 mb-6 pb-3 border-b border-primary/5">
-                <span className="material-symbols-outlined text-primary">analytics</span>
-                <h3 className="font-headline-md text-[16px] text-primary font-bold">Live AI Feedback</h3>
-                {isPlaying && (
-                  <span className="ml-auto flex items-center gap-1.5 text-[10px] text-primary font-bold animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-primary" />
-                    Live Updating...
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                {/* Confidence meter */}
-                <div>
-                  <div className="flex justify-between font-bold mb-1.5">
-                    <span>Confidence Level</span>
-                    <span className="text-primary font-bold">85%</span>
-                  </div>
-                  <div className="w-full bg-surface-container rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{ width: '85%' }} />
-                  </div>
-                </div>
-
-                {/* Communication meter */}
-                <div>
-                  <div className="flex justify-between font-bold mb-1.5">
-                    <span>Communication</span>
-                    <span className="text-primary font-bold">78%</span>
-                  </div>
-                  <div className="w-full bg-surface-container rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{ width: '78%' }} />
-                  </div>
-                </div>
-
-                {/* Technical Accuracy meter */}
-                <div>
-                  <div className="flex justify-between font-bold mb-1.5">
-                    <span>Technical Accuracy</span>
-                    <span className="text-primary font-bold">90%</span>
-                  </div>
-                  <div className="w-full bg-surface-container rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{ width: '90%' }} />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-outline-variant/30 space-y-2 font-semibold">
+              {/* Live transcript / typed answer */}
+              {!lastFeedback && answerMode !== 'idle' && (
+                <Card className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-on-surface-variant flex items-center gap-1">
-                      <span className="material-symbols-outlined text-primary text-sm">visibility</span>
-                      Eye Contact
-                    </span>
-                    <span className="text-primary font-bold">Good</span>
+                    <h4 className="font-bold text-primary uppercase tracking-wider text-[10px]">
+                      {useTextFallback ? 'Your answer' : 'Live transcript (speech-to-text)'}
+                    </h4>
+                    {!useTextFallback && answerMode === 'review' && (
+                      <button
+                        onClick={() => { setUseTextFallback(true); setTypedAnswer(liveTranscript); }}
+                        className="text-[10px] font-bold text-primary cursor-pointer bg-transparent border-none underline"
+                      >
+                        Edit as text
+                      </button>
+                    )}
                   </div>
-                  
+                  {useTextFallback ? (
+                    <textarea
+                      value={typedAnswer}
+                      onChange={e => { setTypedAnswer(e.target.value); observerRef.current?.markActivity(); }}
+                      rows={5}
+                      placeholder="Type your answer here…"
+                      className="w-full p-3.5 rounded-xl border border-outline-variant/70 bg-surface-container-lowest text-body-md text-on-surface outline-none focus:border-primary/40 transition-all resize-y"
+                    />
+                  ) : (
+                    <p className="text-sm text-on-surface leading-relaxed min-h-[3rem]">
+                      {liveTranscript}
+                      {interimTranscript && <span className="text-on-surface-variant italic"> {interimTranscript}</span>}
+                      {!liveTranscript && !interimTranscript && (
+                        <span className="text-on-surface-variant italic">Start speaking — your words appear here…</span>
+                      )}
+                    </p>
+                  )}
+                </Card>
+              )}
+
+              {/* Per-answer AI feedback */}
+              {lastFeedback && (
+                <Card className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-on-surface-variant flex items-center gap-1">
-                      <span className="material-symbols-outlined text-primary text-sm">speed</span>
-                      Speaking Speed
-                    </span>
-                    <span className="text-primary font-bold">Optimal</span>
+                    <h4 className="font-bold text-primary uppercase tracking-wider text-[10px]">AI Feedback on Your Answer</h4>
+                    {lastFeedback.evaluation.estimated && <Badge tone="warning" icon="info">Estimated – AI unavailable</Badge>}
                   </div>
-                </div>
-
-                <div className="pt-4 border-t border-outline-variant/30">
-                  <p className="font-bold text-on-surface-variant mb-2">Keywords Detected:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="px-2 py-0.5 bg-secondary-container/30 text-primary font-bold rounded border border-primary/10">Process</span>
-                    <span className="px-2 py-0.5 bg-secondary-container/30 text-primary font-bold rounded border border-primary/10">Memory</span>
-                    <span className="px-2 py-0.5 bg-secondary-container/30 text-primary font-bold rounded border border-primary/10">Context Switching</span>
+                  <p className="text-xs text-on-surface-variant leading-relaxed italic">"{lastFeedback.evaluation.feedback}"</p>
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                    {(
+                      [
+                        ['Technical', lastFeedback.evaluation.technicalScore],
+                        ['Communication', lastFeedback.evaluation.communicationScore],
+                        ['Problem solving', lastFeedback.evaluation.problemSolvingScore],
+                        ['Relevance', lastFeedback.evaluation.relevanceScore],
+                        ['Completeness', lastFeedback.evaluation.completenessScore],
+                        ['Grammar', lastFeedback.evaluation.grammarScore]
+                      ] as [string, number][]
+                    ).map(([label, value]) => (
+                      <div key={label} className="bg-surface-container-low p-3 rounded-lg text-center">
+                        <p className="text-[9px] text-outline uppercase font-bold leading-tight">{label}</p>
+                        <p className="text-lg font-bold text-primary">{value}</p>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-            </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-surface-container-low p-3 rounded-lg">
+                      <p className="text-[10px] text-outline uppercase font-bold">Pace</p>
+                      <p className="font-bold text-primary">{lastFeedback.wordsPerMinute ? `${Math.round(lastFeedback.wordsPerMinute)} wpm` : '—'}</p>
+                    </div>
+                    <div className="bg-surface-container-low p-3 rounded-lg">
+                      <p className="text-[10px] text-outline uppercase font-bold">Filler words</p>
+                      <p className="font-bold text-primary">{lastFeedback.fillerWordCount}</p>
+                    </div>
+                  </div>
+                  {lastFeedback.evaluation.suggestedBetterAnswer && (
+                    <div className="bg-primary-container/20 border border-primary/10 p-3 rounded-lg">
+                      <p className="text-[10px] text-primary uppercase font-bold mb-1">A stronger answer</p>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">{lastFeedback.evaluation.suggestedBetterAnswer}</p>
+                    </div>
+                  )}
+                </Card>
+              )}
+            </>
+          )}
+        </div>
 
-            {/* Tip of day card */}
-            <div className="bg-secondary-container/30 p-5 rounded-xl border-l-4 border-primary text-xs">
-              <div className="flex gap-3">
-                <span className="material-symbols-outlined text-primary text-lg">lightbulb</span>
-                <div>
-                  <h4 className="font-bold text-primary mb-1">Today's Interview Tip</h4>
-                  <p className="text-on-secondary-fixed-variant leading-relaxed font-medium">
-                    Maintain consistent eye contact with the camera, not the screen, to project confidence during virtual rounds.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Technical topics list */}
-            <div className="bg-white p-6 rounded-xl border border-primary/5 text-xs text-left">
-              <h4 className="font-bold text-primary mb-4 uppercase tracking-wider">Top Technical Topics</h4>
+        <aside className="space-y-6">
+          {phase === 'setup' && history.length > 0 && (
+            <Card>
+              <CardHeader icon="history" title="Recent interviews" />
               <ul className="space-y-2">
-                {[
-                  { title: 'Distributed Systems', icon: 'hub' },
-                  { title: 'React Hooks', icon: 'integration_instructions' },
-                  { title: 'System Design', icon: 'architecture' }
-                ].map(topic => (
-                  <li 
-                    key={topic.title}
-                    onClick={() => showToast(`Loading topic outline: ${topic.title}`, 'info')}
-                    className="flex items-center gap-2 p-2 hover:bg-surface-container rounded-lg cursor-pointer transition-colors font-semibold"
-                  >
-                    <span className="material-symbols-outlined text-primary text-sm">{topic.icon}</span>
-                    <span className="text-on-surface">{topic.title}</span>
+                {history.map(h => (
+                  <li key={h.id}>
+                    <button
+                      onClick={() => navigate(`/student/interview-report/${h.id}`)}
+                      className="w-full text-left p-3 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer border-none"
+                    >
+                      <span className="text-label-md font-semibold text-on-surface block">{h.jobTitle}</span>
+                      <span className="text-[11px] text-on-surface-variant">
+                        {new Date(h.completedAt ?? h.createdAt).toLocaleDateString()} · {h.interviewType} · {h.reports[0] ? `${h.reports[0].score}/100` : 'no report'}
+                      </span>
+                    </button>
                   </li>
                 ))}
               </ul>
-            </div>
+            </Card>
+          )}
 
-            {/* Recent performance score list */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-primary/5 text-xs text-left">
-              <h4 className="font-bold text-primary mb-4 uppercase tracking-wider">Recent Performance</h4>
-              <div className="space-y-4 font-semibold">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-on-surface">Google Technical</p>
-                    <p className="text-[10px] text-outline mt-0.5">Yesterday</p>
-                  </div>
-                  <span className="text-lg font-bold text-primary">92</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-on-surface">HR Behavioral</p>
-                    <p className="text-[10px] text-outline mt-0.5">3 days ago</p>
-                  </div>
-                  <span className="text-lg font-bold text-primary/60">84</span>
-                </div>
-              </div>
-            </div>
+          <Card>
+            <CardHeader icon="lightbulb" title="How it works" />
+            <ul className="space-y-3 text-label-md text-on-surface-variant">
+              <li className="flex gap-2"><span className="material-symbols-outlined text-[18px] text-primary shrink-0">record_voice_over</span>The AI interviewer speaks each question aloud; answer naturally by voice.</li>
+              <li className="flex gap-2"><span className="material-symbols-outlined text-[18px] text-primary shrink-0">trending_up</span>Questions adapt: strong answers raise the difficulty, struggles bring supportive follow-ups.</li>
+              <li className="flex gap-2"><span className="material-symbols-outlined text-[18px] text-primary shrink-0">videocam</span>With camera permission, participation events (like leaving the frame) are noted factually in your report.</li>
+              <li className="flex gap-2"><span className="material-symbols-outlined text-[18px] text-primary shrink-0">picture_as_pdf</span>Every answer is stored and your final report is downloadable as a branded PDF.</li>
+            </ul>
+          </Card>
 
-          </aside>
+          <Card>
+            <CardHeader icon="structure" title="Answer like a pro" />
+            <ul className="space-y-3 text-label-md text-on-surface-variant">
+              <li className="flex gap-2"><span className="material-symbols-outlined text-[18px] text-primary shrink-0">star</span>Use STAR: Situation, Task, Action, Result.</li>
+              <li className="flex gap-2"><span className="material-symbols-outlined text-[18px] text-primary shrink-0">speed</span>Pause before answering — a steady pace reads as composure.</li>
+              <li className="flex gap-2"><span className="material-symbols-outlined text-[18px] text-primary shrink-0">numbers</span>Quantify results — numbers make answers memorable.</li>
+            </ul>
+          </Card>
+        </aside>
+      </div>
 
-        </div>
-      </main>
-
-      {/* End Session Dialog confirm box */}
       <Dialog
         isOpen={isEndingConfirmOpen}
         onClose={() => setIsEndingConfirmOpen(false)}
-        title="End Interview Session"
-        description="Are you sure you want to finish the mock interview session? Your final responses will be locked and compiled into an AI Scorecard."
-        confirmLabel="Finish & View Report"
+        title="Finish interview"
+        description="Your answered questions will be compiled into a permanent AI report with scores, feedback and a learning roadmap. Unanswered questions are discarded."
+        confirmLabel="Finish & Generate Report"
         onConfirm={handleConfirmEnd}
         confirmVariant="primary"
       />

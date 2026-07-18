@@ -8,6 +8,7 @@ import { securityConfig } from './config/security';
 import { logger } from './config/logger';
 import apiRouter from './routes/api.routes';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
+import { maintenanceModeGuard } from './middlewares/maintenance.middleware';
 import { getHealth } from './modules/health/health.controller';
 
 const app = express();
@@ -72,6 +73,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check endpoint routing
 app.get('/health', getHealth);
+
+// Real, DB-backed maintenance mode gate (admin can flip this live from the Command Center)
+app.use(maintenanceModeGuard);
+
 app.use('/api/v1', apiRouter);
 
 // 404 handler

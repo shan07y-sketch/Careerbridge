@@ -5,7 +5,31 @@ const config: CapacitorConfig = {
   appName: 'CareerBridge',
   webDir: 'dist',
   server: {
+    // https scheme keeps secure-context APIs (camera, mic, clipboard) working
+    // inside the WebView and matches production web behavior.
     androidScheme: 'https'
+  },
+  android: {
+    allowMixedContent: false
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      backgroundColor: '#0f172a',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: false
+    },
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#0f172a',
+      overlaysWebView: false
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert']
+    }
   }
 };
 

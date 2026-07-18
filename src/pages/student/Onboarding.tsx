@@ -152,14 +152,14 @@ export const Onboarding: React.FC = () => {
   const totalSteps = 5;
 
   // Step 1: Academic
-  const [university, setUniversity] = useState('Massachusetts Institute of Technology');
-  const [degree, setDegree] = useState('Bachelors of Science');
-  const [major, setMajor] = useState('Computer Science');
-  const [currentYear, setCurrentYear] = useState('Junior');
-  const [gradYear, setGradYear] = useState('2026');
+  const [university, setUniversity] = useState('');
+  const [degree, setDegree] = useState('');
+  const [major, setMajor] = useState('');
+  const [currentYear, setCurrentYear] = useState('');
+  const [gradYear, setGradYear] = useState('');
 
   // Step 2: Interests
-  const [interests, setInterests] = useState<string[]>(['Software Engineering', 'Artificial Intelligence']);
+  const [interests, setInterests] = useState<string[]>([]);
   const availableInterests = [
     { label: 'Software Engineering', icon: 'code' },
     { label: 'Artificial Intelligence', icon: 'auto_awesome' },
@@ -179,7 +179,7 @@ export const Onboarding: React.FC = () => {
   };
 
   // Step 3: Skills
-  const [skills, setSkills] = useState<string[]>(['Python', 'React', 'TypeScript']);
+  const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
   const suggestedSkills = ['React', 'TypeScript', 'Python', 'Java', 'SQL', 'AWS', 'Docker', 'Git'];
 
@@ -292,9 +292,12 @@ export const Onboarding: React.FC = () => {
       await updateUser({
         university,
         degree: `${degree} in ${major}`,
-        gradYear: parseInt(gradYear),
+        gradYear: gradYear ? parseInt(gradYear, 10) : new Date().getFullYear(),
         careerGoal: goal,
-        skills: skills.map(name => ({ name, level: 80 })) // Mock level
+        // Onboarding doesn't collect a self-rated proficiency yet, so every
+        // skill starts at a neutral baseline the student can adjust later
+        // from their Profile page (no confident-but-fake score).
+        skills: skills.map(name => ({ name, level: 50 }))
       });
       setStep(6); // Step 6 = Success page
       showToast('Profile completed successfully!', 'success');

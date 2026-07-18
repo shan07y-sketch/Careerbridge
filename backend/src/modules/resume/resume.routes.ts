@@ -38,8 +38,19 @@ const upload = multer({
 
 router.use(authenticate);
 
-router.get('/', ResumeController.getResumes);
+// Version history ("My Resumes") and single-version detail.
+router.get('/', ResumeController.getResumeHistory);
+router.get('/:id', ResumeController.getResumeDetail);
+
+// Upload = new version (see ResumeService.uploadResume for the rotation logic).
 router.post('/upload', upload.single('resume'), ResumeController.uploadResume);
 router.delete('/:id', ResumeController.deleteResume);
+
+// Owner-only secure download.
+router.get('/:id/download', ResumeController.downloadResume);
+
+// Secure sharing: create/revoke a time-limited public link.
+router.post('/:id/share', ResumeController.createShareLink);
+router.delete('/:id/share', ResumeController.revokeShareLink);
 
 export default router;

@@ -25,12 +25,11 @@ export const AdminLogin: React.FC = () => {
     setAccessDenied(false);
 
     try {
-      // Attempt login
-      await login(email, password, true);
-
-      // Check role
-      // Note: context login sets state, we can also check the localStorage to be sure
-      const resolvedRole = localStorage.getItem('role');
+      // Real API login -- the backend authenticates against PostgreSQL and
+      // returns the account's actual role. (The old `forceAdmin` flag
+      // fabricated a mock admin session with a fake token; every subsequent
+      // API call then failed with 401.)
+      const resolvedRole = await login(email, password);
 
       if (resolvedRole === 'admin') {
         showToast('System Admin session established.', 'success');
@@ -41,7 +40,7 @@ export const AdminLogin: React.FC = () => {
         setAccessDenied(true);
         showToast('Permission Denied', 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Authentication failed. Please check your credentials.', 'error');
     } finally {
       setIsLoading(false);

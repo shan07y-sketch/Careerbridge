@@ -1,0 +1,19 @@
+# Python dependencies for the CareerBridge seed data engine
+# (backend/seed_engine.py, backend/careerbridge_seed_engine/, backend/scripts/generate_seed_json.py)
+#
+# Install with:
+#   pip install -r requirements.txt
+#   (or, on systems with an externally-managed Python: pip install -r requirements.txt --break-system-packages)
+#
+# Requires Python 3.10+.
+
+Faker==40.31.0
+
+# Note for `npm run seed:generate` (invokes `python3 scripts/generate_seed_json.py`):
+# - Requires Python 3.10+ and Faker installed as above (pip install -r requirements.txt).
+# - On Windows, ensure `python3` resolves (py launcher / python.org installer both provide it),
+#   or override the npm script to call `python` instead if your environment only has that alias.
+# - If your system Python is externally managed (e.g. recent Debian/Ubuntu), either use a
+#   virtualenv (`python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`) or pass
+#   `--break-system-packages` to pip.
+

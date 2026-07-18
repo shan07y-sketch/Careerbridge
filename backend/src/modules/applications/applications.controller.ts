@@ -39,4 +39,14 @@ export class ApplicationsController {
       message: 'Application retracted successfully.'
     });
   });
+
+  static acceptOffer = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const offer = await ApplicationsService.respondToOffer(req.user!.id, req.params.id, true);
+    res.status(200).json({ success: true, data: offer, message: 'Offer accepted.' });
+  });
+
+  static declineOffer = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const offer = await ApplicationsService.respondToOffer(req.user!.id, req.params.id, false);
+    res.status(200).json({ success: true, data: offer, message: 'Offer declined.' });
+  });
 }

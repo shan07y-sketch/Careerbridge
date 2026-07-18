@@ -1,3 +1,4 @@
+import { IAIProvider } from './providers/ai-provider.interface';
 import { GeminiProvider } from './providers/gemini.provider';
 import { PromptBuilder } from './prompt-builder/prompt-builder';
 import { AICacheService } from './cache/ai-cache.service';
@@ -5,7 +6,10 @@ import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 
 export class AIOrchestrator {
-  private static provider = new GeminiProvider();
+  // GeminiProvider is the single AI provider for all AIOrchestrator-routed
+  // features (Resume Intelligence). It transparently falls back to a
+  // deterministic mock when GEMINI_API_KEY is unset - see GeminiProvider.
+  private static provider: IAIProvider = new GeminiProvider();
 
   static async runAnalysis(userId: string, feature: string, promptVersion: string, input: string) {
     const inputHash = AICacheService.generateHash(`${feature}_${input}`);
@@ -13,7 +17,7 @@ export class AIOrchestrator {
 
     if (cached) {
       logger.info({ feature, cacheHit: true }, 'AI Cache Hit');
-      
+
       try {
         await prisma.auditLog.create({
           data: {
@@ -35,7 +39,8 @@ export class AIOrchestrator {
       } catch (auditErr) {
         logger.warn({ auditErr }, 'Failed to persist AI cache hit audit log. Continuing pipeline.');
       }
-      return JSON.parse(cached);
+      // Only real (non-estimated) results are ever cached, so a cache hit is authoritative.
+      return { ...JSON.parse(cached), __estimated: false };
     }
 
     const prompt = PromptBuilder.buildPrompt(promptVersion, input);
@@ -49,7 +54,7 @@ export class AIOrchestrator {
     while (attempts < maxRetries) {
       try {
         attempts++;
-        result = await this.provider.generate(prompt, feature);
+        result = await this.provider.generate(prompt, feature, input);
         break;
       } catch (err) {
         lastError = err;
@@ -65,7 +70,13 @@ export class AIOrchestrator {
 
     const duration = Date.now() - start;
 
-    AICacheService.set(inputHash, result.text);
+    // The provider tags mock/fallback responses ('Gemini (MockMode)' /
+    // 'Gemini (Fallback)'). Never cache those, so a cache hit is always a
+    // real Gemini result, and surface the flag so callers can label output.
+    const estimated = /MockMode|Fallback/.test(result.provider || '');
+    if (!estimated) {
+      AICacheService.set(inputHash, result.text);
+    }
 
     const tokensIn = result.tokensIn;
     const tokensOut = result.tokensOut;
@@ -93,6 +104,6 @@ export class AIOrchestrator {
       logger.warn({ auditErr }, 'Failed to persist AI usage audit log. Continuing pipeline.');
     }
 
-    return JSON.parse(result.text);
+    return { ...JSON.parse(result.text), __estimated: estimated };
   }
 }

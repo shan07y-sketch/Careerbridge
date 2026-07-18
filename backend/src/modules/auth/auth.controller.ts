@@ -21,7 +21,7 @@ export class AuthController {
 
   static login = catchAsync(async (req: Request, res: Response) => {
     const result = await AuthService.login(req.body);
-    
+
     // Cookie parameters mapping HttpOnly token
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
@@ -47,6 +47,17 @@ export class AuthController {
     }
 
     const result = await AuthService.refresh(token);
+
+    // Rotation: the old refresh token cookie is replaced with the newly
+    // minted one so the retired token can never be used again by anyone
+    // holding a copy of it (see AuthService.refresh for the full rationale).
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -61,7 +72,7 @@ export class AuthController {
     if (token) {
       await AuthService.logout(token);
     }
-    
+
     res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
