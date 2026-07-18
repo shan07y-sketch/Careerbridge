@@ -13,6 +13,11 @@ import { getHealth } from './modules/health/health.controller';
 
 const app = express();
 
+// Trust the first proxy hop (Render's load balancer) so express-rate-limit can
+// safely read the client IP from X-Forwarded-For without throwing
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR. Use 1 (not true) to avoid IP spoofing.
+app.set('trust proxy', 1);
+
 // Security Headers
 app.use(helmet());
 
