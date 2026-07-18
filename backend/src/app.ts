@@ -70,14 +70,17 @@ app.use((req, res, next) => {
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
+// Health check endpoint routing.
+// Registered BEFORE the global rate limiter: Render's platform health checks
+// hit /health every few seconds from a single internal IP, which would other-
+// wise exhaust the per-IP rate-limit bucket and make health checks return 429.
+app.get('/health', getHealth);
+
 // Global Rate Limiting
 app.use(rateLimit(securityConfig.rateLimit));
 
 // API Swagger UI routing
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-// Health check endpoint routing
-app.get('/health', getHealth);
 
 // Real, DB-backed maintenance mode gate (admin can flip this live from the Command Center)
 app.use(maintenanceModeGuard);
