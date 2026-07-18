@@ -35,12 +35,13 @@ services:
     runtime: node
     plan: free            # free tier sleeps after inactivity; upgrade for always-on
     rootDir: backend
-    # Migrations run in the build step (free tier has no separate pre-deploy
-    # phase). `prisma migrate deploy` is idempotent and the DB is reachable
-    # during Render's build, so this safely applies pending migrations before
-    # the new version starts.
-    buildCommand: npm ci && npx prisma generate && npm run build && npx prisma migrate deploy
-    startCommand: node dist/index.js
+    # `npm install` (not `npm ci`) so Render's npm reconciles the lock file —
+    # the committed backend lock drifts from package.json across npm versions.
+    buildCommand: npm install && npx prisma generate && npm run build
+    # Migrations run at startup (free tier has no pre-deploy phase). At boot
+    # DATABASE_URL is guaranteed present and the DB is up; `migrate deploy` is
+    # idempotent, so this safely applies pending migrations on every deploy.
+    startCommand: npx prisma migrate deploy && node dist/index.js
     healthCheckPath: /health
     autoDeploy: true
     envVars:
