@@ -37,6 +37,23 @@ function resolveEndpoint(apiKey: string, model: string): { url: string; headers:
   };
 }
 
+/**
+ * Pulls the human-readable reason out of a Google API error envelope
+ * ({ error: { message } }), falling back to the raw body when the response
+ * is not the expected shape (e.g. an HTML error page from a proxy).
+ */
+function extractGoogleError(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string; status?: string } };
+    if (parsed.error?.message) {
+      return parsed.error.status ? `${parsed.error.status}: ${parsed.error.message}` : parsed.error.message;
+    }
+  } catch {
+    // Not JSON - fall through to the raw body.
+  }
+  return body || 'Upstream returned an empty error body.';
+}
+
 export interface ChatTurn {
   role: 'user' | 'model';
   text: string;
@@ -56,6 +73,20 @@ function resolveStreamEndpoint(apiKey: string, model: string): { url: string; he
   };
 }
 
+export interface GeminiProbeResult {
+  provider: string;
+  model: string;
+  /** Which Google API the key is being routed to, and why. */
+  endpoint: { host: string; mode: 'developer' | 'vertex'; routedBy: 'env-override' | 'key-prefix' };
+  keyType: 'developer' | 'vertex-express' | 'none';
+  status: 'live' | 'degraded' | 'unconfigured';
+  /** What callers would actually get right now from an AI feature. */
+  generation: 'live' | 'fallback';
+  latencyMs: number | null;
+  /** Populated only when status !== 'live'. Never contains the API key. */
+  error: { httpStatus: number | null; code: string; message: string } | null;
+}
+
 export class GeminiClient {
   static get isConfigured(): boolean {
     return Boolean(env.GEMINI_API_KEY);
@@ -64,6 +95,119 @@ export class GeminiClient {
   static get keyType(): 'developer' | 'vertex-express' | 'none' {
     if (!env.GEMINI_API_KEY) return 'none';
     return env.GEMINI_API_KEY.startsWith('AQ.') ? 'vertex-express' : 'developer';
+  }
+
+  /**
+   * Makes one real, minimal Gemini call to prove the configured key/endpoint/
+   * model actually generate. Unlike getHealth (which only echoes env presence
+   * and so cannot distinguish "configured" from "working"), this is the only
+   * way to answer "is AI live right now" without driving a product feature.
+   *
+   * Deliberately does NOT reuse generate(): no retries (a probe should report
+   * the first failure, not mask it behind 3 backoffs), no JSON response mode,
+   * and it resolves rather than throws so callers get diagnostics either way.
+   */
+  static async probe(): Promise<GeminiProbeResult> {
+    const model = env.GEMINI_MODEL;
+    const isVertex =
+      env.GEMINI_ENDPOINT === 'vertex' ||
+      (env.GEMINI_ENDPOINT === 'auto' && (env.GEMINI_API_KEY ?? '').startsWith('AQ.'));
+    const base: GeminiProbeResult = {
+      provider: env.AI_PROVIDER,
+      model,
+      endpoint: {
+        host: isVertex ? 'aiplatform.googleapis.com' : 'generativelanguage.googleapis.com',
+        mode: isVertex ? 'vertex' : 'developer',
+        routedBy: env.GEMINI_ENDPOINT === 'auto' ? 'key-prefix' : 'env-override'
+      },
+      keyType: this.keyType,
+      status: 'unconfigured',
+      generation: 'fallback',
+      latencyMs: null,
+      error: null
+    };
+
+    if (!env.GEMINI_API_KEY || env.AI_PROVIDER !== 'gemini') {
+      base.error = {
+        httpStatus: null,
+        code: 'AI_NOT_CONFIGURED',
+        message: !env.GEMINI_API_KEY
+          ? 'GEMINI_API_KEY is not set; all AI modules run in deterministic Estimated mode.'
+          : `AI_PROVIDER is "${env.AI_PROVIDER}", not "gemini".`
+      };
+      return base;
+    }
+
+    const { url, headers } = resolveEndpoint(env.GEMINI_API_KEY, model);
+    const controller = new AbortController();
+    // Short timeout: a health probe must not hang a dashboard for 60s.
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const startedAt = Date.now();
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: 'Reply with the single word: LIVE' }] }],
+          // gemini-flash-latest is a thinking model: reasoning tokens are drawn
+          // from maxOutputTokens before any text is emitted, so a small budget
+          // returns 200 with finishReason MAX_TOKENS and zero parts. Disabling
+          // thinking keeps the probe to ~1 token and avoids a false "degraded".
+          generationConfig: { temperature: 0, maxOutputTokens: 16, thinkingConfig: { thinkingBudget: 0 } }
+        }),
+        signal: controller.signal
+      });
+      base.latencyMs = Date.now() - startedAt;
+
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => '');
+        base.status = 'degraded';
+        base.error = {
+          httpStatus: resp.status,
+          code: resp.status === 429 ? 'QUOTA_EXCEEDED' : resp.status === 403 ? 'ACCESS_FORBIDDEN' : resp.status === 404 ? 'MODEL_NOT_FOUND' : 'API_ERROR',
+          // Google returns the reason in the body; it never echoes the key,
+          // which we send as a header rather than a query param. Truncated so
+          // a huge upstream payload cannot bloat the response.
+          message: extractGoogleError(body).slice(0, 500)
+        };
+        logger.error({ status: resp.status, model, keyType: this.keyType }, '[GEMINI PROBE] Upstream rejected probe');
+        return base;
+      }
+
+      const data = (await resp.json()) as {
+        candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[];
+      };
+      const candidate = data.candidates?.[0];
+      const text = candidate?.content?.parts?.[0]?.text;
+      if (!text) {
+        base.status = 'degraded';
+        base.error = {
+          httpStatus: 200,
+          code: 'AI_EMPTY_RESPONSE',
+          // finishReason is the difference between "model refused"
+          // (SAFETY/RECITATION) and "budget too small" (MAX_TOKENS).
+          message: `Gemini returned 200 with no candidate text (finishReason: ${candidate?.finishReason ?? 'unknown'}).`
+        };
+        return base;
+      }
+
+      base.status = 'live';
+      base.generation = 'live';
+      return base;
+    } catch (err: any) {
+      base.latencyMs = Date.now() - startedAt;
+      base.status = 'degraded';
+      const isTimeout = err?.name === 'AbortError';
+      base.error = {
+        httpStatus: null,
+        code: isTimeout ? 'TIMEOUT_ERROR' : 'NETWORK_FAILURE',
+        message: isTimeout ? 'Probe timed out after 10s.' : `Network connection failed: ${err?.message ?? 'unknown'}`
+      };
+      return base;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   /**

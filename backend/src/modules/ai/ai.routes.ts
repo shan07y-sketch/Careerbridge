@@ -16,6 +16,12 @@ const router = Router();
 // in production regardless of role.
 router.get('/health', AIController.getHealth);
 
+// /health/probe makes a REAL (billed) Gemini call, so it carries the same
+// admin gate as /analyze-test - an anonymous probe endpoint is an API-billing
+// abuse vector. Unlike /analyze-test it stays enabled in production, because
+// diagnosing "why is prod AI falling back" is exactly a production need.
+router.get('/health/probe', authenticate, restrictTo('admin'), AIController.getHealthProbe);
+
 router.post(
   '/analyze-test',
   authenticate,
