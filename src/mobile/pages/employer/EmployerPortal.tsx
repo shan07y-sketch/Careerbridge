@@ -15,8 +15,9 @@ import type {
   EmployerRecruiter, EmployerCompanyProfile, EmployerInterview,
   EmployerConversation, EmployerConversationMessage,
 } from '../../../services';
-import { MobileShell, Card, Stat, Chip, SectionTitle, SkeletonList, EmptyState, ErrorState, Button, Avatar, ScoreRing, PullToRefresh } from '../../components';
+import { MobileShell, Card, Stat, SectionTitle, SkeletonList, EmptyState, ErrorState, Avatar, ScoreRing, PullToRefresh } from '../../components';
 import JobsManager from './JobsManager';
+import ApplicantTracking from './ApplicantTracking';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', jobs: 'Jobs', candidates: 'Candidates', pipeline: 'Talent Pipeline',
@@ -323,44 +324,9 @@ const OverviewView: React.FC<{ onNavigate: (k: string) => void }> = ({ onNavigat
 // Jobs management (create/edit/publish/archive/delete/search/filters) lives in
 // its own file — see JobsManager. Module 2 replaced the old read-only list.
 
-const CandidatesView: React.FC = () => {
-  const { showToast } = useToast();
-  const { data, loading, error, reload } = useAsync(() => HiringPipelineService.getQueue({ limit: 50 }));
-  const act = async (fn: () => Promise<unknown>, msg: string) => {
-    try { await fn(); showToast(msg); await reload(); }
-    catch (err) { showToast(err instanceof Error ? err.message : 'Action failed', 'error'); }
-  };
-  if (loading) return <SkeletonList count={5} />;
-  if (error || !data) return <ErrorState message={error || undefined} onRetry={reload} />;
-  const apps: PipelineApplication[] = data.applications;
-  if (apps.length === 0) return <EmptyState icon="group" title="No applications yet" hint="Candidates who apply to your jobs appear here." />;
-  return (
-    <div className="px-4 pt-4 space-y-2.5">
-      {apps.map(app => {
-        const s = app.studentProfile;
-        const name = `${s.firstName} ${s.lastName}`.trim();
-        return (
-          <Card key={app.id}>
-            <div className="flex items-center gap-3">
-              <Avatar src={s.avatarUrl} name={name} size={40} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold truncate">{name}</p>
-                <p className="text-xs text-on-surface-variant truncate">{app.job.title}</p>
-              </div>
-              <Chip tone={app.status === 'SHORTLISTED' ? 'success' : app.status === 'REJECTED' ? 'error' : 'neutral'}>{app.status}</Chip>
-            </div>
-            {(app.status === 'APPLIED' || app.status === 'REVIEWING' || app.status === 'SCREENING') && (
-              <div className="flex gap-2 mt-3">
-                <Button full variant="tonal" onClick={() => act(() => HiringPipelineService.shortlist(app.id), 'Candidate shortlisted')}>Shortlist</Button>
-                <Button full variant="outline" onClick={() => act(() => HiringPipelineService.reject(app.id), 'Candidate rejected')}>Reject</Button>
-              </div>
-            )}
-          </Card>
-        );
-      })}
-    </div>
-  );
-};
+// Applicant tracking (pipeline board, résumé viewer, AI evaluation, stage
+// actions) lives in its own file — see ApplicantTracking. Module 3 replaced
+// the old read-only candidates list.
 
 const AnalyticsView: React.FC = () => {
   const { data, loading, error, reload } = useAsync<PipelineAnalytics>(() => HiringPipelineService.getAnalytics());
@@ -559,7 +525,7 @@ const MobileEmployerPortal: React.FC = () => {
     switch (view) {
       case 'jobs': return <JobsManager />;
       case 'candidates':
-      case 'pipeline': return <CandidatesView />;
+      case 'pipeline': return <ApplicantTracking />;
       case 'analytics':
       case 'reports': return <AnalyticsView />;
       case 'recruiters': return <RecruitersView />;
