@@ -74,8 +74,8 @@ Backend → **Variables** → **Raw Editor**, paste (substitute the two URLs fro
 ```
 NODE_ENV=production
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-JWT_ACCESS_SECRET=EWQWAYYcL7FBdVthRrVKxK5EPrfdqhEXLn2ufYZk0lEgM+gNo3OVggbkkLSr0M6u
-JWT_REFRESH_SECRET=z90SqQ7bZ77Uzak01OEw5TRy6PQGWjSp0lOkhB7abvtsLYDWQBuX9iXT6negqaMc
+JWT_ACCESS_SECRET=97dd58e766750a9b67cfc671dfcdc21248723ac178bd21aa7bffcd8388d406d85cfc270b11a03bc7d26f944377abc094
+JWT_REFRESH_SECRET=427cd8c27d369626a45cccc23125b59421e7269c71a829df867c84fea6e528ca58f54c575e1493de531b3dbeb821256d
 JWT_ACCESS_EXPIRY=15m
 JWT_REFRESH_EXPIRY=7d
 CORS_ORIGIN=<FRONTEND URL from Step 3>
@@ -84,8 +84,15 @@ AI_PROVIDER=gemini
 GEMINI_MODEL=gemini-flash-latest
 GEMINI_ENDPOINT=auto
 ```
-> The two secrets above are freshly generated and safe to use as-is; regenerate with
-> `openssl rand -base64 48` if you prefer. Add `GEMINI_API_KEY=…` for real AI (optional).
+> **Secrets format:** the two secrets above are **hex** (only `0-9a-f`, 96 chars) so no
+> dashboard/dotenv parser can mangle them — unlike base64, which contains `+ / =`. They
+> satisfy the ≥32-char production requirement. Regenerate with `openssl rand -hex 48` if
+> you prefer. Add `GEMINI_API_KEY=…` for real AI (optional).
+>
+> **`APP_BASE_URL` and `CORS_ORIGIN` must be full origins with `https://` and no trailing
+> slash** (e.g. `https://careerbridge-backend-production.up.railway.app`). A bare host
+> like `careerbridge-backend-production.up.railway.app` fails URL validation and the app
+> won't boot.
 
 ### Step 5 — Frontend: set the API URL
 Frontend → **Variables** → add:
