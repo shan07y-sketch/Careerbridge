@@ -14,6 +14,11 @@ export class UniversityController {
     res.status(200).json({ success: true, data });
   });
 
+  static getInternships = catchAsync(async (req: UniversityRequest, res: Response) => {
+    const data = await UniversityService.getInternships(req.universityId!);
+    res.status(200).json({ success: true, data });
+  });
+
   static verifyStudent = catchAsync(async (req: UniversityRequest, res: Response) => {
     const data = await UniversityService.verifyStudent(
       req.user!.id,

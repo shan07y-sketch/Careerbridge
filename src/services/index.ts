@@ -1802,6 +1802,26 @@ export interface UniversityActivity {
   timestamp: string;
 }
 
+export interface UniversityInternship {
+  id: string;
+  status: string;
+  createdAt: string;
+  studentProfile: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+    department: { id: string; name: string } | null;
+  };
+  job: {
+    id: string;
+    title: string;
+    location: string;
+    company: { id: string; name: string; logoUrl: string | null };
+  };
+  offer: { status: string; startDate: string; salary: number; respondedAt: string | null } | null;
+}
+
 export interface UniversityDashboard {
   // existing (backward compatible)
   placementRate: number;
@@ -1897,6 +1917,9 @@ export const UniversityService = {
   },
   getStudents: async (): Promise<UniversityStudent[]> => {
     return fetchJson('/university/students', {});
+  },
+  getInternships: async (): Promise<UniversityInternship[]> => {
+    return fetchJson('/university/internships', {});
   },
   verifyStudent: async (studentProfileId: string, status: VerificationStatus): Promise<UniversityStudent> => {
     return fetchJson(`/university/students/${studentProfileId}/verify`, {

@@ -13,6 +13,7 @@ router.use(restrictToUniversityScope);
 
 router.get('/dashboard', UniversityController.getDashboard);
 router.get('/students', UniversityController.getStudents);
+router.get('/internships', UniversityController.getInternships);
 router.patch('/students/:studentId/verify', validate(verifyStudentSchema), UniversityController.verifyStudent);
 
 router.get('/drives', UniversityController.getCampusDrives);

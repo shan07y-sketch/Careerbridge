@@ -41,6 +41,10 @@ export class UniversityService {
     return UniversityRepository.getStudents(universityId);
   }
 
+  static async getInternships(universityId: string) {
+    return UniversityRepository.getInternships(universityId);
+  }
+
   static async verifyStudent(userId: string, universityId: string, studentProfileId: string, status: VerificationStatus) {
     const student = await UniversityRepository.findStudentInUniversity(universityId, studentProfileId);
     if (!student) {

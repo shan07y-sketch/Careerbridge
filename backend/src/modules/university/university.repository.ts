@@ -345,6 +345,31 @@ export class UniversityRepository {
       .sort((a, b) => b.applications - a.applications);
   }
 
+  /**
+   * Real internship records for this university's students. Derived from actual
+   * Application/Offer/Job data (jobType INTERNSHIP) -- there is no separate
+   * internship model, so this reuses the recruitment tables the same way
+   * getPartnerCompanies does. No mock or fabricated rows.
+   */
+  static async getInternships(universityId: string) {
+    return prisma.application.findMany({
+      where: { studentProfile: { universityId }, job: { jobType: 'INTERNSHIP' } },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        studentProfile: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, department: { select: { id: true, name: true } } }
+        },
+        job: {
+          select: { id: true, title: true, location: true, company: { select: { id: true, name: true, logoUrl: true } } }
+        },
+        offer: { select: { status: true, startDate: true, salary: true, respondedAt: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
   static async getSettings(universityId: string) {
     const university = await prisma.university.findUnique({
       where: { id: universityId },
