@@ -26,6 +26,8 @@ const Dashboard = adaptive(() => import('./pages/student/Dashboard'), () => impo
 const Jobs = adaptive(() => import('./pages/student/Jobs'), () => import('./mobile/pages/student/Jobs'));
 const JobDetails = adaptive(() => import('./pages/student/JobDetails'), () => import('./mobile/pages/student/JobDetails'));
 const SavedJobs = adaptive(() => import('./pages/student/SavedJobs'), () => import('./mobile/pages/student/SavedJobs'));
+// Internships: focused mobile view of internship roles; desktop uses the Jobs browser.
+const Internships = adaptive(() => import('./pages/student/Jobs'), () => import('./mobile/pages/student/Internships'));
 const Applications = adaptive(() => import('./pages/student/Applications'), () => import('./mobile/pages/student/Applications'));
 const Profile = adaptive(() => import('./pages/student/Profile'), () => import('./mobile/pages/student/Profile'));
 // Resume: mobile gets a dedicated workspace; desktop resume management lives in the Profile page.
@@ -172,16 +174,24 @@ export const App: React.FC = () => {
                         </ProtectedRoute>
                       } 
                     />
-                    <Route 
-                      path="/student/saved" 
+                    <Route
+                      path="/student/saved"
                       element={
                         <ProtectedRoute>
                           <SavedJobs />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/student/applications" 
+                    <Route
+                      path="/student/internships"
+                      element={
+                        <ProtectedRoute>
+                          <Internships />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/student/applications"
                       element={
                         <ProtectedRoute>
                           <Applications />

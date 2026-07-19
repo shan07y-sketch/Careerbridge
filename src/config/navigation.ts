@@ -35,6 +35,7 @@ export const NAV_CONFIG: Record<PortalRole, NavGroup[]> = {
         { label: 'Jobs', icon: 'work', to: '/student/jobs' },
         { label: 'Applications', icon: 'assignment_turned_in', to: '/student/applications' },
         { label: 'Saved', icon: 'bookmark', to: '/student/saved' },
+        { label: 'Internships', icon: 'school', to: '/student/internships' },
       ],
     },
     {
