@@ -112,7 +112,11 @@ export class ResumeService {
       );
     }
 
-    return ResumeRepository.getResumeById(resume.id);
+    const saved = await ResumeRepository.getResumeById(resume.id);
+    // Attach (not persist) why extraction failed, so the student sees an
+    // actionable reason instead of a bare FAILED, and so the failure is
+    // diagnosable in a deployed environment without log access.
+    return extraction.error ? { ...saved, extractionError: extraction.error } : saved;
   }
 
   static async deleteResume(userId: string, id: string) {

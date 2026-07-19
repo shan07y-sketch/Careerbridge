@@ -19,6 +19,14 @@ export type ExtractionStatus = 'PARSED' | 'FAILED';
 export interface ExtractionResult {
   text: string;
   status: ExtractionStatus;
+  /**
+   * Why extraction failed, when it did. Surfaced to the caller because a
+   * silent FAILED tells neither the student ("is my file bad?") nor an
+   * operator ("is the parser broken in this environment?") anything usable -
+   * and it is not diagnosable from outside the container without it.
+   * Never contains file contents.
+   */
+  error?: string;
 }
 
 // A resume that "parses" to only a handful of characters is almost always a
@@ -46,10 +54,10 @@ export class ResumeTextExtractionService {
         // as the pre-existing placeholder behavior did -- this is a known,
         // documented gap, not a silent one.
         logger.warn('Legacy .doc text extraction is not supported; falling back to filename-based signal only.');
-        return { text: '', status: 'FAILED' };
+        return { text: '', status: 'FAILED', error: 'Legacy .doc format is not supported. Please upload a PDF or DOCX.' };
       } else {
         logger.warn({ mimeType }, 'Unrecognized resume mime type for text extraction.');
-        return { text: '', status: 'FAILED' };
+        return { text: '', status: 'FAILED', error: `Unsupported file type: ${mimeType}.` };
       }
 
       const normalized = text.replace(/\s+/g, ' ').trim();
@@ -59,13 +67,18 @@ export class ResumeTextExtractionService {
           { extractedLength: normalized.length },
           'Resume text extraction produced too little text to be useful (likely a scanned/image-only document).'
         );
-        return { text: normalized, status: 'FAILED' };
+        return {
+          text: normalized,
+          status: 'FAILED',
+          error: `Only ${normalized.length} characters of text were readable (minimum ${MIN_VIABLE_TEXT_LENGTH}). This is usually a scanned or image-only document.`
+        };
       }
 
       return { text: normalized, status: 'PARSED' };
     } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
       logger.error({ err, mimeType }, 'Resume text extraction threw an error.');
-      return { text: '', status: 'FAILED' };
+      return { text: '', status: 'FAILED', error: `Could not read this file: ${reason}` };
     }
   }
 }
