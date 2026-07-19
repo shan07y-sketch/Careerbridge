@@ -19,7 +19,13 @@ export const getHealth = catchAsync(async (req: Request, res: Response) => {
       version: '1.0.0',
       uptime: process.uptime(),
       environment: env.NODE_ENV,
-      database: dbStatus
+      database: dbStatus,
+      // Runtime identity. Not decorative: pdf-parse silently fails to extract
+      // text on Node 22 but works on Node 24, so "which Node is production
+      // actually running" is a question we have had to answer the hard way.
+      // Neither value is a secret.
+      node: process.version,
+      platform: `${process.platform}-${process.arch}`
     },
     message: 'Operational health status verified.'
   });
