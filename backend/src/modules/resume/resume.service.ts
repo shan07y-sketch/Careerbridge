@@ -91,19 +91,38 @@ export class ResumeService {
           extraction.text
         );
 
+        // The live Gemini prompt returns `atsScore` (see PromptBuilder's
+        // resume-analysis-v1 schema) while the deterministic fallback returns
+        // `score`. Reading only `score` meant every REAL analysis was
+        // generated, billed, and then dropped by a Prisma validation error
+        // that this best-effort catch swallowed - the bug was invisible
+        // precisely because it only appeared once real Gemini was enabled.
+        const score = typeof aiResult.atsScore === 'number' ? aiResult.atsScore : aiResult.score;
+        if (typeof score !== 'number' || Number.isNaN(score)) {
+          throw new Error(
+            `Resume analysis returned no usable score (atsScore=${aiResult.atsScore}, score=${aiResult.score}).`
+          );
+        }
+
         await prisma.resumeAnalysis.create({
           data: {
             studentProfileId: profile.id,
             resumeId: resume.id,
             summary: aiResult.summary,
-            score: aiResult.score,
+            score: Math.round(score),
             status: 'PARSED',
             // Label offline/fallback analyses so nothing heuristic is shown as a live Gemini result.
             modelVersion: aiResult.__estimated ? 'resume-analysis-v1-estimated' : 'resume-analysis-v1'
           }
         });
       } catch (aiErr) {
-        logger.error({ aiErr }, 'AI Resume analysis pipeline encountered a failure');
+        // Log the message explicitly: Prisma errors serialize to just
+        // { name, clientVersion } under the default serializer, which hid a
+        // schema mismatch here for the entire life of the feature.
+        logger.error(
+          { reason: aiErr instanceof Error ? aiErr.message : String(aiErr), resumeId: resume.id },
+          'AI Resume analysis pipeline encountered a failure'
+        );
       }
     } else {
       logger.warn(
