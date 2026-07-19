@@ -88,14 +88,15 @@ export const NAV_CONFIG: Record<PortalRole, NavGroup[]> = {
       items: [
         { label: 'Dashboard', icon: 'space_dashboard', key: 'dashboard' },
         { label: 'Students', icon: 'school', key: 'students' },
-        { label: 'Companies', icon: 'apartment', key: 'companies' },
-        { label: 'Campus Drives', icon: 'campaign', key: 'drives' },
+        { label: 'Placements', icon: 'workspace_premium', key: 'drives' },
+        { label: 'Internships', icon: 'work_history', key: 'internships' },
       ],
     },
     {
       title: 'Insight',
       items: [
-        { label: 'Placement Analytics', icon: 'monitoring', key: 'analytics' },
+        { label: 'Analytics', icon: 'monitoring', key: 'analytics' },
+        { label: 'Companies', icon: 'apartment', key: 'companies' },
         { label: 'Reports', icon: 'summarize', key: 'reports' },
       ],
     },

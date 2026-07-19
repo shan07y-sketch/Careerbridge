@@ -6,14 +6,18 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { UniversityService } from '../../../services';
 import type {
-  UniversityDashboard, UniversityStudent, UniversityAnalytics,
-  PlacementDrive, PartnerCompany, SentBroadcast, UniversityActivity,
+  UniversityDashboard, UniversityStudent,
+  PartnerCompany, SentBroadcast, UniversityActivity,
 } from '../../../services';
 import { MobileShell, Card, Stat, Chip, SectionTitle, SkeletonList, EmptyState, ErrorState, Button, Sheet, Avatar, Progress, ScoreRing, PullToRefresh } from '../../components';
+import StudentManagement from './StudentManagement';
+import PlacementManagement from './PlacementManagement';
+import InternshipManagement from './InternshipManagement';
+import UniversityAnalytics from './UniversityAnalytics';
 
 const VIEW_TITLES: Record<string, string> = {
-  dashboard: 'Dashboard', students: 'Students', companies: 'Companies', drives: 'Campus Drives',
-  analytics: 'Placement Analytics', reports: 'Reports', messages: 'Messages',
+  dashboard: 'Dashboard', students: 'Students', companies: 'Companies', drives: 'Placements',
+  internships: 'Internships', analytics: 'Analytics', reports: 'Reports', messages: 'Messages',
   verification: 'Verification', help: 'Help & Support',
 };
 
@@ -312,71 +316,6 @@ const CompaniesView: React.FC = () => {
   );
 };
 
-const DrivesView: React.FC = () => {
-  const { data, loading, error, reload } = useAsync<PlacementDrive[]>(() => UniversityService.getDrives());
-  if (loading) return <SkeletonList count={4} />;
-  if (error || !data) return <ErrorState message={error || undefined} onRetry={reload} />;
-  if (data.length === 0) return <EmptyState icon="campaign" title="No campus drives" hint="Create drives from the desktop portal." />;
-  return (
-    <div className="px-4 pt-4 space-y-2.5">
-      {data.map(d => (
-        <Card key={d.id}>
-          <p className="text-sm font-bold">{d.title}</p>
-          <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">{d.description}</p>
-          <div className="flex items-center gap-2 mt-2 text-xs text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]">event</span>
-            {new Date(d.scheduledAt).toLocaleDateString()}
-            <span className="material-symbols-outlined text-[16px] ml-2">location_on</span>
-            {d.location}
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-};
-
-const AnalyticsView: React.FC = () => {
-  const { data, loading, error, reload } = useAsync<UniversityAnalytics>(() => UniversityService.getAnalytics());
-  if (loading) return <SkeletonList count={4} />;
-  if (error || !data) return <ErrorState message={error || undefined} onRetry={reload} />;
-  return (
-    <div className="px-4 pt-4">
-      <div className="grid grid-cols-2 gap-3">
-        <Stat icon="percent" label="Placement rate" value={`${Math.round(data.placementPercentage)}%`} />
-        <Stat icon="workspace_premium" label="Placed" value={`${data.studentsPlaced}/${data.totalStudents}`} />
-        <Stat icon="payments" label="Average package" value={data.averageSalary != null ? `${Math.round(data.averageSalary / 1000)}k` : '—'} />
-        <Stat icon="trending_up" label="Highest package" value={data.highestPackage != null ? `${Math.round(data.highestPackage / 1000)}k` : '—'} />
-      </div>
-
-      <SectionTitle>Department breakdown</SectionTitle>
-      <div className="space-y-2.5">
-        {data.departmentBreakdown.map(d => (
-          <Card key={d.departmentId ?? d.departmentName}>
-            <div className="flex justify-between text-sm mb-1.5">
-              <span className="font-semibold">{d.departmentName}</span>
-              <span className="font-bold">{Math.round(d.placementPercentage)}%</span>
-            </div>
-            <Progress value={d.placementPercentage} tone={d.placementPercentage >= 70 ? 'success' : 'warning'} />
-            <p className="text-[11px] text-on-surface-variant mt-1">{d.placed} of {d.total} placed</p>
-          </Card>
-        ))}
-      </div>
-
-      <SectionTitle>Interview readiness</SectionTitle>
-      <Card>
-        <div className="flex justify-between text-sm">
-          <span className="text-on-surface-variant">Mock interviews completed</span>
-          <span className="font-bold">{data.interviewReadiness.totalInterviews}</span>
-        </div>
-        <div className="flex justify-between text-sm mt-2">
-          <span className="text-on-surface-variant">Average score</span>
-          <span className="font-bold">{data.interviewReadiness.averageScore != null ? Math.round(data.interviewReadiness.averageScore) : '—'}</span>
-        </div>
-      </Card>
-    </div>
-  );
-};
-
 const MessagesView: React.FC = () => {
   const { showToast } = useToast();
   const { data, loading, error, reload } = useAsync<SentBroadcast[]>(() => UniversityService.getSentBroadcasts());
@@ -464,12 +403,13 @@ const MobileUniversityPortal: React.FC = () => {
 
   const render = () => {
     switch (view) {
-      case 'students': return <StudentsView />;
+      case 'students': return <StudentManagement />;
       case 'verification': return <StudentsView verifyMode />;
       case 'companies': return <CompaniesView />;
-      case 'drives': return <DrivesView />;
+      case 'drives': return <PlacementManagement />;
+      case 'internships': return <InternshipManagement />;
       case 'analytics':
-      case 'reports': return <AnalyticsView />;
+      case 'reports': return <UniversityAnalytics />;
       case 'messages': return <MessagesView />;
       case 'help': return <HelpView />;
       default: return <OverviewView onNavigate={setView} />;
