@@ -18,6 +18,7 @@ import type {
 import { MobileShell, Card, Stat, SectionTitle, SkeletonList, EmptyState, ErrorState, Avatar, ScoreRing, PullToRefresh } from '../../components';
 import JobsManager from './JobsManager';
 import ApplicantTracking from './ApplicantTracking';
+import EmployerAnalytics from './EmployerAnalytics';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', jobs: 'Jobs', candidates: 'Candidates', pipeline: 'Talent Pipeline',
@@ -328,41 +329,9 @@ const OverviewView: React.FC<{ onNavigate: (k: string) => void }> = ({ onNavigat
 // actions) lives in its own file — see ApplicantTracking. Module 3 replaced
 // the old read-only candidates list.
 
-const AnalyticsView: React.FC = () => {
-  const { data, loading, error, reload } = useAsync<PipelineAnalytics>(() => HiringPipelineService.getAnalytics());
-  if (loading) return <SkeletonList count={4} />;
-  if (error || !data) return <ErrorState message={error || undefined} onRetry={reload} />;
-  return (
-    <div className="px-4 pt-4">
-      <div className="grid grid-cols-2 gap-3">
-        <Stat icon="work" label="Active jobs" value={data.activeJobs} />
-        <Stat icon="group" label="Total applications" value={data.totalApplications} />
-        <Stat icon="timer" label="Time to hire" value={data.timeToHireDays != null ? `${data.timeToHireDays}d` : '—'} />
-        <Stat icon="verified" label="Offer acceptance" value={data.offerAcceptanceRate != null ? `${Math.round(data.offerAcceptanceRate)}%` : '—'} />
-      </div>
-      <SectionTitle>Pipeline stages</SectionTitle>
-      <Card>
-        <div className="space-y-2">
-          {Object.entries(data.statusBreakdown).map(([status, count]) => (
-            <div key={status} className="flex justify-between text-sm">
-              <span className="text-on-surface-variant">{status}</span>
-              <span className="font-bold">{count}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-      <SectionTitle>Per job</SectionTitle>
-      <div className="space-y-2.5">
-        {data.perJob.map(j => (
-          <Card key={j.jobId}>
-            <p className="text-sm font-bold">{j.jobTitle}</p>
-            <p className="text-xs text-on-surface-variant mt-0.5">{j.totalApplications} applications</p>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-};
+// Employer Analytics (KPIs, pipeline funnel, recruitment metrics, job &
+// recruiter performance, timeframe filter, CSV export) lives in its own file —
+// see EmployerAnalytics. Module 5 replaced the old read-only stat grid.
 
 const RecruitersView: React.FC = () => {
   const { data, loading, error, reload } = useAsync<EmployerRecruiter[]>(() => EmployerRecruiterService.getRecruiters());
@@ -527,7 +496,7 @@ const MobileEmployerPortal: React.FC = () => {
       case 'candidates':
       case 'pipeline': return <ApplicantTracking />;
       case 'analytics':
-      case 'reports': return <AnalyticsView />;
+      case 'reports': return <EmployerAnalytics />;
       case 'recruiters': return <RecruitersView />;
       case 'company': return <CompanyView />;
       case 'messages': return <MessagesView />;

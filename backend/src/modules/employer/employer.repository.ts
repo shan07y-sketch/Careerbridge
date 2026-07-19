@@ -668,49 +668,162 @@ export class EmployerRepository {
     return prisma.savedFilter.delete({ where: { id } });
   }
 
-  static async getAnalytics(companyId: string) {
+  /**
+   * Company recruitment analytics. Every value is a real aggregate over the
+   * company's own jobs/applications/interviews/offers -- no estimates, no
+   * fabricated series.
+   *
+   * `opts.days` scopes the *application cohort* (applications received within
+   * the window, by createdAt) and everything derived from it: totals, funnel,
+   * conversion rates, per-job counts and recruiter activity. Job *state* facts
+   * (status counts, "closing soon", days-open) are point-in-time and are not
+   * windowed. When `days` is omitted the window is all-time (used by the
+   * dashboard overview, which shares this endpoint).
+   *
+   * Honesty notes:
+   *  - The pipeline "funnel" reports the *current* status distribution (the app
+   *    stores an application's current status, not a full stage history), so it
+   *    is a snapshot, not a cumulative reached-this-stage funnel.
+   *  - Conversion RATES instead use persistent Interview/Offer *records* (which
+   *    survive status changes), so "reached interview / offer" is cumulative and
+   *    correct regardless of the application's current status.
+   *  - A "hire" == an ACCEPTED offer (there is no HIRED application status).
+   */
+  static async getAnalytics(companyId: string, opts?: { days?: number }) {
     const jobs = await prisma.job.findMany({
       where: { companyId },
-      include: { applications: { include: { offer: true } } }
+      include: { applications: { include: { offer: true, interviews: true } } }
+    });
+    const recruiters = await prisma.recruiter.findMany({
+      where: { companyId },
+      select: { id: true, firstName: true, lastName: true, user: { select: { email: true } } }
     });
 
-    const allApplications = jobs.flatMap(j => j.applications);
-    const appCount = allApplications.length;
+    const DAY = 1000 * 60 * 60 * 24;
+    const now = Date.now();
+    const cutoff = opts?.days ? now - opts.days * DAY : null;
+    const inWindow = (d: Date | string): boolean => cutoff === null || new Date(d).getTime() >= cutoff;
 
-    const offers = allApplications.map(a => a.offer).filter(Boolean) as any[];
-    const respondedOffers = offers.filter(o => o.status === 'ACCEPTED' || o.status === 'DECLINED');
-    const acceptedOffers = offers.filter(o => o.status === 'ACCEPTED');
-    const offerAcceptanceRate = respondedOffers.length > 0 ? Math.round((acceptedOffers.length / respondedOffers.length) * 100) : null;
+    // ── Job state (point-in-time, not windowed) ──────────────────────
+    const byStatus = (s: string) => jobs.filter(j => j.status === s).length;
+    const jobStatusCounts = {
+      total: jobs.length,
+      draft: byStatus('DRAFT'),
+      published: byStatus('PUBLISHED'),
+      paused: byStatus('PAUSED'),
+      closed: byStatus('CLOSED'),
+      archived: byStatus('ARCHIVED')
+    };
+    const jobsClosingSoon = jobs.filter(j =>
+      j.status === 'PUBLISHED' && j.deadline &&
+      new Date(j.deadline).getTime() >= now &&
+      new Date(j.deadline).getTime() <= now + 7 * DAY
+    ).length;
 
-    const hireTimes = acceptedOffers
-      .map(o => {
-        const app = allApplications.find(a => a.offer?.id === o.id);
-        if (!app || !o.respondedAt) return null;
-        return (new Date(o.respondedAt).getTime() - new Date(app.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-      })
-      .filter((n): n is number => n !== null);
-    const timeToHireDays = hireTimes.length > 0 ? Math.round(hireTimes.reduce((s, n) => s + n, 0) / hireTimes.length) : null;
+    // ── Windowed application cohort ──────────────────────────────────
+    const allApps = jobs.flatMap(j => j.applications.map(a => ({ ...a, _job: j })));
+    const apps = allApps.filter(a => inWindow(a.createdAt));
+    const appCount = apps.length;
+    const countStatus = (...statuses: string[]) => apps.filter(a => statuses.includes(a.status)).length;
 
-    const statusBreakdown = allApplications.reduce((acc: Record<string, number>, a) => {
+    const statusBreakdown = apps.reduce((acc: Record<string, number>, a) => {
       acc[a.status] = (acc[a.status] || 0) + 1;
       return acc;
     }, {});
 
+    // Offers / hires (cohort). "Sent" == extended to the candidate (not DRAFT).
+    const offers = apps.map(a => a.offer).filter(Boolean) as any[];
+    const sentOffers = offers.filter(o => o.status !== 'DRAFT');
+    const acceptedOffers = offers.filter(o => o.status === 'ACCEPTED');
+    const respondedOffers = offers.filter(o => o.status === 'ACCEPTED' || o.status === 'DECLINED');
+    const offerAcceptanceRate = respondedOffers.length > 0
+      ? Math.round((acceptedOffers.length / respondedOffers.length) * 100) : null;
+    const hires = acceptedOffers.length;
+
+    // Interviews (cohort) -- a real record exists; exclude cancelled from counts.
+    const liveInterview = (i: any) => i.status !== 'CANCELLED';
+    const interviewsScheduled = apps.reduce((s, a) => s + a.interviews.filter(liveInterview).length, 0);
+    const appsReachedInterview = apps.filter(a => a.interviews.some(liveInterview)).length;
+    const appsReachedOffer = apps.filter(a => a.offer && a.offer.status !== 'DRAFT').length;
+
+    // Time-to-hire: days from application received -> offer accepted. FIX for
+    // the historical negative bug -- discard any nonsensical entry where the
+    // seeded respondedAt predates createdAt (n < 0) so it can never corrupt the
+    // average or surface a negative value.
+    const hireTimes = acceptedOffers
+      .map(o => {
+        const app = apps.find(a => a.offer?.id === o.id);
+        if (!app || !o.respondedAt) return null;
+        return (new Date(o.respondedAt).getTime() - new Date(app.createdAt).getTime()) / DAY;
+      })
+      .filter((n): n is number => n !== null && n >= 0);
+    const timeToHireDays = hireTimes.length > 0
+      ? Math.round(hireTimes.reduce((s, n) => s + n, 0) / hireTimes.length) : null;
+    const fastestHireDays = hireTimes.length > 0 ? Math.round(Math.min(...hireTimes)) : null;
+
+    const rate = (num: number, den: number): number | null => (den > 0 ? Math.round((num / den) * 100) : null);
+    const rejectedCount = countStatus('REJECTED');
+    const withdrawnCount = countStatus('WITHDRAWN');
+
+    // ── Per-job performance (windowed cohort) ────────────────────────
     const perJob = jobs.map(j => {
-      const jobStatusBreakdown = j.applications.reduce((acc: Record<string, number>, a: any) => {
-        acc[a.status] = (acc[a.status] || 0) + 1;
-        return acc;
-      }, {});
+      const japps = j.applications.filter(a => inWindow(a.createdAt));
+      const jOffers = japps.map(a => a.offer).filter(Boolean) as any[];
+      const terminal = j.status === 'CLOSED' || j.status === 'ARCHIVED';
+      const daysOpen = Math.max(0, Math.round(
+        ((terminal ? new Date(j.updatedAt).getTime() : now) - new Date(j.createdAt).getTime()) / DAY
+      ));
       return {
         jobId: j.id,
         jobTitle: j.title,
-        totalApplications: j.applications.length,
-        statusBreakdown: jobStatusBreakdown
+        status: j.status,
+        totalApplications: japps.length,
+        interviewCount: japps.reduce((s, a) => s + a.interviews.filter(liveInterview).length, 0),
+        offerCount: jOffers.filter(o => o.status !== 'DRAFT').length,
+        hireCount: jOffers.filter(o => o.status === 'ACCEPTED').length,
+        daysOpen,
+        statusBreakdown: japps.reduce((acc: Record<string, number>, a) => {
+          acc[a.status] = (acc[a.status] || 0) + 1;
+          return acc;
+        }, {})
       };
     });
+    const jobsWithoutApplicants = jobs.filter(j =>
+      j.status === 'PUBLISHED' && j.applications.filter(a => inWindow(a.createdAt)).length === 0
+    ).length;
+    const jobsWithApplicants = perJob.filter(j => j.totalApplications > 0).length;
+    const jobsFilled = perJob.filter(j => j.hireCount > 0).length;
+
+    // ── Recruiter performance (cohort activity, real attributions) ───
+    const recruiterPerformance = recruiters.map(r => {
+      const rJobs = jobs.filter(j => j.recruiterId === r.id).length;
+      const rInterviews = apps.reduce(
+        (s, a) => s + a.interviews.filter(i => liveInterview(i) && i.scheduledByRecruiterId === r.id).length, 0
+      );
+      const rOffers = offers.filter(o => o.createdByRecruiterId === r.id && o.status !== 'DRAFT');
+      const rAccepted = rOffers.filter(o => o.status === 'ACCEPTED');
+      const rHireTimes = rAccepted
+        .map(o => {
+          const app = apps.find(a => a.offer?.id === o.id);
+          if (!app || !o.respondedAt) return null;
+          return (new Date(o.respondedAt).getTime() - new Date(app.createdAt).getTime()) / DAY;
+        })
+        .filter((n): n is number => n !== null && n >= 0);
+      return {
+        recruiterId: r.id,
+        name: [r.firstName, r.lastName].filter(Boolean).join(' ') || r.user.email,
+        jobsManaged: rJobs,
+        interviewsConducted: rInterviews,
+        offersMade: rOffers.length,
+        hires: rAccepted.length,
+        avgTimeToHireDays: rHireTimes.length > 0
+          ? Math.round(rHireTimes.reduce((s, n) => s + n, 0) / rHireTimes.length) : null
+      };
+    }).filter(r => r.jobsManaged > 0 || r.interviewsConducted > 0 || r.offersMade > 0);
 
     return {
-      activeJobs: jobs.filter(j => j.status === 'PUBLISHED').length,
+      // ── existing fields (backward-compatible with the dashboard overview) ──
+      activeJobs: jobStatusCounts.published,
       totalApplications: appCount,
       timeToHireDays,
       offerAcceptanceRate,
@@ -719,7 +832,48 @@ export class EmployerRepository {
         open: jobs.filter(j => j.status !== 'ARCHIVED').length,
         closed: jobs.filter(j => j.status === 'ARCHIVED').length
       },
-      perJob
+      perJob,
+      // ── Module 5 additions ──
+      windowDays: opts?.days ?? null,
+      jobStatusCounts,
+      totals: {
+        totalApplicants: appCount,
+        newApplicants: countStatus('APPLIED'),
+        interviewsScheduled,
+        offersSent: sentOffers.length,
+        offersAccepted: hires,
+        rejected: rejectedCount,
+        hires
+      },
+      funnel: {
+        applied: countStatus('APPLIED'),
+        reviewing: countStatus('REVIEWING', 'SCREENING'),
+        shortlisted: countStatus('SHORTLISTED'),
+        interview: countStatus('INTERVIEWING'),
+        offer: countStatus('OFFERED'),
+        hired: hires,
+        rejected: rejectedCount,
+        withdrawn: withdrawnCount
+      },
+      metrics: {
+        timeToHireDays,
+        fastestHireDays,
+        hireSampleSize: hireTimes.length,
+        applicationConversionRate: rate(appsReachedInterview, appCount),
+        interviewConversionRate: rate(appsReachedOffer, appsReachedInterview),
+        offerAcceptanceRate,
+        hireRate: rate(hires, appCount),
+        dropOffRate: rate(rejectedCount + withdrawnCount, appCount),
+        // Textbook definition: total applicants over every job. Not scoped to
+        // "live" jobs -- seeded/closed jobs still hold real historical applicants.
+        avgApplicantsPerJob: jobs.length > 0 ? Math.round((appCount / jobs.length) * 10) / 10 : null,
+        // Of the jobs that actually attracted candidates, how many resulted in a
+        // hire. Avoids dividing by jobs that were never really openings.
+        fillRate: jobsWithApplicants > 0 ? Math.round((jobsFilled / jobsWithApplicants) * 100) : null,
+        jobsWithoutApplicants,
+        jobsClosingSoon
+      },
+      recruiterPerformance
     };
   }
 

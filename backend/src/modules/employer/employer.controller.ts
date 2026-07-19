@@ -222,7 +222,13 @@ export class EmployerController {
   });
 
   static getAnalytics = catchAsync(async (req: EmployerRequest, res: Response) => {
-    const data = await EmployerService.getAnalytics(req.user!.id);
+    // Timeframe filter: only the fixed set the UI offers is honoured; anything
+    // else (including "all") falls through to all-time. Prevents an arbitrary
+    // window from being injected via the query string.
+    const allowedDays = new Set([7, 30, 90, 365]);
+    const parsed = Number(req.query.days);
+    const days = allowedDays.has(parsed) ? parsed : undefined;
+    const data = await EmployerService.getAnalytics(req.user!.id, { days });
     res.status(200).json({ success: true, data });
   });
 

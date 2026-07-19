@@ -624,9 +624,9 @@ export class EmployerService {
     return updated;
   }
 
-  static async getAnalytics(userId: string) {
+  static async getAnalytics(userId: string, opts?: { days?: number }) {
     const { companyId } = await this.getCompanyIdForUser(userId);
-    return EmployerRepository.getAnalytics(companyId);
+    return EmployerRepository.getAnalytics(companyId, opts);
   }
 
   // ------------------------------------------------------------------

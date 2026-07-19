@@ -1211,8 +1211,68 @@ export interface PipelineOffer {
 export interface PipelinePerJobAnalytics {
   jobId: string;
   jobTitle: string;
+  status: JobStatus;
   totalApplications: number;
+  interviewCount: number;
+  offerCount: number;
+  hireCount: number;
+  daysOpen: number;
   statusBreakdown: Record<string, number>;
+}
+
+export interface PipelineAnalyticsTotals {
+  totalApplicants: number;
+  newApplicants: number;
+  interviewsScheduled: number;
+  offersSent: number;
+  offersAccepted: number;
+  rejected: number;
+  hires: number;
+}
+
+export interface PipelineFunnel {
+  applied: number;
+  reviewing: number;
+  shortlisted: number;
+  interview: number;
+  offer: number;
+  hired: number;
+  rejected: number;
+  withdrawn: number;
+}
+
+export interface PipelineMetrics {
+  timeToHireDays: number | null;
+  fastestHireDays: number | null;
+  hireSampleSize: number;
+  applicationConversionRate: number | null;
+  interviewConversionRate: number | null;
+  offerAcceptanceRate: number | null;
+  hireRate: number | null;
+  dropOffRate: number | null;
+  avgApplicantsPerJob: number | null;
+  fillRate: number | null;
+  jobsWithoutApplicants: number;
+  jobsClosingSoon: number;
+}
+
+export interface RecruiterPerformance {
+  recruiterId: string;
+  name: string;
+  jobsManaged: number;
+  interviewsConducted: number;
+  offersMade: number;
+  hires: number;
+  avgTimeToHireDays: number | null;
+}
+
+export interface PipelineJobStatusCounts {
+  total: number;
+  draft: number;
+  published: number;
+  paused: number;
+  closed: number;
+  archived: number;
 }
 
 export interface PipelineAnalytics {
@@ -1223,6 +1283,13 @@ export interface PipelineAnalytics {
   statusBreakdown: Record<string, number>;
   openVsClosed: { open: number; closed: number };
   perJob: PipelinePerJobAnalytics[];
+  // Module 5 additions — all real PostgreSQL aggregates.
+  windowDays: number | null;
+  jobStatusCounts: PipelineJobStatusCounts;
+  totals: PipelineAnalyticsTotals;
+  funnel: PipelineFunnel;
+  metrics: PipelineMetrics;
+  recruiterPerformance: RecruiterPerformance[];
 }
 
 export interface JobCategory {
@@ -1393,8 +1460,9 @@ export const HiringPipelineService = {
   withdrawOffer: async (offerId: string): Promise<PipelineOffer> => {
     return fetchJson(`/employer/offers/${offerId}/withdraw`, { method: 'PATCH' });
   },
-  getAnalytics: async (): Promise<PipelineAnalytics> => {
-    return fetchJson('/employer/analytics', {});
+  getAnalytics: async (params?: { days?: number }): Promise<PipelineAnalytics> => {
+    const q = params?.days ? `?days=${params.days}` : '';
+    return fetchJson(`/employer/analytics${q}`, {});
   },
   /** Opens the resume in a new tab. Fetched as an authenticated blob rather than
    * a raw URL because the preview endpoint requires a Bearer token -- a plain
