@@ -9,8 +9,17 @@
  * callers depend only on `extractText(buffer, mimeType)` returning
  * `{ text, status }`. If a future phase adds Qwen2.5-VL-based OCR for
  * scanned/image-only PDFs, only this file's internals change.
+ *
+ * PDF parsing uses `unpdf` (modern pdf.js), NOT `pdf-parse`. pdf-parse is
+ * unmaintained and vendors pdf.js v1.10.100 (2018), which cannot parse PDFs
+ * in any process that has loaded busboy - i.e. every Express + multer upload
+ * server, including this one. It failed with "bad XRef entry" on byte-perfect
+ * files, so every PDF resume upload silently produced status FAILED in
+ * production while DOCX worked. Reproduced in a clean node:24-alpine image
+ * with only express + multer + pdf-parse installed; see the commit for the
+ * full bisection. Do not reintroduce pdf-parse.
  */
-import pdfParse from 'pdf-parse';
+import { extractText as unpdfExtractText, getDocumentProxy } from 'unpdf';
 import mammoth from 'mammoth';
 import { logger } from '../../config/logger';
 
@@ -41,8 +50,11 @@ export class ResumeTextExtractionService {
       let text = '';
 
       if (mimeType === 'application/pdf') {
-        const parsed = await pdfParse(buffer);
-        text = parsed.text;
+        // `new Uint8Array(buffer)` copies the bytes into a standalone view,
+        // so the parser never sees a pooled Buffer's offset window.
+        const pdf = await getDocumentProxy(new Uint8Array(buffer));
+        const extracted = await unpdfExtractText(pdf, { mergePages: true });
+        text = extracted.text;
       } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const parsed = await mammoth.extractRawText({ buffer });
         text = parsed.value;

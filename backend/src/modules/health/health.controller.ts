@@ -40,7 +40,7 @@ export const getHealth = catchAsync(async (req: Request, res: Response) => {
       // match the committed lockfile - and a parser version mismatch is
       // otherwise invisible from outside the container.
       deps: {
-        pdfParse: safeVersion('pdf-parse'),
+        unpdf: safeVersion('unpdf'),
         mammoth: safeVersion('mammoth')
       }
     },
