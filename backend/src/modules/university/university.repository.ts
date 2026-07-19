@@ -30,24 +30,163 @@ export class UniversityRepository {
     });
   }
 
+  /**
+   * University dashboard overview. Every value is a real aggregate over this
+   * university's own students / applications / offers / drives -- no mock or
+   * fabricated figures. Returned as a superset of the original shape so the
+   * existing desktop consumer of `/university/dashboard` keeps working.
+   *
+   * Honesty notes:
+   *  - "Placed" == a student flagged PLACEMENT_COMPLETED. "Seeking" ==
+   *    PLACEMENT_ELIGIBLE, "Pending" == PENDING verification. These are the real
+   *    VerificationStatus states; there is no separate placement table.
+   *  - "Graduated" == graduationYear strictly before the current calendar year
+   *    (the only completion signal in the schema); everyone else is "active".
+   *  - Packages come from ACCEPTED offers of this university's students (any job
+   *    type), matching the existing analytics endpoint.
+   *  - Internships are derived from applications to INTERNSHIP-type jobs. There
+   *    is NO internship lifecycle/end date, so "completed" cannot be computed --
+   *    only currently-active (started) vs upcoming, plus a success rate.
+   */
   static async getDashboard(universityId: string) {
-    const [totalStudents, placed, pending, upcomingDrives] = await Promise.all([
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    const [
+      totalStudents, graduatedStudents, statusGroups,
+      departmentsCount, drivesCount, upcomingDrives, university, apps
+    ] = await Promise.all([
       prisma.studentProfile.count({ where: { universityId } }),
-      prisma.studentProfile.count({ where: { universityId, verificationStatus: 'PLACEMENT_COMPLETED' } }),
-      prisma.studentProfile.count({ where: { universityId, verificationStatus: 'PENDING' } }),
+      prisma.studentProfile.count({ where: { universityId, graduationYear: { lt: currentYear } } }),
+      prisma.studentProfile.groupBy({ by: ['verificationStatus'], where: { universityId }, _count: { _all: true } }),
+      prisma.department.count({ where: { universityId } }),
+      prisma.placementDrive.count({ where: { universityId, isDeleted: false } }),
       prisma.placementDrive.findMany({
-        where: { universityId, isDeleted: false, scheduledAt: { gte: new Date() } },
+        where: { universityId, isDeleted: false, scheduledAt: { gte: now } },
         orderBy: { scheduledAt: 'asc' },
         take: 5
+      }),
+      prisma.university.findUnique({ where: { id: universityId }, select: { name: true, logoUrl: true, location: true } }),
+      prisma.application.findMany({
+        where: { studentProfile: { universityId } },
+        select: {
+          status: true, createdAt: true,
+          studentProfile: { select: { id: true, firstName: true, lastName: true } },
+          job: { select: { id: true, title: true, jobType: true, companyId: true, company: { select: { name: true } } } },
+          offer: { select: { status: true, startDate: true, respondedAt: true, createdAt: true, salary: true } }
+        }
       })
     ]);
 
+    // ── Student status breakdown ──
+    const byStatus: Record<string, number> = {
+      PENDING: 0, VERIFIED: 0, PLACEMENT_ELIGIBLE: 0, PLACEMENT_COMPLETED: 0, REJECTED: 0
+    };
+    for (const g of statusGroups) byStatus[g.verificationStatus] = g._count._all;
+    const placed = byStatus.PLACEMENT_COMPLETED;
+    const pending = byStatus.PENDING;
+    const seeking = byStatus.PLACEMENT_ELIGIBLE;
+    const activeStudents = totalStudents - graduatedStudents;
+    const placementRate = totalStudents > 0 ? Math.round((placed / totalStudents) * 100) : 0;
+
+    // ── Companies connected (distinct companies students applied to) ──
+    const companyIds = new Set<string>();
+    for (const a of apps) companyIds.add(a.job.companyId);
+
+    // ── Placement packages + trend (accepted offers, any job type) ──
+    const acceptedOffers = apps.map(a => a.offer).filter(o => o && o.status === 'ACCEPTED') as
+      { status: string; startDate: Date; respondedAt: Date | null; createdAt: Date; salary: number }[];
+    const salaries = acceptedOffers.map(o => o.salary).filter(n => typeof n === 'number');
+    const averagePackage = salaries.length > 0 ? Math.round(salaries.reduce((s, n) => s + n, 0) / salaries.length) : null;
+    const highestPackage = salaries.length > 0 ? Math.max(...salaries) : null;
+    const trendMap = new Map<string, number>();
+    for (const o of acceptedOffers) {
+      // Match the existing analytics endpoint: fall back to the offer's real
+      // createdAt (never "now") when respondedAt is missing in seeded data.
+      const y = new Date(o.respondedAt || o.createdAt).getFullYear().toString();
+      trendMap.set(y, (trendMap.get(y) || 0) + 1);
+    }
+    const placementTrend = Array.from(trendMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([year, placements]) => ({ year, placements }));
+
+    // ── Internships (INTERNSHIP-type jobs) ──
+    const internApps = apps.filter(a => a.job.jobType === 'INTERNSHIP');
+    const internAccepted = internApps.filter(a => a.offer?.status === 'ACCEPTED');
+    const internCompanyIds = new Set(internApps.map(a => a.job.companyId));
+    const internStudentIds = new Set(internAccepted.map(a => a.studentProfile.id));
+    const activeInternships = internAccepted.filter(a => a.offer!.startDate && new Date(a.offer!.startDate) <= now).length;
+    const upcomingInternships = internAccepted.filter(a => a.offer!.startDate && new Date(a.offer!.startDate) > now).length;
+    const internshipSuccessRate = internApps.length > 0 ? Math.round((internAccepted.length / internApps.length) * 100) : null;
+    const internshipPercentage = totalStudents > 0 ? Math.round((internStudentIds.size / totalStudents) * 100) : 0;
+
+    // ── Recent activity (real rows only) ──
+    type Activity = { type: 'APPLICATION' | 'PLACEMENT' | 'DRIVE'; summary: string; timestamp: string };
+    const activities: Activity[] = [];
+    for (const a of apps) {
+      const name = `${a.studentProfile.firstName} ${a.studentProfile.lastName}`.trim();
+      activities.push({
+        type: 'APPLICATION',
+        summary: `${name} applied to ${a.job.title} at ${a.job.company.name}`,
+        timestamp: new Date(a.createdAt).toISOString()
+      });
+      if (a.offer?.status === 'ACCEPTED' && a.offer.respondedAt) {
+        activities.push({
+          type: 'PLACEMENT',
+          summary: `${name} accepted an offer from ${a.job.company.name}`,
+          timestamp: new Date(a.offer.respondedAt).toISOString()
+        });
+      }
+    }
+    for (const d of upcomingDrives) {
+      activities.push({
+        type: 'DRIVE',
+        summary: `Campus drive "${d.title}" scheduled at ${d.location}`,
+        timestamp: new Date(d.createdAt).toISOString()
+      });
+    }
+    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const recentActivity = activities.slice(0, 10);
+
     return {
-      placementRate: totalStudents > 0 ? Math.round((placed / totalStudents) * 100) : 0,
+      // ── existing fields (backward compatible) ──
+      placementRate,
       studentsPlaced: placed,
       pendingVerificationsCount: pending,
       totalStudents,
-      upcomingDrives
+      upcomingDrives,
+      // ── Module 1 additions ──
+      university: university || { name: 'University', logoUrl: null, location: '' },
+      students: {
+        total: totalStudents,
+        active: activeStudents,
+        graduated: graduatedStudents,
+        byStatus
+      },
+      departmentsCount,
+      drivesCount,
+      companiesConnected: companyIds.size,
+      placement: {
+        placed,
+        pending,
+        seeking,
+        placementPercentage: placementRate,
+        highestPackage,
+        averagePackage,
+        trend: placementTrend
+      },
+      internships: {
+        totalApplications: internApps.length,
+        accepted: internAccepted.length,
+        active: activeInternships,
+        upcoming: upcomingInternships,
+        companiesOffering: internCompanyIds.size,
+        successRate: internshipSuccessRate,
+        studentsWithInternship: internStudentIds.size,
+        internshipPercentage,
+        completionTracked: false
+      },
+      recentActivity
     };
   }
 

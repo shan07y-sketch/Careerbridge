@@ -1796,12 +1796,51 @@ export interface UniversityStudent {
   [key: string]: any;
 }
 
+export interface UniversityActivity {
+  type: 'APPLICATION' | 'PLACEMENT' | 'DRIVE';
+  summary: string;
+  timestamp: string;
+}
+
 export interface UniversityDashboard {
+  // existing (backward compatible)
   placementRate: number;
   studentsPlaced: number;
   pendingVerificationsCount: number;
   totalStudents: number;
   upcomingDrives: PlacementDrive[];
+  // Module 1 additions — all real PostgreSQL aggregates
+  university: { name: string; logoUrl: string | null; location: string };
+  students: {
+    total: number;
+    active: number;
+    graduated: number;
+    byStatus: Record<string, number>;
+  };
+  departmentsCount: number;
+  drivesCount: number;
+  companiesConnected: number;
+  placement: {
+    placed: number;
+    pending: number;
+    seeking: number;
+    placementPercentage: number;
+    highestPackage: number | null;
+    averagePackage: number | null;
+    trend: { year: string; placements: number }[];
+  };
+  internships: {
+    totalApplications: number;
+    accepted: number;
+    active: number;
+    upcoming: number;
+    companiesOffering: number;
+    successRate: number | null;
+    studentsWithInternship: number;
+    internshipPercentage: number;
+    completionTracked: boolean;
+  };
+  recentActivity: UniversityActivity[];
 }
 
 export interface UniversityAnalytics {
