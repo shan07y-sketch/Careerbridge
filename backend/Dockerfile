@@ -1,25 +1,31 @@
-# Stage 1: Build compilation
-FROM node:20-alpine AS builder
-WORKDIR /usr/src/app
+# CareerBridge backend (Express + Prisma). node:22-alpine runtime so both
+# `node` and the Prisma CLI exist for the startup migration.
+
+# ---- build stage ----
+FROM node:22-alpine AS build
+WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install --include=dev
 
 COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# Stage 2: Production runtime
-FROM node:20-alpine AS runner
-WORKDIR /usr/src/app
+# ---- runtime stage ----
+FROM node:22-alpine AS runtime
+WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package*.json ./
-RUN npm ci --only=production
+# Copy the full node_modules from the build stage. This deliberately keeps the
+# Prisma CLI (a devDependency) so `prisma migrate deploy` works at startup — a
+# prod-only reinstall would drop it and break migrations. Also brings the
+# generated client + query engine.
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/package.json ./package.json
 
-COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /usr/src/app/prisma ./prisma
-
-EXPOSE 5000
-CMD ["node", "dist/index.js"]
+# Apply pending migrations, then start. The app binds process.env.PORT
+# (Railway injects it). migrate deploy is idempotent.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
