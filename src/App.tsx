@@ -75,7 +75,7 @@ const PageLoader: React.FC = () => (
 
 export const App: React.FC = () => {
   React.useEffect(() => {
-    PushNotificationService.initialize();
+    PushNotificationService.initialize().catch(() => undefined);
 
     const stateListener = NativeApp.addListener('appStateChange', (state) => {
       console.log('[LIFECYCLE] Native App State Changed:', state.isActive ? 'ACTIVE' : 'BACKGROUND');

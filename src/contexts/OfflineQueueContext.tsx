@@ -37,24 +37,34 @@ export const OfflineQueueProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     const initNetwork = async () => {
-      const status = await Network.getStatus();
-      setIsOnline(status.connected);
+      try {
+        const status = await Network.getStatus();
+        setIsOnline(status.connected);
+      } catch {
+        // Network plugin unavailable — assume online so the app stays usable.
+        setIsOnline(true);
+      }
     };
 
     initNetwork();
 
-    const listener = Network.addListener('networkStatusChange', status => {
-      setIsOnline(status.connected);
-      if (status.connected) {
-        showToast('Internet connection restored. Syncing pending requests...', 'success');
-        replayQueue();
-      } else {
-        showToast('Internet connection lost. Switched to offline mode.', 'error');
-      }
-    });
+    let listener: ReturnType<typeof Network.addListener> | undefined;
+    try {
+      listener = Network.addListener('networkStatusChange', status => {
+        setIsOnline(status.connected);
+        if (status.connected) {
+          showToast('Internet connection restored. Syncing pending requests...', 'success');
+          replayQueue();
+        } else {
+          showToast('Internet connection lost. Switched to offline mode.', 'error');
+        }
+      });
+    } catch {
+      /* no-op: network change events unavailable on this platform */
+    }
 
     return () => {
-      listener.then(h => h.remove());
+      listener?.then(h => h.remove());
     };
   }, []);
 
