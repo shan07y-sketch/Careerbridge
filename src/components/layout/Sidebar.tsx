@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Dialog } from '../ui/Dialog';
 import { NAV_CONFIG, PORTAL_META, type NavGroup, type NavItem, type PortalRole } from '../../config/navigation';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -127,7 +128,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* User footer */}
-        <div className="mt-auto p-3 border-t border-outline-variant/50 shrink-0">
+        <div className="mt-auto p-3 border-t border-outline-variant/50 shrink-0 space-y-1">
+          <ThemeToggle />
           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-surface-container transition-colors">
             {user?.profilePicture ? (
               <img src={user.profilePicture} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />

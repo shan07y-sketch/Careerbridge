@@ -3,6 +3,144 @@
 @import "./mobile/mobile.css";
 
 /* ===================================================================
+   Theme tokens — RGB channels consumed by tailwind.config.js as
+   rgb(var(--c-token) / <alpha-value>). :root = light (unchanged from the
+   original static palette), .dark = the CareerBridge dark theme. Material-3
+   "fixed" tokens intentionally stay constant across both themes, so they are
+   only declared once (in :root) and inherited under .dark.
+   =================================================================== */
+:root {
+    --c-surface: 246 244 240;
+    --c-surface-dim: 232 228 220;
+    --c-surface-bright: 255 255 255;
+    --c-surface-container-lowest: 255 255 255;
+    --c-surface-container-low: 251 250 247;
+    --c-surface-container: 242 239 234;
+    --c-surface-container-high: 236 232 225;
+    --c-surface-container-highest: 228 223 214;
+    --c-on-surface: 27 26 23;
+    --c-on-surface-variant: 92 87 78;
+    --c-inverse-surface: 42 40 35;
+    --c-inverse-on-surface: 245 242 236;
+    --c-outline: 138 131 119;
+    --c-outline-variant: 226 221 211;
+    --c-surface-tint: 20 69 61;
+    --c-surface-variant: 236 232 225;
+    --c-background: 246 244 240;
+    --c-on-background: 27 26 23;
+    --c-primary: 20 69 61;
+    --c-on-primary: 251 250 247;
+    --c-primary-container: 216 231 225;
+    --c-on-primary-container: 12 51 44;
+    --c-inverse-primary: 143 196 182;
+    --c-primary-fixed: 216 231 225;
+    --c-primary-fixed-dim: 169 205 194;
+    --c-on-primary-fixed: 6 35 30;
+    --c-on-primary-fixed-variant: 40 90 80;
+    --c-secondary: 74 90 84;
+    --c-on-secondary: 255 255 255;
+    --c-secondary-container: 231 237 234;
+    --c-on-secondary-container: 36 51 46;
+    --c-secondary-fixed: 220 228 224;
+    --c-secondary-fixed-dim: 192 204 198;
+    --c-on-secondary-fixed: 12 27 22;
+    --c-on-secondary-fixed-variant: 58 74 68;
+    --c-tertiary: 156 123 69;
+    --c-on-tertiary: 255 255 255;
+    --c-tertiary-container: 241 231 213;
+    --c-on-tertiary-container: 90 67 33;
+    --c-tertiary-fixed: 241 231 213;
+    --c-tertiary-fixed-dim: 222 200 160;
+    --c-on-tertiary-fixed: 46 32 8;
+    --c-on-tertiary-fixed-variant: 122 94 48;
+    --c-accent: 156 123 69;
+    --c-on-accent: 255 255 255;
+    --c-accent-container: 241 231 213;
+    --c-on-accent-container: 90 67 33;
+    --c-error: 178 59 50;
+    --c-on-error: 255 255 255;
+    --c-error-container: 247 227 224;
+    --c-on-error-container: 122 36 29;
+    --c-success: 31 122 84;
+    --c-on-success: 255 255 255;
+    --c-success-container: 223 239 231;
+    --c-on-success-container: 15 74 49;
+    --c-warning: 176 122 30;
+    --c-on-warning: 255 255 255;
+    --c-warning-container: 246 235 213;
+    --c-on-warning-container: 107 74 15;
+    --c-info: 44 110 143;
+    --c-on-info: 255 255 255;
+    --c-info-container: 225 237 243;
+    --c-on-info-container: 18 62 83;
+}
+
+.dark {
+    /* Warm charcoal/ink surfaces (mirror of the light porcelain/stone) */
+    --c-surface: 22 21 18;
+    --c-surface-dim: 17 16 14;
+    --c-surface-bright: 42 40 35;
+    --c-surface-container-lowest: 15 14 12;
+    --c-surface-container-low: 26 24 21;
+    --c-surface-container: 30 28 24;
+    --c-surface-container-high: 41 38 33;
+    --c-surface-container-highest: 52 48 42;
+    --c-on-surface: 236 232 225;
+    --c-on-surface-variant: 178 171 159;
+    --c-inverse-surface: 245 242 236;
+    --c-inverse-on-surface: 42 40 35;
+    --c-outline: 138 131 119;
+    --c-outline-variant: 60 56 50;
+    --c-surface-tint: 143 196 182;
+    --c-surface-variant: 52 48 42;
+    --c-background: 22 21 18;
+    --c-on-background: 236 232 225;
+
+    /* Brand evergreen — lighter tints for contrast on dark */
+    --c-primary: 143 196 182;
+    --c-on-primary: 6 35 30;
+    --c-primary-container: 40 90 80;
+    --c-on-primary-container: 216 231 225;
+    --c-inverse-primary: 20 69 61;
+
+    /* Secondary */
+    --c-secondary: 192 204 198;
+    --c-on-secondary: 36 51 46;
+    --c-secondary-container: 58 74 68;
+    --c-on-secondary-container: 231 237 234;
+
+    /* Tertiary / accent (bronze) */
+    --c-tertiary: 222 200 160;
+    --c-on-tertiary: 46 32 8;
+    --c-tertiary-container: 122 94 48;
+    --c-on-tertiary-container: 241 231 213;
+    --c-accent: 222 200 160;
+    --c-on-accent: 46 32 8;
+    --c-accent-container: 122 94 48;
+    --c-on-accent-container: 241 231 213;
+
+    /* Status — lighter base, deeper container, light on-container */
+    --c-error: 240 152 145;
+    --c-on-error: 87 20 15;
+    --c-error-container: 122 36 29;
+    --c-on-error-container: 247 227 224;
+    --c-success: 122 210 170;
+    --c-on-success: 8 46 30;
+    --c-success-container: 15 74 49;
+    --c-on-success-container: 223 239 231;
+    --c-warning: 230 184 100;
+    --c-on-warning: 60 40 8;
+    --c-warning-container: 107 74 15;
+    --c-on-warning-container: 246 235 213;
+    --c-info: 130 190 220;
+    --c-on-info: 12 40 55;
+    --c-info-container: 18 62 83;
+    --c-on-info-container: 225 237 243;
+}
+
+
+
+/* ===================================================================
    CareerBridge Design System — "Ink & Evergreen"
    One design language for all four portals.
    =================================================================== */

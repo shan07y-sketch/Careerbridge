@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_CONFIG } from '../../config/navigation';
 import type { NavItem, PortalRole } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Sheet } from './Sheet';
 
 interface TabBarProps {
@@ -24,6 +25,7 @@ export const TabBar: React.FC<TabBarProps> = ({ role, activeKey, onNavigate, bad
   const navigate = useNavigate();
   const location = useLocation();
   const { role: authRole, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const resolvedRole: PortalRole = role ?? ((authRole as PortalRole) || 'student');
@@ -123,6 +125,16 @@ export const TabBar: React.FC<TabBarProps> = ({ role, activeKey, onNavigate, bad
               <span className="text-[11px] text-on-surface text-center leading-tight">{item.label}</span>
             </button>
           ))}
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            className="m-press flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-surface-container"
+          >
+            <span className="w-11 h-11 rounded-full bg-primary-container flex items-center justify-center">
+              <span className="material-symbols-outlined text-[22px] text-on-primary-container">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+            </span>
+            <span className="text-[11px] text-on-surface leading-tight">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+          </button>
           <button
             onClick={async () => { setMoreOpen(false); await logout(); navigate('/'); }}
             className="m-press flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-surface-container"
