@@ -39,6 +39,27 @@ const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   console.error('Environment validation failure:', parsed.error.format());
+  // Diagnostic: show whether each expected variable actually reached the
+  // container (name + length only — never the value). This makes a
+  // misconfigured or missing platform variable obvious from the deploy logs:
+  //   "MISSING"          -> the variable is not set on the service at all
+  //   "present length=0" -> set but empty
+  //   "present length=N" -> set (N chars) but failed a format/length rule
+  const required = [
+    'DATABASE_URL',
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+    'APP_BASE_URL',
+    'CORS_ORIGIN',
+    'NODE_ENV',
+  ];
+  console.error('Environment presence check (names/lengths only, no values):');
+  for (const key of required) {
+    const value = process.env[key];
+    console.error(
+      `  ${key}: ${value === undefined ? 'MISSING' : `present length=${value.length}`}`
+    );
+  }
   process.exit(1);
 }
 
