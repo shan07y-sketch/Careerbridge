@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "start": "serve -s dist -l tcp://0.0.0.0:${PORT:-4173}",
+    "start": "node server.js",
     "lint": "oxlint",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync android",
@@ -36,7 +36,6 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0",
-    "serve": "^14.2.4",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {

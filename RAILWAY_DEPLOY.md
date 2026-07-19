@@ -111,9 +111,10 @@ Swagger API docs: `https://YOUR-RAILWAY-BACKEND.up.railway.app/api-docs`.
 ---
 
 ## Notes / risks
-- **Static frontend on Railway** is served by [`serve`](https://www.npmjs.com/package/serve)
-  (`serve -s dist` → SPA fallback to `index.html`). It's a dependency, installed
-  during the frontend build.
+- **Static frontend on Railway** is served by a zero-dependency Node script
+  ([`server.js`](server.js), started with `node server.js`) — SPA fallback to
+  `index.html`. No external binary, so it avoids the `serve`/PATH failure in the
+  Nixpacks runtime image.
 - **Cross-site cookies:** the refresh-token cookie is `sameSite:none; secure` in
   production, and CORS reflects the frontend origin with credentials — required
   because frontend and backend are different Railway domains.
