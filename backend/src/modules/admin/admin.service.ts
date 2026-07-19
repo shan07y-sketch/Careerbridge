@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import os from 'os';
 import { AdminRepository } from './admin.repository';
 import { FeatureFlagsService } from './feature-flags.service';

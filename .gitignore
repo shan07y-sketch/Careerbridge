@@ -46,3 +46,7 @@ __pycache__/
 .sync_marker*
 _synctest.txt
 .bmp
+
+# Stray local build-output snapshots (never commit)
+dist_check/
+dist_check2/

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // AuthRepository and EmailService are mocked so these tests exercise
 // AuthService's business logic in isolation, with no real database or SMTP

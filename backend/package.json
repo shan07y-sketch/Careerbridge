@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Enterprise Node.js Backend for CareerBridge SaaS platform",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
@@ -26,7 +29,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -49,7 +52,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
