@@ -2,3 +2,14 @@ node_modules/
 dist/
 .env
 *.log
+
+# Runtime user uploads (resumes, interview audio, generated artifacts).
+# These are user data, not source: they must never enter the repo. Untracking
+# them also closed a privacy hole - six mock-interview .wav answer recordings
+# and a stale feature_flags.json were previously committed.
+# uploads/resumes/dummy_resume.pdf is the exception: it is a seed fixture
+# referenced by scripts/data/resumes.json, so fresh deploys need it in-repo.
+uploads/*
+!uploads/resumes/
+uploads/resumes/*
+!uploads/resumes/dummy_resume.pdf
