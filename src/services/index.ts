@@ -579,6 +579,44 @@ export interface CoachStreamHandlers {
   signal?: AbortSignal;
 }
 
+export type CoverLetterTone = 'PROFESSIONAL' | 'ENTHUSIASTIC' | 'CONCISE' | 'ACADEMIC';
+
+export interface CoverLetter {
+  id: string;
+  jobId: string | null;
+  targetRole: string;
+  companyName: string;
+  tone: CoverLetterTone;
+  content: string;
+  /** "cover-letter-v1" when live, "cover-letter-v1-estimated" for the offline fallback. */
+  modelVersion: string;
+  createdAt: string;
+  job?: { id: string; title: string; company: { name: string } } | null;
+  /** Only present on the generate response, not on list/get. */
+  highlights?: string[];
+  estimated?: boolean;
+}
+
+export const CoverLetterService = {
+  list: async (): Promise<CoverLetter[]> => {
+    return fetchJson('/cover-letter');
+  },
+  get: async (id: string): Promise<CoverLetter> => {
+    return fetchJson(`/cover-letter/${id}`);
+  },
+  generate: async (input: {
+    jobId?: string;
+    targetRole?: string;
+    companyName?: string;
+    tone?: CoverLetterTone;
+  }): Promise<CoverLetter> => {
+    return fetchJson('/cover-letter/generate', { method: 'POST', body: JSON.stringify(input) });
+  },
+  remove: async (id: string): Promise<void> => {
+    await fetchJson(`/cover-letter/${id}`, { method: 'DELETE' });
+  }
+};
+
 export const CoachService = {
   listConversations: async (): Promise<CoachConversationSummary[]> => {
     return fetchJson('/coach/conversations');

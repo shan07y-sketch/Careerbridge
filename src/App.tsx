@@ -39,6 +39,10 @@ const MockInterviewReport = adaptive(() => import('./pages/student/MockInterview
 const AICareerReport = adaptive(() => import('./pages/student/AICareerReport'), () => import('./mobile/pages/student/CareerCoach'));
 // Conversational AI Career Coach chat (mobile); desktop falls back to the readiness report for now.
 const Coach = adaptive(() => import('./pages/student/AICareerReport'), () => import('./mobile/pages/student/Coach'));
+// NOTE: no desktop counterpart yet - both variants intentionally resolve to
+// the mobile screen so the feature is reachable on every device. A dedicated
+// desktop layout is the next step for this feature.
+const CoverLetter = adaptive(() => import('./mobile/pages/student/CoverLetter'), () => import('./mobile/pages/student/CoverLetter'));
 const Messages = adaptive(() => import('./pages/student/Messages'), () => import('./mobile/pages/student/Messages'));
 const Network = adaptive(() => import('./pages/student/Network'), () => import('./mobile/pages/student/Network'));
 const Settings = adaptive(() => import('./pages/student/Settings'), () => import('./mobile/pages/student/Settings'));
@@ -253,6 +257,14 @@ export const App: React.FC = () => {
                       element={
                         <ProtectedRoute>
                           <Coach />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/student/cover-letters"
+                      element={
+                        <ProtectedRoute>
+                          <CoverLetter />
                         </ProtectedRoute>
                       }
                     />

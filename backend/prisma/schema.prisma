@@ -85,6 +85,7 @@ model StudentProfile {
   aiConversations          AiConversation[]
   applications             Application[]
   careerInsights           CareerInsight[]
+  coverLetters             CoverLetter[]
   certifications           Certification[]
   connectionsReceived      Connection[]              @relation("ConnectionReceiver")
   connectionsSent          Connection[]              @relation("ConnectionSender")
@@ -212,8 +213,8 @@ model Resume {
 }
 
 model Company {
-  id              String      @id @default(uuid())
-  name            String      @unique
+  id              String          @id @default(uuid())
+  name            String          @unique
   logoUrl         String?
   website         String?
   industry        String
@@ -225,17 +226,17 @@ model Company {
   // of local component state. Kept as plain scalars/JSON rather than new
   // relational models since none of this needs independent querying.
   coverImageUrl   String?
-  missionValues   String[]    @default([])
-  techStack       String[]    @default([])
-  galleryImages   String[]    @default([])
-  officeLocations Json        @default("[]")
-  screenedTarget  Int         @default(100)
-  outreachTarget  Int         @default(20)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  isDeleted       Boolean     @default(false)
+  missionValues   String[]        @default([])
+  techStack       String[]        @default([])
+  galleryImages   String[]        @default([])
+  officeLocations Json            @default("[]")
+  screenedTarget  Int             @default(100)
+  outreachTarget  Int             @default(20)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  isDeleted       Boolean         @default(false)
   deletedAt       DateTime?
-  isVerified      Boolean     @default(false)
+  isVerified      Boolean         @default(false)
   verifiedAt      DateTime?
   jobs            Job[]
   recruiters      Recruiter[]
@@ -365,7 +366,7 @@ model JobCategory {
 }
 
 model Job {
-  id              String        @id @default(uuid())
+  id              String          @id @default(uuid())
   companyId       String
   recruiterId     String
   categoryId      String
@@ -378,20 +379,21 @@ model Job {
   workMode        WorkMode
   salaryMin       Float?
   salaryMax       Float?
-  currency        String        @default("USD")
+  currency        String          @default("USD")
   deadline        DateTime?
-  isPublished     Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  isDeleted       Boolean       @default(false)
+  isPublished     Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  isDeleted       Boolean         @default(false)
   deletedAt       DateTime?
-  status          JobStatus     @default(DRAFT)
+  status          JobStatus       @default(DRAFT)
   applications    Application[]
-  category        JobCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  recruiter       Recruiter     @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  category        JobCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  recruiter       Recruiter       @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
   skillsRequired  JobSkill[]
   savedByStudents SavedJob[]
+  coverLetters    CoverLetter[]
   mockInterviews  MockInterview[]
 
   @@index([title])
@@ -614,16 +616,16 @@ model Connection {
 }
 
 model Mentor {
-  id               String          @id @default(uuid())
-  studentProfileId String          @unique
+  id               String               @id @default(uuid())
+  studentProfileId String               @unique
   expertise        String[]
   jobTitle         String
   companyName      String
   bio              String
-  rating           Float           @default(5.0)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  studentProfile   StudentProfile  @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  rating           Float                @default(5.0)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  studentProfile   StudentProfile       @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   bookings         MentorBooking[]
   availability     MentorAvailability[]
 }
@@ -759,44 +761,44 @@ model ResumeAnalysis {
 }
 
 model MockInterview {
-  id                String                 @id @default(uuid())
-  studentProfileId  String
-  jobTitle          String
-  durationLimit     Int                    @default(30)
-  createdAt         DateTime               @default(now())
-  targetRole        String?
-  numQuestions      Int                    @default(6)
-  status            InterviewSessionStatus @default(IN_PROGRESS)
-  aiEngineSessionId String?
-  completedAt       DateTime?
+  id                  String                 @id @default(uuid())
+  studentProfileId    String
+  jobTitle            String
+  durationLimit       Int                    @default(30)
+  createdAt           DateTime               @default(now())
+  targetRole          String?
+  numQuestions        Int                    @default(6)
+  status              InterviewSessionStatus @default(IN_PROGRESS)
+  aiEngineSessionId   String?
+  completedAt         DateTime?
   /// Interview configuration chosen at setup time.
-  interviewType     MockInterviewType      @default(MIXED)
-  difficulty        InterviewDifficulty    @default(MEDIUM)
+  interviewType       MockInterviewType      @default(MIXED)
+  difficulty          InterviewDifficulty    @default(MEDIUM)
   /// Optional real job this practice session targets (drives job-match scoring).
-  jobId             String?
-  companyName       String?
+  jobId               String?
+  companyName         String?
   /// DB-backed session state: the AI-generated question plan (remaining
   /// planned questions + adaptive state). Replaces the old in-memory Map so
   /// sessions survive restarts and scale horizontally.
-  questionPlan      Json?
+  questionPlan        Json?
   /// Snapshot of the student/job context the plan was generated from, so the
   /// final report is traceable to exactly what the AI saw.
-  contextSnapshot   Json?
+  contextSnapshot     Json?
   /// Observable camera/participation events reported by the client
   /// ({at, type, detail}). Events only -- never fraud/cheating claims.
-  cameraObservations Json                  @default("[]")
+  cameraObservations  Json                   @default("[]")
   /// True when the question plan came from the deterministic fallback
   /// rather than Gemini.
-  planEstimated     Boolean                @default(false)
-  totalDurationSec  Int?
+  planEstimated       Boolean                @default(false)
+  totalDurationSec    Int?
   /// Student opt-in: employers with an application from this student may
   /// view the final report.
-  sharedWithEmployers Boolean              @default(false)
-  sharedAt          DateTime?
-  job               Job?                   @relation(fields: [jobId], references: [id])
-  questions         InterviewQuestion[]
-  studentProfile    StudentProfile         @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
-  reports           MockInterviewReport[]
+  sharedWithEmployers Boolean                @default(false)
+  sharedAt            DateTime?
+  job                 Job?                   @relation(fields: [jobId], references: [id])
+  questions           InterviewQuestion[]
+  studentProfile      StudentProfile         @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  reports             MockInterviewReport[]
 
   @@index([studentProfileId, status])
 }
@@ -851,57 +853,57 @@ model InterviewQuestion {
 }
 
 model MockInterviewReport {
-  id                    String        @id @default(uuid())
-  mockInterviewId       String
-  summary               String
-  score                 Int
-  status                String
-  modelVersion          String
-  generatedAt           DateTime      @default(now())
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  technicalScore        Int?
-  hrScore               Int?
-  communicationScore    Int?
-  confidenceScore       Int?
-  grammarScore          Int?
-  answerQualityScore    Int?
-  eyeContactPercent     Float?
-  smileFrequencyPercent Float?
-  bodyLanguageScore     Float?
-  headMovementScore     Float?
-  speakingSpeedWpm      Float?
-  fillerWordCount       Int?
-  improvementPlan       String[]      @default([])
-  suggestedCourses      String[]      @default([])
-  suggestedQuestions    String[]      @default([])
-  aiSummary             String?
-  behavioralScore       Int?
-  problemSolvingScore   Int?
+  id                        String        @id @default(uuid())
+  mockInterviewId           String
+  summary                   String
+  score                     Int
+  status                    String
+  modelVersion              String
+  generatedAt               DateTime      @default(now())
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  technicalScore            Int?
+  hrScore                   Int?
+  communicationScore        Int?
+  confidenceScore           Int?
+  grammarScore              Int?
+  answerQualityScore        Int?
+  eyeContactPercent         Float?
+  smileFrequencyPercent     Float?
+  bodyLanguageScore         Float?
+  headMovementScore         Float?
+  speakingSpeedWpm          Float?
+  fillerWordCount           Int?
+  improvementPlan           String[]      @default([])
+  suggestedCourses          String[]      @default([])
+  suggestedQuestions        String[]      @default([])
+  aiSummary                 String?
+  behavioralScore           Int?
+  problemSolvingScore       Int?
   /// 0-100 readiness for real interviews at this difficulty/role.
-  interviewReadiness    Int?
+  interviewReadiness        Int?
   /// Fit vs the targeted job (only meaningful when a job was selected).
-  jobMatchPercent       Int?
-  skillMatchPercent     Int?
-  strengths             String[]      @default([])
-  weaknesses            String[]      @default([])
-  missingSkills         String[]      @default([])
+  jobMatchPercent           Int?
+  skillMatchPercent         Int?
+  strengths                 String[]      @default([])
+  weaknesses                String[]      @default([])
+  missingSkills             String[]      @default([])
   /// Ordered learning roadmap steps: [{step, title, description, resources[]}].
-  learningRoadmap       Json          @default("[]")
-  recommendedProjects   String[]      @default([])
-  recommendedCertifications String[]  @default([])
-  careerRecommendations String[]      @default([])
+  learningRoadmap           Json          @default("[]")
+  recommendedProjects       String[]      @default([])
+  recommendedCertifications String[]      @default([])
+  careerRecommendations     String[]      @default([])
   /// Frozen per-question breakdown snapshot so every surface (dashboard,
   /// employer, university, PDF) renders the exact same values.
-  questionBreakdown     Json          @default("[]")
+  questionBreakdown         Json          @default("[]")
   /// Aggregated observable camera events ({event, count}) -- events only.
-  cameraSummary         Json?
+  cameraSummary             Json?
   /// True when qualitative sections were produced by the offline fallback.
   /// Surfaces as "Estimated – AI unavailable" and must never be presented
   /// as Gemini output.
-  estimated             Boolean       @default(false)
-  pdfUrl                String?
-  mockInterview         MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
+  estimated                 Boolean       @default(false)
+  pdfUrl                    String?
+  mockInterview             MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
 }
 
 model Event {
@@ -1173,4 +1175,33 @@ model AiMessage {
   createdAt      DateTime       @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+/// AI-generated cover letter drafts. Kept as its own model rather than living
+/// on Application.coverLetter because a student iterates on drafts (tone,
+/// regeneration) BEFORE applying, and may never apply at all. On submit, the
+/// chosen draft's content is copied into Application.coverLetter, which stays
+/// the single source of truth for what was actually sent to the employer.
+model CoverLetter {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  /// Null when the letter targets a free-form role/company rather than a
+  /// posting on the platform.
+  jobId            String?
+  targetRole       String
+  companyName      String
+  tone             String         @default("PROFESSIONAL")
+  content          String
+  /// "cover-letter-v1" for live Gemini output, "cover-letter-v1-estimated"
+  /// for the deterministic fallback - mirrors CareerInsight.modelVersion so
+  /// the UI never presents a heuristic as a live AI result.
+  modelVersion     String
+  generatedAt      DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  job              Job?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, createdAt])
+  @@index([jobId])
 }
