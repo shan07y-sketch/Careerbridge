@@ -67,7 +67,7 @@ const MobileDashboard: React.FC = () => {
 
   const quickActions = [
     { icon: 'record_voice_over', label: 'Mock interview', to: '/student/mock-interview' },
-    { icon: 'neurology', label: 'AI coach', to: '/student/career-report' },
+    { icon: 'neurology', label: 'AI coach', to: '/student/coach' },
     { icon: 'description', label: 'Resume', to: '/student/profile' },
     { icon: 'bookmark', label: 'Saved', to: '/student/saved' },
   ];
@@ -138,7 +138,7 @@ const MobileDashboard: React.FC = () => {
         <div className="px-4">
           {/* ---- AI coach CTA ---- */}
           <button
-            onClick={() => navigate('/student/career-report')}
+            onClick={() => navigate('/student/coach')}
             className="m-ai-cta m-card-lift w-full mt-4 rounded-3xl p-4 flex items-center gap-3 text-left shadow-lg m-rise m-rise-1"
           >
             <span className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
@@ -146,7 +146,7 @@ const MobileDashboard: React.FC = () => {
             </span>
             <div className="flex-1 min-w-0 relative z-10">
               <p className="text-sm font-extrabold">Ask your AI Career Coach</p>
-              <p className="text-[13px] text-white/85 truncate">Roadmaps, skill gaps & personalized guidance</p>
+              <p className="text-[13px] text-white/85 truncate">Chat about roadmaps, skills & interviews</p>
             </div>
             <span className="material-symbols-outlined relative z-10">chevron_right</span>
           </button>

@@ -544,6 +544,111 @@ export const CareerService = {
   }
 };
 
+/* ── AI Career Coach chat ─────────────────────────────────────────── */
+
+export interface CoachConversationSummary {
+  id: string;
+  title: string;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastMessage: string | null;
+  lastRole: string | null;
+}
+export interface CoachMessage {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  estimated: boolean;
+  createdAt: string;
+}
+export interface CoachConversation {
+  id: string;
+  title: string;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+  messages: CoachMessage[];
+}
+export interface CoachStreamHandlers {
+  onMeta?: (m: { conversationId: string; title: string }) => void;
+  onDelta?: (text: string) => void;
+  onDone?: (r: { conversationId: string; messageId: string; estimated: boolean }) => void;
+  onError?: (message: string) => void;
+  signal?: AbortSignal;
+}
+
+export const CoachService = {
+  listConversations: async (): Promise<CoachConversationSummary[]> => {
+    return fetchJson('/coach/conversations');
+  },
+  createConversation: async (title?: string): Promise<CoachConversation> => {
+    return fetchJson('/coach/conversations', { method: 'POST', body: JSON.stringify({ title }) });
+  },
+  getConversation: async (id: string): Promise<CoachConversation> => {
+    return fetchJson(`/coach/conversations/${id}`);
+  },
+  updateConversation: async (id: string, data: { title?: string; pinned?: boolean }): Promise<void> => {
+    await fetchJson(`/coach/conversations/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+  },
+  deleteConversation: async (id: string): Promise<void> => {
+    await fetchJson(`/coach/conversations/${id}`, { method: 'DELETE' });
+  },
+  /**
+   * Streams an assistant reply over SSE. Uses fetch (not EventSource) so the
+   * Bearer token travels in the Authorization header like every other call.
+   */
+  streamChat: async (
+    params: { conversationId?: string; content: string },
+    handlers: CoachStreamHandlers
+  ): Promise<void> => {
+    const resp = await fetch(`${API_BASE_URL}/coach/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      credentials: 'include',
+      body: JSON.stringify(params),
+      signal: handlers.signal
+    });
+    if (!resp.ok || !resp.body) {
+      let msg = 'The coach could not respond right now.';
+      try { const j = await resp.json(); msg = j.error?.message || msg; } catch { /* non-JSON */ }
+      handlers.onError?.(msg);
+      return;
+    }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const block = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const evMatch = block.match(/^event: (.*)$/m);
+          const dataMatch = block.match(/^data: (.*)$/m);
+          if (!evMatch || !dataMatch) continue;
+          let data: any;
+          try { data = JSON.parse(dataMatch[1]); } catch { continue; }
+          switch (evMatch[1]) {
+            case 'meta': handlers.onMeta?.(data); break;
+            case 'delta': handlers.onDelta?.(data.text); break;
+            case 'done': handlers.onDone?.(data); break;
+            case 'error': handlers.onError?.(data.message); break;
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as { name?: string })?.name !== 'AbortError') {
+        handlers.onError?.(err instanceof Error ? err.message : 'Stream interrupted');
+      }
+    }
+  }
+};
+
 export const MessageService = {
   getThreads: async (): Promise<Thread[]> => {
     return fetchJson('/messages');

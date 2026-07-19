@@ -82,6 +82,7 @@ model StudentProfile {
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   verificationStatus       VerificationStatus        @default(PENDING)
+  aiConversations          AiConversation[]
   applications             Application[]
   careerInsights           CareerInsight[]
   certifications           Certification[]
@@ -1144,4 +1145,32 @@ enum InterviewDifficulty {
   EASY
   MEDIUM
   HARD
+}
+
+/// AI Career Coach — conversational chat threads owned by a student.
+model AiConversation {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  title            String         @default("New conversation")
+  pinned           Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  messages         AiMessage[]
+
+  @@index([studentProfileId])
+  @@index([studentProfileId, pinned, updatedAt])
+}
+
+/// A single turn within an AiConversation. role is 'user' | 'assistant'.
+model AiMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  estimated      Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
 }

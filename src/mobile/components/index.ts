@@ -8,3 +8,4 @@ export {
   Button, Segmented, ScoreRing, Progress, Expandable, PullToRefresh, Avatar,
 } from './ui';
 export { JobListCard } from './JobListCard';
+export { Markdown } from './Markdown';

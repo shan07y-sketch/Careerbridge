@@ -41,7 +41,8 @@ export const NAV_CONFIG: Record<PortalRole, NavGroup[]> = {
     {
       title: 'Career growth',
       items: [
-        { label: 'AI Career Coach', icon: 'neurology', to: '/student/career-report' },
+        { label: 'AI Career Coach', icon: 'neurology', to: '/student/coach' },
+        { label: 'Career Report', icon: 'insights', to: '/student/career-report' },
         { label: 'Resume Analyzer', icon: 'description', to: '/student/resume' },
         { label: 'Interviews', icon: 'record_voice_over', to: '/student/interviews' },
       ],

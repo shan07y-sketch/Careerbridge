@@ -37,6 +37,25 @@ function resolveEndpoint(apiKey: string, model: string): { url: string; headers:
   };
 }
 
+export interface ChatTurn {
+  role: 'user' | 'model';
+  text: string;
+}
+
+/** Streaming endpoint variant of resolveEndpoint (SSE, streamGenerateContent). */
+function resolveStreamEndpoint(apiKey: string, model: string): { url: string; headers: Record<string, string> } {
+  const isVertexExpressKey =
+    env.GEMINI_ENDPOINT === 'vertex' ||
+    (env.GEMINI_ENDPOINT === 'auto' && apiKey.startsWith('AQ.'));
+  const base = isVertexExpressKey
+    ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:streamGenerateContent`
+    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`;
+  return {
+    url: `${base}?alt=sse`,
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }
+  };
+}
+
 export class GeminiClient {
   static get isConfigured(): boolean {
     return Boolean(env.GEMINI_API_KEY);
@@ -154,6 +173,103 @@ export class GeminiClient {
     }
 
     throw lastError || new AppError('Failed to contact Gemini API after multiple retries.', 503, 'AI_UNAVAILABLE');
+  }
+
+  /**
+   * Multi-turn conversational streaming for the AI Career Coach chat. Streams
+   * plain-text/markdown deltas via `onDelta` and resolves with the full text
+   * plus token usage. Uses Gemini's SSE `streamGenerateContent?alt=sse`.
+   * Throws (never falls back here) so the caller can decide how to degrade.
+   */
+  static async streamChat(params: {
+    contents: ChatTurn[];
+    systemInstruction: string;
+    onDelta: (text: string) => void;
+  }): Promise<GeminiGenerateResult> {
+    if (!env.GEMINI_API_KEY) {
+      throw new AppError('AI provider is not configured. Missing GEMINI_API_KEY.', 503, 'AI_NOT_CONFIGURED');
+    }
+    const model = env.GEMINI_MODEL;
+    const { url, headers } = resolveStreamEndpoint(env.GEMINI_API_KEY, model);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: params.systemInstruction }] },
+          contents: params.contents.map(c => ({ role: c.role, parts: [{ text: c.text }] })),
+          generationConfig: { temperature: 0.7, topP: 0.95 }
+        }),
+        signal: controller.signal
+      });
+
+      if (!resp.ok || !resp.body) {
+        const body = await resp.text().catch(() => '');
+        if (resp.status === 429) throw new AppError('Gemini API rate limit or quota exceeded.', 429, 'QUOTA_EXCEEDED');
+        if (resp.status === 403 || resp.status === 404) {
+          logger.error({ status: resp.status, body, model }, '[GEMINI CLIENT] Streaming access/model error');
+          throw new AppError(`Model ${model} is unavailable for the configured API key.`, 503, 'MODEL_UNAVAILABLE');
+        }
+        throw new AppError(`Gemini streaming error (${resp.status}): ${body}`, 502, 'API_BAD_GATEWAY');
+      }
+
+      const reader = (resp.body as unknown as ReadableStream<Uint8Array>).getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let full = '';
+      let usage: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined;
+
+      // Parse the SSE stream: each event is a `data: {json}` line; a network
+      // chunk may split a line, so only process up to the last newline.
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line.startsWith('data:')) continue;
+          const json = line.slice(5).trim();
+          if (!json || json === '[DONE]') continue;
+          try {
+            const obj = JSON.parse(json) as {
+              candidates?: { content?: { parts?: { text?: string }[] } }[];
+              usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+            };
+            const delta = obj.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (delta) { full += delta; params.onDelta(delta); }
+            if (obj.usageMetadata) usage = obj.usageMetadata;
+          } catch {
+            // Ignore a malformed/partial data line; the SSE framing keeps
+            // whole JSON objects on single lines, so this is rare.
+          }
+        }
+      }
+
+      if (!full) throw new AppError('Gemini returned no streamed text.', 502, 'AI_EMPTY_RESPONSE');
+      logger.info({ model, chars: full.length }, '[GEMINI CLIENT] Streaming chat completed');
+      return {
+        text: full,
+        tokensIn: usage?.promptTokenCount ?? 0,
+        tokensOut: usage?.candidatesTokenCount ?? Math.floor(full.length / 4),
+        model
+      };
+    } catch (err: any) {
+      if (err instanceof AppError) throw err;
+      const isTimeout = err?.name === 'AbortError';
+      throw new AppError(
+        isTimeout ? 'Gemini API request timed out.' : `Network connection failed: ${err?.message ?? 'unknown'}`,
+        isTimeout ? 504 : 503,
+        isTimeout ? 'TIMEOUT_ERROR' : 'NETWORK_FAILURE'
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   /**

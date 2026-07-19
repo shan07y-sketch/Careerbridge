@@ -37,6 +37,8 @@ const MockInterview = adaptive(() => import('./pages/student/MockInterview'), ()
 const Interviews = adaptive(() => import('./pages/student/MockInterview'), () => import('./mobile/pages/student/Interviews'));
 const MockInterviewReport = adaptive(() => import('./pages/student/MockInterviewReport'), () => import('./mobile/pages/student/MockInterviewReport'));
 const AICareerReport = adaptive(() => import('./pages/student/AICareerReport'), () => import('./mobile/pages/student/CareerCoach'));
+// Conversational AI Career Coach chat (mobile); desktop falls back to the readiness report for now.
+const Coach = adaptive(() => import('./pages/student/AICareerReport'), () => import('./mobile/pages/student/Coach'));
 const Messages = adaptive(() => import('./pages/student/Messages'), () => import('./mobile/pages/student/Messages'));
 const Network = adaptive(() => import('./pages/student/Network'), () => import('./mobile/pages/student/Network'));
 const Settings = adaptive(() => import('./pages/student/Settings'), () => import('./mobile/pages/student/Settings'));
@@ -238,16 +240,24 @@ export const App: React.FC = () => {
                         </ProtectedRoute>
                       }
                     />
-                    <Route 
-                      path="/student/career-report" 
+                    <Route
+                      path="/student/career-report"
                       element={
                         <ProtectedRoute>
                           <AICareerReport />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/student/messages" 
+                    <Route
+                      path="/student/coach"
+                      element={
+                        <ProtectedRoute>
+                          <Coach />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/student/messages"
                       element={
                         <ProtectedRoute>
                           <Messages />
