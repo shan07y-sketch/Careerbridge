@@ -1,8 +1,15 @@
-# CareerBridge backend (Express + Prisma). node:22-alpine runtime so both
+# CareerBridge backend (Express + Prisma). node:24-alpine runtime so both
 # `node` and the Prisma CLI exist for the startup migration.
+#
+# Node 24 is REQUIRED, not incidental: pdf-parse@1.1.4's bundled pdf.js fails
+# with "bad XRef entry" on Node 22 for PDFs it parses fine on Node 24. On
+# node:22-alpine every PDF resume upload silently returned status FAILED with
+# no extracted text (DOCX was unaffected, which is why it went unnoticed).
+# Verified by running the identical file through both images.
+# Do not downgrade this tag without re-verifying PDF resume extraction.
 
 # ---- build stage ----
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
@@ -13,7 +20,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # ---- runtime stage ----
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
