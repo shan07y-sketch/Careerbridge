@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
+import { isStudentOnboarded } from '../../utils/onboarding';
 
 export const Authentication: React.FC = () => {
   const { login, registerStudent, selectRole, role: contextRole } = useAuth();
@@ -55,7 +56,7 @@ export const Authentication: React.FC = () => {
     try {
       // login() resolves the REAL role from the backend response -- the
       // account's role in PostgreSQL wins over whatever tab the user was on.
-      const resolvedRole = await login(email, password);
+      const { role: resolvedRole, user: profile } = await login(email, password);
       showToast('Signed in successfully!', 'success');
       if (resolvedRole === 'admin') {
         navigate('/admin/dashboard');
@@ -64,7 +65,9 @@ export const Authentication: React.FC = () => {
       } else if (resolvedRole === 'university') {
         navigate('/university/dashboard');
       } else {
-        navigate('/student/onboarding');
+        // Returning students with a saved profile go straight to their
+        // dashboard; only genuinely fresh profiles see the onboarding wizard.
+        navigate(isStudentOnboarded(profile) ? '/student/dashboard' : '/student/onboarding');
       }
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Invalid credentials', 'error');
@@ -108,7 +111,7 @@ export const Authentication: React.FC = () => {
       // Send the EXACT payload the backend's registerSchema requires for the
       // selected role (student: universityName/degree/graduationYear;
       // employer: companyName+industry; university: universityName+location).
-      const resolvedRole = await registerStudent({
+      const { role: resolvedRole } = await registerStudent({
         name,
         email,
         password,
@@ -128,7 +131,10 @@ export const Authentication: React.FC = () => {
       } else if (resolvedRole === 'university') {
         navigate('/university/dashboard');
       } else {
-        navigate('/student/onboarding');
+        // firstRun marks this as the intentional post-registration wizard --
+        // without it the onboarding guard would bounce the new account to the
+        // dashboard because registration already saved degree/grad year.
+        navigate('/student/onboarding', { state: { firstRun: true } });
       }
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Registration failed', 'error');

@@ -29,7 +29,7 @@ export const AdminLogin: React.FC = () => {
       // returns the account's actual role. (The old `forceAdmin` flag
       // fabricated a mock admin session with a fake token; every subsequent
       // API call then failed with 401.)
-      const resolvedRole = await login(email, password);
+      const { role: resolvedRole } = await login(email, password);
 
       if (resolvedRole === 'admin') {
         showToast('System Admin session established.', 'success');

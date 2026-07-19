@@ -5,17 +5,28 @@ import type { RegisterPayload } from '../services';
 
 type Role = 'student' | 'employer' | 'university' | 'admin';
 
+/**
+ * Login/registration resolve with BOTH the role and the freshly-fetched
+ * profile so callers can route immediately (e.g. skip onboarding for a
+ * student whose saved profile is already complete) without waiting for a
+ * React state update or re-reading localStorage.
+ */
+export interface AuthResult {
+  role: Role;
+  user: Student;
+}
+
 interface AuthContextType {
   user: Student | null;
   isAuthenticated: boolean;
   role: Role | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<Role>;
+  login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   selectRole: (role: Role) => void;
-  register: (payload: RegisterPayload) => Promise<Role>;
+  register: (payload: RegisterPayload) => Promise<AuthResult>;
   /** @deprecated kept as an alias of register() for older call sites */
-  registerStudent: (payload: RegisterPayload) => Promise<Role>;
+  registerStudent: (payload: RegisterPayload) => Promise<AuthResult>;
   updateUser: (updates: Partial<Student>) => Promise<void>;
 }
 
@@ -66,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Returns the authenticated role so callers can route immediately without
    * re-reading localStorage.
    */
-  const login = async (email: string, password: string): Promise<Role> => {
+  const login = async (email: string, password: string): Promise<AuthResult> => {
     setIsLoading(true);
     try {
       const profile = await AuthService.login(email, password);
@@ -74,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(profile);
       setIsAuthenticated(true);
       setRoleState(resolvedRole);
-      return resolvedRole;
+      return { role: resolvedRole, user: profile };
     } catch (err) {
       // No mock fallback: silently faking a successful login when the real API
       // call fails used to leave isAuthenticated=true with no real accessToken
@@ -104,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('role', newRole);
   };
 
-  const register = async (payload: RegisterPayload): Promise<Role> => {
+  const register = async (payload: RegisterPayload): Promise<AuthResult> => {
     setIsLoading(true);
     try {
       await AuthService.register(payload);
@@ -115,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(profile);
       setIsAuthenticated(true);
       setRoleState(resolvedRole);
-      return resolvedRole;
+      return { role: resolvedRole, user: profile };
     } catch (err) {
       // No mock fallback: faking success would leave the user believing they
       // have an account that doesn't actually exist in PostgreSQL.

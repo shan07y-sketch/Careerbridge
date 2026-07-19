@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
+import { isStudentOnboarded } from '../../utils/onboarding';
 
 const OnboardingSuccess: React.FC<{ navigate: (path: string) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info') => void }> = ({ navigate, showToast }) => {
   const confettiContainerRef = useRef<HTMLDivElement>(null);
@@ -145,11 +146,28 @@ const OnboardingSuccess: React.FC<{ navigate: (path: string) => void; showToast:
 };
 
 export const Onboarding: React.FC = () => {
-  const { updateUser } = useAuth();
+  const { updateUser, user, isLoading: authLoading } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1);
   const totalSteps = 5;
+
+  // Already-onboarded students (saved degree/grad year/goal/skills in the
+  // database) never see this wizard again — deep links, stale bookmarks and
+  // the login redirect all land on the dashboard instead. Two exceptions:
+  //  - a just-registered account arrives with { firstRun: true } navigation
+  //    state (registration pre-fills degree/grad year, but interests, skills
+  //    and career goal are still worth collecting once);
+  //  - the guard only runs while the wizard is untouched (step 1) so finishing
+  //    the flow isn't interrupted mid-way.
+  const firstRun = (location.state as { firstRun?: boolean } | null)?.firstRun === true;
+  useEffect(() => {
+    if (!authLoading && !firstRun && step === 1 && isStudentOnboarded(user)) {
+      navigate('/student/dashboard', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
 
   // Step 1: Academic
   const [university, setUniversity] = useState('');

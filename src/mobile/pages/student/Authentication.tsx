@@ -6,7 +6,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
+import type { AuthResult } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
+import { isStudentOnboarded } from '../../../utils/onboarding';
 
 type Role = 'student' | 'employer' | 'university';
 type Tab = 'signin' | 'signup';
@@ -53,11 +55,14 @@ const MobileAuthentication: React.FC = () => {
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const pwStrong = checks.length && checks.upper && checks.lower && checks.number;
 
-  const goByRole = (r: string) => {
+  const goByRole = ({ role: r, user: profile }: AuthResult, firstRun = false) => {
     if (r === 'admin') navigate('/admin/dashboard');
     else if (r === 'employer') navigate('/employer/dashboard');
     else if (r === 'university') navigate('/university/dashboard');
-    else navigate('/student/onboarding');
+    // A fresh registration always gets the one-time wizard (firstRun defeats
+    // the onboarding guard); returning students with a saved profile skip it.
+    else if (firstRun) navigate('/student/onboarding', { state: { firstRun: true } });
+    else navigate(isStudentOnboarded(profile) ? '/student/dashboard' : '/student/onboarding');
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -96,7 +101,7 @@ const MobileAuthentication: React.FC = () => {
         location: role === 'university' ? uniLocation : undefined,
       });
       showToast('Account created!', 'success');
-      goByRole(resolved);
+      goByRole(resolved, true);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Sign up failed.', 'error');
     } finally {
