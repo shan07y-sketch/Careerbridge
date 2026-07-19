@@ -28,6 +28,8 @@ const JobDetails = adaptive(() => import('./pages/student/JobDetails'), () => im
 const SavedJobs = adaptive(() => import('./pages/student/SavedJobs'), () => import('./mobile/pages/student/SavedJobs'));
 const Applications = adaptive(() => import('./pages/student/Applications'), () => import('./mobile/pages/student/Applications'));
 const Profile = adaptive(() => import('./pages/student/Profile'), () => import('./mobile/pages/student/Profile'));
+// Resume: mobile gets a dedicated workspace; desktop resume management lives in the Profile page.
+const Resume = adaptive(() => import('./pages/student/Profile'), () => import('./mobile/pages/student/Resume'));
 const MockInterview = adaptive(() => import('./pages/student/MockInterview'), () => import('./mobile/pages/student/MockInterview'));
 const MockInterviewReport = adaptive(() => import('./pages/student/MockInterviewReport'), () => import('./mobile/pages/student/MockInterviewReport'));
 const AICareerReport = adaptive(() => import('./pages/student/AICareerReport'), () => import('./mobile/pages/student/CareerCoach'));
@@ -184,15 +186,23 @@ export const App: React.FC = () => {
                         </ProtectedRoute>
                       } 
                     />
-                    <Route 
-                      path="/student/profile" 
+                    <Route
+                      path="/student/profile"
                       element={
                         <ProtectedRoute>
                           <Profile />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
+                    <Route
+                      path="/student/resume"
+                      element={
+                        <ProtectedRoute>
+                          <Resume />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
                       path="/student/mock-interview" 
                       element={
                         <ProtectedRoute>
