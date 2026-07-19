@@ -15,12 +15,33 @@ import type {
   EmployerRecruiter, EmployerCompanyProfile, EmployerInterview,
   EmployerConversation, EmployerConversationMessage,
 } from '../../../services';
-import { MobileShell, Card, Stat, Chip, SectionTitle, SkeletonList, EmptyState, ErrorState, Button, Avatar } from '../../components';
+import { MobileShell, Card, Stat, Chip, SectionTitle, SkeletonList, EmptyState, ErrorState, Button, Avatar, ScoreRing, PullToRefresh } from '../../components';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', jobs: 'Jobs', candidates: 'Candidates', pipeline: 'Talent Pipeline',
   analytics: 'Analytics', reports: 'Reports', recruiters: 'Recruiters', company: 'Company Profile',
   messages: 'Messages', interviews: 'Interviews',
+};
+
+const greeting = (): string => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+};
+
+/**
+ * Candidate pipeline-status pill. Tone map covers the real Application status
+ * vocabulary seen from the queue/analytics endpoints (APPLIED, INTERVIEWING,
+ * SHORTLISTED, OFFERED, REJECTED, WITHDRAWN) plus a few synonyms for safety.
+ */
+const StatusPill: React.FC<{ status: string }> = ({ status }) => {
+  const tone =
+    status === 'SHORTLISTED' || status === 'OFFERED' || status === 'OFFER' || status === 'HIRED' ? 'bg-success/15 text-success' :
+    status === 'REJECTED' || status === 'WITHDRAWN' ? 'bg-error/15 text-error' :
+    status === 'INTERVIEWING' || status === 'INTERVIEW' || status === 'REVIEWING' || status === 'SCREENING' ? 'bg-info/15 text-info' :
+    'bg-on-surface/8 text-on-surface-variant';
+  return <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 capitalize ${tone}`}>{status.toLowerCase()}</span>;
 };
 
 /** Generic async view wrapper: loading / error / data. */
@@ -41,36 +62,260 @@ function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []) {
 
 /* ── Views ─────────────────────────────────────────────────────────── */
 
+/**
+ * Premium employer home — aurora hero + real-data feed. Every value is a live
+ * PostgreSQL aggregate: no placeholders, honest empty states per section.
+ * Loads are resilient (allSettled) so one failing panel never blanks the page;
+ * only a failed core dashboard call surfaces the error state.
+ */
 const OverviewView: React.FC<{ onNavigate: (k: string) => void }> = ({ onNavigate }) => {
-  const { data, loading, error, reload } = useAsync<EmployerDashboardStats>(() => EmployerOverviewService.getDashboard());
-  if (loading) return <SkeletonList count={4} />;
-  if (error || !data) return <ErrorState message={error || undefined} onRetry={reload} />;
+  const [stats, setStats] = useState<EmployerDashboardStats | null>(null);
+  const [company, setCompany] = useState<EmployerCompanyProfile | null>(null);
+  const [jobs, setJobs] = useState<EmployerJob[]>([]);
+  const [applicants, setApplicants] = useState<PipelineApplication[]>([]);
+  const [interviews, setInterviews] = useState<EmployerInterview[]>([]);
+  const [analytics, setAnalytics] = useState<PipelineAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    const [s, c, j, q, iv, an] = await Promise.allSettled([
+      EmployerOverviewService.getDashboard(),
+      EmployerCompanyService.getProfile(),
+      EmployerJobService.getJobs(),
+      HiringPipelineService.getQueue({ limit: 6, sortBy: 'createdAt', sortOrder: 'desc' }),
+      EmployerOverviewService.getInterviews(),
+      HiringPipelineService.getAnalytics(),
+    ]);
+    if (s.status === 'fulfilled') setStats(s.value);
+    if (c.status === 'fulfilled') setCompany(c.value);
+    if (j.status === 'fulfilled') setJobs(j.value);
+    if (q.status === 'fulfilled') setApplicants(q.value.applications);
+    if (iv.status === 'fulfilled') setInterviews(iv.value);
+    if (an.status === 'fulfilled') setAnalytics(an.value);
+    // The dashboard header stats are the one call the page can't render without.
+    if (s.status === 'rejected') setError(s.reason instanceof Error ? s.reason.message : 'Request failed');
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <div className="px-4 pt-4"><SkeletonList count={5} /></div>;
+  if (error || !stats) return <ErrorState message={error || undefined} onRetry={() => { setLoading(true); load(); }} />;
+
+  const now = Date.now();
+  const upcoming = interviews
+    .filter(i => i.status === 'SCHEDULED' && new Date(i.scheduledAt).getTime() >= now)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  const activeJobs = jobs.filter(j => j.status === 'PUBLISHED');
+  const acceptance = analytics?.offerAcceptanceRate;
+  const companyName = company?.name || 'Your company';
+  // Guard against a known backend analytics quirk where time-to-hire can come
+  // back negative (nonsensical) — treat anything non-positive as "no value"
+  // rather than render "-5d". Tracked for the Module 5 analytics pass.
+  const ttHire = analytics?.timeToHireDays != null && analytics.timeToHireDays > 0 ? analytics.timeToHireDays : null;
+
+  const quickActions = [
+    { icon: 'work', label: 'Jobs', key: 'jobs' },
+    { icon: 'groups', label: 'Candidates', key: 'candidates' },
+    { icon: 'videocam', label: 'Interviews', key: 'interviews' },
+    { icon: 'monitoring', label: 'Analytics', key: 'analytics' },
+  ];
+
   return (
-    <div className="px-4 pt-4">
-      <div className="grid grid-cols-2 gap-3">
-        <Stat icon="work" label="Active jobs" value={data.activeJobsCount} />
-        <Stat icon="group" label="Applications" value={data.totalApplications} />
-        <Stat icon="event" label="Upcoming interviews" value={data.upcomingInterviewCount} />
-        <Stat icon="handshake" label="Active offers" value={data.activeOfferCount} />
-      </div>
-      <SectionTitle action={<button onClick={() => onNavigate('jobs')} className="text-xs font-semibold text-primary">Manage</button>}>
-        Your job postings
-      </SectionTitle>
-      {data.jobsList.length === 0 ? (
-        <Card><p className="text-sm text-on-surface-variant">No jobs posted yet.</p></Card>
-      ) : (
-        <div className="space-y-2.5">
-          {data.jobsList.slice(0, 5).map(j => (
-            <Card key={j.id} onClick={() => onNavigate('jobs')}>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-bold truncate">{j.title}</p>
-                <Chip tone={j.status === 'PUBLISHED' ? 'success' : 'neutral'}>{j.status}</Chip>
-              </div>
-            </Card>
+    <PullToRefresh onRefresh={load}>
+      {/* ---- Aurora hero ---- */}
+      <section className="m-hero m-safe-top px-5 pt-5 pb-8 rounded-b-[28px]">
+        <div className="flex items-center gap-3">
+          <Avatar src={company?.logoUrl} name={companyName} size={44} />
+          <div className="min-w-0">
+            <p className="text-[13px] text-white/70 leading-none">{greeting()}</p>
+            <p className="text-lg font-extrabold leading-tight truncate flex items-center gap-1">
+              {companyName}
+              {company?.isVerified && (
+                <span className="material-symbols-outlined text-[18px] text-white/90" aria-label="Verified">verified</span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Live stats */}
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          {[
+            { v: stats.activeJobsCount, l: 'Active jobs' },
+            { v: stats.totalApplications, l: 'Applications' },
+            { v: stats.upcomingInterviewCount, l: 'Interviews' },
+          ].map((x, idx) => (
+            <div key={idx} className="rounded-2xl m-glass py-2.5 text-center">
+              <p className="text-xl font-extrabold leading-none">{x.v}</p>
+              <p className="text-[11px] text-white/70 mt-1">{x.l}</p>
+            </div>
           ))}
         </div>
-      )}
-    </div>
+
+        {/* Offer-acceptance pulse — shown only when there is real acceptance data */}
+        {acceptance != null && (
+          <div className="mt-3 flex items-center gap-4 rounded-3xl m-glass p-4">
+            <div className="shrink-0"><ScoreRing score={Math.round(acceptance)} size={64} label="accept" /></div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold">Offer acceptance</p>
+              <p className="text-[13px] text-white/75 leading-snug">
+                {stats.activeOfferCount} offer{stats.activeOfferCount === 1 ? '' : 's'} currently extended
+                {ttHire != null ? ` · ~${ttHire}d to hire` : ''}.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className="px-4">
+        {/* ---- Quick actions ---- */}
+        <div className="grid grid-cols-4 gap-2 mt-4 m-rise m-rise-1">
+          {quickActions.map(a => (
+            <button
+              key={a.key}
+              onClick={() => onNavigate(a.key)}
+              className="m-press flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-surface-container/60 border border-on-surface/5"
+            >
+              <span className="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px] text-on-primary-container">{a.icon}</span>
+              </span>
+              <span className="text-[11px] font-semibold text-on-surface-variant text-center leading-tight">{a.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ---- Recent applicants ---- */}
+        <SectionTitle action={<button onClick={() => onNavigate('candidates')} className="text-xs font-semibold text-primary">See all</button>}>
+          Recent applicants
+        </SectionTitle>
+        {applicants.length === 0 ? (
+          <Card><p className="text-sm text-on-surface-variant">No applications yet — candidates will appear here as they apply.</p></Card>
+        ) : (
+          <div className="space-y-2.5 m-rise m-rise-2">
+            {applicants.slice(0, 4).map(app => {
+              const s = app.studentProfile;
+              const name = `${s.firstName} ${s.lastName}`.trim();
+              return (
+                <div
+                  key={app.id}
+                  onClick={() => onNavigate('candidates')}
+                  className="m-card-lift flex items-center gap-3 rounded-2xl bg-surface-container/60 border border-on-surface/5 p-3"
+                >
+                  <Avatar src={s.avatarUrl} name={name} size={40} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">{name}</p>
+                    <p className="text-xs text-on-surface-variant truncate">{app.job.title}</p>
+                  </div>
+                  <StatusPill status={app.status} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ---- Active jobs ---- */}
+        <SectionTitle action={<button onClick={() => onNavigate('jobs')} className="text-xs font-semibold text-primary">Manage</button>}>
+          Active jobs
+        </SectionTitle>
+        {activeJobs.length === 0 ? (
+          <Card><p className="text-sm text-on-surface-variant">No published jobs. Publish a role to start receiving applicants.</p></Card>
+        ) : (
+          <div className="space-y-2.5 m-rise m-rise-3">
+            {activeJobs.slice(0, 4).map(j => {
+              const count = j.applications?.length ?? 0;
+              return (
+                <div
+                  key={j.id}
+                  onClick={() => onNavigate('jobs')}
+                  className="m-card-lift rounded-2xl bg-surface-container/70 border border-on-surface/5 p-3.5"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold truncate">{j.title}</p>
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-success/15 text-success shrink-0">{j.status}</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[15px]">group</span>
+                    {count} applicant{count === 1 ? '' : 's'}{j.location ? ` · ${j.location}` : ''}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ---- Upcoming interviews ---- */}
+        <SectionTitle action={<button onClick={() => onNavigate('interviews')} className="text-xs font-semibold text-primary">See all</button>}>
+          Upcoming interviews
+        </SectionTitle>
+        {upcoming.length === 0 ? (
+          <Card><p className="text-sm text-on-surface-variant">No interviews scheduled.</p></Card>
+        ) : (
+          <div className="space-y-2.5 m-rise m-rise-4">
+            {upcoming.slice(0, 3).map(iv => {
+              const s = iv.application.studentProfile;
+              return (
+                <div
+                  key={iv.id}
+                  onClick={() => onNavigate('interviews')}
+                  className="m-card-lift rounded-2xl bg-surface-container/60 border border-on-surface/5 p-3.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold truncate">{s.firstName} {s.lastName}</p>
+                    {iv.locationUrl && (
+                      <a
+                        href={iv.locationUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-xs font-bold text-primary shrink-0"
+                      >
+                        Join
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-xs text-on-surface-variant truncate mt-0.5">{iv.title} · {iv.application.job.title}</p>
+                  <p className="text-xs font-semibold mt-1.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[15px] text-primary">schedule</span>
+                    {new Date(iv.scheduledAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · {iv.duration}m
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ---- Pipeline snapshot (real analytics) ---- */}
+        {analytics && (
+          <>
+            <SectionTitle action={<button onClick={() => onNavigate('analytics')} className="text-xs font-semibold text-primary">Details</button>}>
+              Pipeline snapshot
+            </SectionTitle>
+            <div className="m-rise m-rise-5 space-y-2.5">
+              <div className="grid grid-cols-2 gap-3">
+                <Stat icon="timer" label="Time to hire" value={ttHire != null ? `${ttHire}d` : '—'} />
+                <Stat icon="verified" label="Offer acceptance" value={analytics.offerAcceptanceRate != null ? `${Math.round(analytics.offerAcceptanceRate)}%` : '—'} />
+              </div>
+              {Object.keys(analytics.statusBreakdown).length > 0 && (
+                <Card>
+                  <p className="text-xs font-bold text-on-surface-variant mb-2">Candidates by stage</p>
+                  <div className="space-y-1.5">
+                    {Object.entries(analytics.statusBreakdown).map(([status, count]) => (
+                      <div key={status} className="flex items-center justify-between text-sm">
+                        <span className="text-on-surface-variant capitalize">{status.toLowerCase()}</span>
+                        <span className="font-bold">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+          </>
+        )}
+
+        <div className="h-4" />
+      </div>
+    </PullToRefresh>
   );
 };
 
@@ -345,10 +590,14 @@ const MobileEmployerPortal: React.FC = () => {
     }
   };
 
+  const isDashboard = view === 'dashboard';
   return (
     <MobileShell
+      // Dashboard renders its own full-bleed aurora hero (Phase 3 language),
+      // so skip the sticky app bar for it; every other view keeps the header.
+      bare={isDashboard}
       title={VIEW_TITLES[view] || 'Employer'}
-      subtitle={user?.university || undefined}
+      subtitle={isDashboard ? undefined : (user?.university || undefined)}
       role="employer"
       activeKey={view === 'candidates' ? 'candidates' : view}
       onNavigate={setView}
