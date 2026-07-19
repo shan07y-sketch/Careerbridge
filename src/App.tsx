@@ -14,8 +14,12 @@ import { MessageProvider } from './contexts/MessageContext';
 // presentation at render time (Capacitor/touch/viewport detection);
 // the unused variant's chunk is never downloaded.
 import { adaptive } from './mobile/adaptive';
+import { isNative } from './hooks/usePlatform';
 
 const Landing = lazy(() => import('./pages/student/Landing'));
+// Native-only entry. The web app still renders Landing at "/" exactly as
+// before; only a packaged Capacitor build boots into the app splash instead.
+const AppEntry = lazy(() => import('./mobile/pages/AppEntry'));
 const RoleSelection = lazy(() => import('./pages/student/RoleSelection'));
 const Authentication = adaptive(() => import('./pages/student/Authentication'), () => import('./mobile/pages/student/Authentication'));
 const ForgotPassword = lazy(() => import('./pages/student/ForgotPassword'));
@@ -126,7 +130,7 @@ export const App: React.FC = () => {
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                     {/* Public Pathways */}
-                     <Route path="/" element={<Landing />} />
+                     <Route path="/" element={isNative ? <AppEntry /> : <Landing />} />
                      <Route path="/login" element={<Authentication />} />
                      <Route path="/role-selection" element={<RoleSelection />} />
                      <Route path="/auth" element={<Authentication />} />
