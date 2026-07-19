@@ -19,6 +19,7 @@ import { MobileShell, Card, Stat, SectionTitle, SkeletonList, EmptyState, ErrorS
 import JobsManager from './JobsManager';
 import ApplicantTracking from './ApplicantTracking';
 import EmployerAnalytics from './EmployerAnalytics';
+import InterviewManager from './InterviewManager';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', jobs: 'Jobs', candidates: 'Candidates', pipeline: 'Talent Pipeline',
@@ -386,31 +387,10 @@ const CompanyView: React.FC = () => {
   );
 };
 
-const InterviewsView: React.FC = () => {
-  const { data, loading, error, reload } = useAsync<EmployerInterview[]>(() => EmployerOverviewService.getInterviews());
-  if (loading) return <SkeletonList count={4} />;
-  if (error || !data) return <ErrorState message={error || undefined} onRetry={reload} />;
-  if (data.length === 0) return <EmptyState icon="videocam" title="No interviews scheduled" />;
-  return (
-    <div className="px-4 pt-4 space-y-2.5">
-      {data.map(iv => {
-        const s = iv.application.studentProfile;
-        return (
-          <Card key={iv.id}>
-            <p className="text-sm font-bold">{iv.title}</p>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              {s.firstName} {s.lastName} · {iv.application.job.title}
-            </p>
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-xs font-semibold">{new Date(iv.scheduledAt).toLocaleString()} · {iv.duration}m</p>
-              {iv.locationUrl && <a href={iv.locationUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-primary">Join</a>}
-            </div>
-          </Card>
-        );
-      })}
-    </div>
-  );
-};
+// Interview management (dashboard stats, schedule/reschedule/cancel/complete,
+// candidate detail with résumé/AI-fit/skills/notes/timeline, feedback with
+// ratings/recommendation/decision, search/filters/sort) lives in its own file —
+// see InterviewManager. Module 4 replaced the old read-only InterviewsView.
 
 const MessagesView: React.FC = () => {
   const { showToast } = useToast();
@@ -500,7 +480,7 @@ const MobileEmployerPortal: React.FC = () => {
       case 'recruiters': return <RecruitersView />;
       case 'company': return <CompanyView />;
       case 'messages': return <MessagesView />;
-      case 'interviews': return <InterviewsView />;
+      case 'interviews': return <InterviewManager />;
       default: return <OverviewView onNavigate={setView} />;
     }
   };
