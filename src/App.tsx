@@ -17,7 +17,7 @@ import { adaptive } from './mobile/adaptive';
 
 const Landing = lazy(() => import('./pages/student/Landing'));
 const RoleSelection = lazy(() => import('./pages/student/RoleSelection'));
-const Authentication = lazy(() => import('./pages/student/Authentication'));
+const Authentication = adaptive(() => import('./pages/student/Authentication'), () => import('./mobile/pages/student/Authentication'));
 const ForgotPassword = lazy(() => import('./pages/student/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/student/ResetPassword'));
 const EmailVerification = lazy(() => import('./pages/student/EmailVerification'));
