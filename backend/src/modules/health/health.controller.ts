@@ -3,6 +3,15 @@ import { catchAsync } from '../../utils/catch-async';
 import { prisma } from '../../config/database';
 import { env } from '../../config/env';
 
+/** Resolved version of an installed package, or null if it cannot be read. */
+function safeVersion(pkg: string): string | null {
+  try {
+    return require(`${pkg}/package.json`).version as string;
+  } catch {
+    return null;
+  }
+}
+
 export const getHealth = catchAsync(async (req: Request, res: Response) => {
   let dbStatus = 'disconnected';
   try {
@@ -25,7 +34,15 @@ export const getHealth = catchAsync(async (req: Request, res: Response) => {
       // actually running" is a question we have had to answer the hard way.
       // Neither value is a secret.
       node: process.version,
-      platform: `${process.platform}-${process.arch}`
+      platform: `${process.platform}-${process.arch}`,
+      // Resolved versions of the parsers behind resume extraction. The build
+      // uses `npm install`, not `npm ci`, so what ships is not guaranteed to
+      // match the committed lockfile - and a parser version mismatch is
+      // otherwise invisible from outside the container.
+      deps: {
+        pdfParse: safeVersion('pdf-parse'),
+        mammoth: safeVersion('mammoth')
+      }
     },
     message: 'Operational health status verified.'
   });
