@@ -31,6 +31,8 @@ const Profile = adaptive(() => import('./pages/student/Profile'), () => import('
 // Resume: mobile gets a dedicated workspace; desktop resume management lives in the Profile page.
 const Resume = adaptive(() => import('./pages/student/Profile'), () => import('./mobile/pages/student/Resume'));
 const MockInterview = adaptive(() => import('./pages/student/MockInterview'), () => import('./mobile/pages/student/MockInterview'));
+// Interviews hub: mobile gets a scheduled + practice hub; desktop opens the mock-interview studio.
+const Interviews = adaptive(() => import('./pages/student/MockInterview'), () => import('./mobile/pages/student/Interviews'));
 const MockInterviewReport = adaptive(() => import('./pages/student/MockInterviewReport'), () => import('./mobile/pages/student/MockInterviewReport'));
 const AICareerReport = adaptive(() => import('./pages/student/AICareerReport'), () => import('./mobile/pages/student/CareerCoach'));
 const Messages = adaptive(() => import('./pages/student/Messages'), () => import('./mobile/pages/student/Messages'));
@@ -203,12 +205,20 @@ export const App: React.FC = () => {
                       }
                     />
                     <Route
-                      path="/student/mock-interview" 
+                      path="/student/mock-interview"
                       element={
                         <ProtectedRoute>
                           <MockInterview />
                         </ProtectedRoute>
-                      } 
+                      }
+                    />
+                    <Route
+                      path="/student/interviews"
+                      element={
+                        <ProtectedRoute>
+                          <Interviews />
+                        </ProtectedRoute>
+                      }
                     />
                     <Route
                       path="/student/interview-report/:id"
