@@ -16,6 +16,7 @@ import type {
   EmployerConversation, EmployerConversationMessage,
 } from '../../../services';
 import { MobileShell, Card, Stat, Chip, SectionTitle, SkeletonList, EmptyState, ErrorState, Button, Avatar, ScoreRing, PullToRefresh } from '../../components';
+import JobsManager from './JobsManager';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', jobs: 'Jobs', candidates: 'Candidates', pipeline: 'Talent Pipeline',
@@ -319,29 +320,8 @@ const OverviewView: React.FC<{ onNavigate: (k: string) => void }> = ({ onNavigat
   );
 };
 
-const JobsView: React.FC = () => {
-  const { data, loading, error, reload } = useAsync<EmployerJob[]>(() => EmployerJobService.getJobs());
-  if (loading) return <SkeletonList count={5} />;
-  if (error || !data) return <ErrorState message={error || undefined} onRetry={reload} />;
-  if (data.length === 0) return <EmptyState icon="work_off" title="No job postings" hint="Create jobs from the desktop portal." />;
-  return (
-    <div className="px-4 pt-4 space-y-2.5">
-      {data.map(job => (
-        <Card key={job.id}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-bold leading-snug">{job.title}</p>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                {job.location} · {job.applications?.length ?? 0} applicants
-              </p>
-            </div>
-            <Chip tone={job.status === 'PUBLISHED' ? 'success' : job.status === 'CLOSED' ? 'error' : 'neutral'}>{job.status}</Chip>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-};
+// Jobs management (create/edit/publish/archive/delete/search/filters) lives in
+// its own file — see JobsManager. Module 2 replaced the old read-only list.
 
 const CandidatesView: React.FC = () => {
   const { showToast } = useToast();
@@ -577,7 +557,7 @@ const MobileEmployerPortal: React.FC = () => {
 
   const render = () => {
     switch (view) {
-      case 'jobs': return <JobsView />;
+      case 'jobs': return <JobsManager />;
       case 'candidates':
       case 'pipeline': return <CandidatesView />;
       case 'analytics':
