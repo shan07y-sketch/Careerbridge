@@ -55,3 +55,83 @@
 
 /* Full-screen interview stage */
 .m-interview-stage { position: fixed; inset: 0; z-index: 60; background: #0f172a; color: #f1f5f9; }
+
+/* ===================================================================
+   Premium redesign layer (Phase 1) — gradients, glass, motion
+   =================================================================== */
+
+/* Aurora gradient hero (student home) */
+.m-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 0% 0%, #1c5d52 0%, #14453d 42%, #0c332c 100%);
+  color: #f4f7f5;
+}
+.m-hero::before {
+  content: '';
+  position: absolute;
+  inset: -40% -20% auto auto;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(126,231,193,0.35) 0%, transparent 68%);
+  filter: blur(6px);
+  pointer-events: none;
+  animation: m-float 9s ease-in-out infinite;
+}
+.m-hero::after {
+  content: '';
+  position: absolute;
+  inset: auto auto -30% -15%;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(88,180,255,0.22) 0%, transparent 70%);
+  pointer-events: none;
+  animation: m-float 11s ease-in-out infinite reverse;
+}
+@keyframes m-float {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-14px,12px) scale(1.08); }
+}
+
+/* Frosted glass surface for cards on tinted backgrounds */
+.m-glass {
+  background: rgba(255,255,255,0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+/* Elevated premium card (light + dark aware via tokens) */
+.m-card-lift {
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s;
+  will-change: transform;
+}
+.m-card-lift:active { transform: scale(0.98); }
+
+/* Gradient "AI" call-to-action */
+.m-ai-cta {
+  background: linear-gradient(120deg, #6d3bff 0%, #9333ea 45%, #d946ef 100%);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.m-ai-cta::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: m-sheen 3.2s ease-in-out infinite;
+}
+@keyframes m-sheen { 0% { transform: translateX(-120%); } 55%,100% { transform: translateX(120%); } }
+
+/* Streak flame pulse */
+.m-flame { animation: m-flame-pulse 1.8s ease-in-out infinite; transform-origin: bottom center; }
+@keyframes m-flame-pulse { 0%,100% { transform: scale(1) rotate(-2deg); } 50% { transform: scale(1.12) rotate(2deg); } }
+
+/* Staggered rise-in for feed cards */
+@keyframes m-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.m-rise { animation: m-rise 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+.m-rise-1 { animation-delay: 0.04s; }
+.m-rise-2 { animation-delay: 0.10s; }
+.m-rise-3 { animation-delay: 0.16s; }
+.m-rise-4 { animation-delay: 0.22s; }
+.m-rise-5 { animation-delay: 0.28s; }

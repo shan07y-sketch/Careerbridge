@@ -10,7 +10,8 @@ import { OfflineBanner } from './OfflineBanner';
 import type { PortalRole } from '../../config/navigation';
 
 interface MobileShellProps {
-  title: string;
+  /** Header title. Optional when `bare` is set (page renders its own hero). */
+  title?: string;
   subtitle?: string;
   /** Show a back arrow instead of the app mark. */
   back?: boolean;
@@ -24,11 +25,13 @@ interface MobileShellProps {
   badges?: Record<string, number>;
   /** Floating action button rendered above the tab bar. */
   fab?: React.ReactNode;
+  /** Skip the sticky header so the page can render its own full-bleed hero. */
+  bare?: boolean;
   children: React.ReactNode;
 }
 
 export const MobileShell: React.FC<MobileShellProps> = ({
-  title, subtitle, back, actions, hideTabs, role, activeKey, onNavigate, badges, fab, children,
+  title, subtitle, back, actions, hideTabs, role, activeKey, onNavigate, badges, fab, bare, children,
 }) => {
   const navigate = useNavigate();
 
@@ -36,6 +39,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
     <div className="min-h-screen bg-surface text-on-surface">
       <OfflineBanner />
 
+      {!bare && (
       <header className="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-on-surface/5 m-safe-top">
         <div className="flex items-center gap-3 h-14 px-4">
           {back ? (
@@ -58,6 +62,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
           {actions}
         </div>
       </header>
+      )}
 
       <main className={hideTabs ? 'pb-6' : 'pb-[88px]'}>
         {children}
