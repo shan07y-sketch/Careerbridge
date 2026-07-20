@@ -239,17 +239,82 @@ export interface RegisterPayload {
   location?: string;
 }
 
+/** Result of POST /auth/login — either a session, or a pending second factor. */
+export type LoginOutcome =
+  | { status: 'authenticated'; user: Student }
+  | { status: 'two_factor_required'; challengeToken: string };
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  enrolledAt: string | null;
+  recoveryCodesRemaining: number;
+}
+
+export interface TwoFactorSetup {
+  /** otpauth:// URI, for authenticator apps opened via a deep link. */
+  otpAuthUri: string;
+  /** Ready-to-render PNG data URI of the QR code. */
+  qrCodeDataUri: string;
+  /** Base32 secret, for apps that cannot scan a QR code. */
+  manualEntryKey: string;
+}
+
+/**
+ * Writes the session that a successful authentication returned. Shared by the
+ * password-only and two-factor paths so both store exactly the same state —
+ * if these drifted, a 2FA login would end up subtly different from a normal one.
+ */
+function persistSession(data: any): Student {
+  localStorage.setItem('accessToken', data.accessToken);
+  localStorage.setItem('isAuthenticated', 'true');
+  localStorage.setItem('role', data.user?.role?.toLowerCase() || 'student');
+  return mapAuthUserByRole(data.user);
+}
+
 export const AuthService = {
-  login: async (email: string, password: string): Promise<Student> => {
+  /**
+   * Sign in with email + password.
+   *
+   * An account with two-step verification switched on is NOT signed in by this
+   * call: the backend returns a short-lived challenge token instead of a
+   * session, and the caller must finish via `verifyTwoFactor`. The return type
+   * is a discriminated union so a caller cannot accidentally treat a pending
+   * challenge as a completed login.
+   */
+  login: async (email: string, password: string): Promise<LoginOutcome> => {
     const data = await fetchJson('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('isAuthenticated', 'true');
-    const userRole = data.user?.role?.toLowerCase() || 'student';
-    localStorage.setItem('role', userRole);
-    return mapAuthUserByRole(data.user);
+
+    if (data?.twoFactorRequired) {
+      // Deliberately no session state is written here — nothing is stored
+      // until the second factor actually verifies.
+      return { status: 'two_factor_required', challengeToken: data.challengeToken };
+    }
+
+    return { status: 'authenticated', user: persistSession(data) };
+  },
+
+  /** Completes a login that stopped at the second factor. */
+  verifyTwoFactor: async (challengeToken: string, code: string): Promise<Student> => {
+    const data = await fetchJson('/auth/2fa/verify-login', {
+      method: 'POST',
+      body: JSON.stringify({ challengeToken, code })
+    });
+    return persistSession(data);
+  },
+
+  /** Two-step verification management, used by the security settings screen. */
+  twoFactor: {
+    status: (): Promise<TwoFactorStatus> => fetchJson('/auth/2fa/status'),
+    beginSetup: (): Promise<TwoFactorSetup> => fetchJson('/auth/2fa/setup', { method: 'POST' }),
+    confirm: (code: string): Promise<{ recoveryCodes: string[] }> =>
+      fetchJson('/auth/2fa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
+    disable: (password: string): Promise<void> =>
+      fetchJson('/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ password }) }),
+    regenerateRecoveryCodes: (): Promise<{ recoveryCodes: string[] }> =>
+      fetchJson('/auth/2fa/recovery-codes', { method: 'POST' })
   },
   /**
    * Restore the current session from the httpOnly refresh cookie + stored

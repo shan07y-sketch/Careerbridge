@@ -9,6 +9,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { AuthService } from '../../../services';
+import { TwoFactorSettings } from '../../../components/auth/TwoFactorSettings';
 import { MobileShell, Card, SectionTitle, Button, Sheet, Segmented, Avatar } from '../../components';
 
 const inputCls = 'w-full h-11 px-4 rounded-xl bg-surface-container text-sm outline-none focus:ring-2 focus:ring-primary/30';
@@ -240,6 +241,10 @@ const MobileSettings: React.FC = () => {
           <Row icon="notifications" label="Notifications" onClick={() => navigate('/student/notifications')} />
           <Row icon="lock_reset" label="Change password" onClick={() => setPwOpen(true)} />
         </div>
+
+        {/* ---- Security ---- */}
+        <SectionTitle>Security</SectionTitle>
+        <TwoFactorSettings />
 
         {/* ---- Legal ---- */}
         <SectionTitle>Legal</SectionTitle>

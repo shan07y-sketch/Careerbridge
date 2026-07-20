@@ -16,12 +16,23 @@ export interface AuthResult {
   user: Student;
 }
 
+/**
+ * `login` either completes, or stops at the second factor. Callers must handle
+ * both: the union makes it impossible to route a user into the app on the
+ * strength of a password alone when 2FA is switched on.
+ */
+export type LoginResult =
+  | ({ twoFactorRequired?: false } & AuthResult)
+  | { twoFactorRequired: true; challengeToken: string };
+
 interface AuthContextType {
   user: Student | null;
   isAuthenticated: boolean;
   role: Role | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<AuthResult>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  /** Finishes a login that returned `twoFactorRequired`. */
+  verifyTwoFactor: (challengeToken: string, code: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   selectRole: (role: Role) => void;
   register: (payload: RegisterPayload) => Promise<AuthResult>;
@@ -77,20 +88,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Returns the authenticated role so callers can route immediately without
    * re-reading localStorage.
    */
-  const login = async (email: string, password: string): Promise<AuthResult> => {
+  /** Applies a completed authentication to context state. */
+  const adoptSession = (profile: Student, fallbackRole: Role = 'student'): AuthResult => {
+    const resolvedRole = (localStorage.getItem('role') as Role | null) || fallbackRole;
+    setUser(profile);
+    setIsAuthenticated(true);
+    setRoleState(resolvedRole);
+    return { role: resolvedRole, user: profile };
+  };
+
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     setIsLoading(true);
     try {
-      const profile = await AuthService.login(email, password);
-      const resolvedRole = (localStorage.getItem('role') as Role | null) || 'student';
-      setUser(profile);
-      setIsAuthenticated(true);
-      setRoleState(resolvedRole);
-      return { role: resolvedRole, user: profile };
+      const outcome = await AuthService.login(email, password);
+
+      // Password was right, but the account is not authenticated until the
+      // second factor verifies — leave auth state untouched.
+      if (outcome.status === 'two_factor_required') {
+        return { twoFactorRequired: true, challengeToken: outcome.challengeToken };
+      }
+
+      return adoptSession(outcome.user);
     } catch (err) {
       // No mock fallback: silently faking a successful login when the real API
       // call fails used to leave isAuthenticated=true with no real accessToken
       // -- every later API call then 401'd while the UI looked logged in.
       throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyTwoFactor = async (challengeToken: string, code: string): Promise<AuthResult> => {
+    setIsLoading(true);
+    try {
+      return adoptSession(await AuthService.verifyTwoFactor(challengeToken, code));
     } finally {
       setIsLoading(false);
     }
@@ -121,12 +153,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AuthService.register(payload);
       // Log in with the password the user actually chose -- registration used
       // to silently create every account with a shared hardcoded password.
-      const profile = await AuthService.login(payload.email, payload.password);
-      const resolvedRole = (localStorage.getItem('role') as Role | null) || payload.role;
-      setUser(profile);
-      setIsAuthenticated(true);
-      setRoleState(resolvedRole);
-      return { role: resolvedRole, user: profile };
+      const outcome = await AuthService.login(payload.email, payload.password);
+
+      // A brand new account cannot have 2FA enrolled yet, so this branch is
+      // unreachable in practice — but it is handled rather than cast away, so
+      // the code stays correct if registration ever gains an enrolment step.
+      if (outcome.status === 'two_factor_required') {
+        throw new Error('Two-step verification is required. Please sign in.');
+      }
+
+      return adoptSession(outcome.user, payload.role);
     } catch (err) {
       // No mock fallback: faking success would leave the user believing they
       // have an account that doesn't actually exist in PostgreSQL.
@@ -154,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         isLoading,
         login,
+        verifyTwoFactor,
         logout,
         selectRole,
         register,

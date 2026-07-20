@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { TwoFactorChallenge } from '../../components/auth/TwoFactorChallenge';
+import type { AuthResult } from '../../contexts/AuthContext';
 
 export const AdminLogin: React.FC = () => {
   const { login, logout } = useAuth();
@@ -13,6 +15,26 @@ export const AdminLogin: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
+  // Set when the password step succeeds but the account requires a second factor.
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+
+  /**
+   * Admission check applied once a session actually exists. Shared by the
+   * password-only and two-factor paths so a 2FA admin login enforces exactly
+   * the same role gate.
+   */
+  const admitAdmin = async ({ role }: AuthResult) => {
+    if (role === 'admin') {
+      showToast('System Admin session established.', 'success');
+      navigate('/admin/dashboard');
+      return;
+    }
+    // Authenticated but not an admin!
+    await logout(); // Securely clean session
+    setChallengeToken(null);
+    setAccessDenied(true);
+    showToast('Permission Denied', 'error');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,17 +51,16 @@ export const AdminLogin: React.FC = () => {
       // returns the account's actual role. (The old `forceAdmin` flag
       // fabricated a mock admin session with a fake token; every subsequent
       // API call then failed with 401.)
-      const { role: resolvedRole } = await login(email, password);
+      const result = await login(email, password);
 
-      if (resolvedRole === 'admin') {
-        showToast('System Admin session established.', 'success');
-        navigate('/admin/dashboard');
-      } else {
-        // Authenticated but not an admin!
-        await logout(); // Securely clean session
-        setAccessDenied(true);
-        showToast('Permission Denied', 'error');
+      // Admins are the likeliest accounts to have 2FA switched on, so the
+      // challenge must be handled here too — not just on the student form.
+      if (result.twoFactorRequired) {
+        setChallengeToken(result.challengeToken);
+        return;
       }
+
+      await admitAdmin(result);
     } catch {
       showToast('Authentication failed. Please check your credentials.', 'error');
     } finally {
@@ -81,6 +102,20 @@ export const AdminLogin: React.FC = () => {
             <span className="material-symbols-outlined text-base">arrow_back</span>
             <span>Return to Login</span>
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (challengeToken) {
+    return (
+      <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-6 antialiased font-sans">
+        <div className="w-full max-w-md bg-surface border border-outline-variant/20 shadow-2xl rounded-3xl p-8">
+          <TwoFactorChallenge
+            challengeToken={challengeToken}
+            onVerified={admitAdmin}
+            onCancel={() => setChallengeToken(null)}
+          />
         </div>
       </div>
     );

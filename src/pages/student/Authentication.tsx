@@ -3,7 +3,8 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
-import { isStudentOnboarded } from '../../utils/onboarding';
+import { resolveLandingRoute } from '../../utils/post-login-route';
+import { TwoFactorChallenge } from '../../components/auth/TwoFactorChallenge';
 
 export const Authentication: React.FC = () => {
   const { login, registerStudent, selectRole, role: contextRole } = useAuth();
@@ -18,6 +19,8 @@ export const Authentication: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);
+  // Set when the password step succeeds but the account requires a second factor.
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
 
   // Form Fields
   const [email, setEmail] = useState('');
@@ -56,19 +59,16 @@ export const Authentication: React.FC = () => {
     try {
       // login() resolves the REAL role from the backend response -- the
       // account's role in PostgreSQL wins over whatever tab the user was on.
-      const { role: resolvedRole, user: profile } = await login(email, password);
-      showToast('Signed in successfully!', 'success');
-      if (resolvedRole === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (resolvedRole === 'employer') {
-        navigate('/employer/dashboard');
-      } else if (resolvedRole === 'university') {
-        navigate('/university/dashboard');
-      } else {
-        // Returning students with a saved profile go straight to their
-        // dashboard; only genuinely fresh profiles see the onboarding wizard.
-        navigate(isStudentOnboarded(profile) ? '/student/dashboard' : '/student/onboarding');
+      const result = await login(email, password);
+
+      // 2FA accounts are not signed in yet: hand off to the code step.
+      if (result.twoFactorRequired) {
+        setChallengeToken(result.challengeToken);
+        return;
       }
+
+      showToast('Signed in successfully!', 'success');
+      navigate(resolveLandingRoute(result));
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Invalid credentials', 'error');
     } finally {
@@ -145,6 +145,28 @@ export const Authentication: React.FC = () => {
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col justify-between">
+      {/* Second login step. Rendered over the form rather than replacing it so
+          cancelling returns the user to exactly where they were. */}
+      {challengeToken && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Two-step verification"
+          className="fixed inset-0 z-[100] bg-scrim/60 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div className="w-full max-w-sm rounded-3xl bg-surface border border-on-surface/10 shadow-xl p-6">
+            <TwoFactorChallenge
+              challengeToken={challengeToken}
+              onVerified={(result) => {
+                showToast('Signed in successfully!', 'success');
+                navigate(resolveLandingRoute(result));
+              }}
+              onCancel={() => setChallengeToken(null)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* TopNavBar */}
       <header className="bg-white dark:bg-surface-container shadow-[0_4px_20px_rgba(2,54,41,0.04)] w-full top-0 z-50">
         <div className="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">

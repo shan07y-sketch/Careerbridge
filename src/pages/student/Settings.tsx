@@ -7,6 +7,7 @@ import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { AuthService } from '../../services';
+import { TwoFactorSettings } from '../../components/auth/TwoFactorSettings';
 
 type TabId = 'account' | 'preferences' | 'security' | 'notifications' | 'connections' | 'appearance';
 const TABS: { id: TabId; label: string; icon: string }[] = [
@@ -61,7 +62,6 @@ export const Settings: React.FC = () => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [twoFactor, setTwoFactor] = useState(false);
 
   // Career preferences
   const [careerPath, setCareerPath] = useState(user?.careerPath || '');
@@ -248,11 +248,10 @@ export const Settings: React.FC = () => {
                   <div className="flex justify-end mt-6"><Button type="submit" variant="primary" disabled={isSaving}>{isSaving ? 'Updating…' : 'Update password'}</Button></div>
                 </Card>
               </form>
-              <Card>
-                <CardHeader icon="verified_user" title="Two-factor authentication" subtitle="Add an extra layer of security" />
-                <Toggle checked={twoFactor} onChange={(v) => { setTwoFactor(v); showToast(v ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.', 'success'); }}
-                  label="Require a verification code at sign-in" description="Protects your account even if your password is compromised." />
-              </Card>
+              {/* Replaces a toggle that only flipped local state and showed a
+                  toast — it never enrolled anything, so an account that looked
+                  protected was still password-only. */}
+              <TwoFactorSettings />
               <Card>
                 <CardHeader icon="download" title="Your data" subtitle="Export a copy of your CareerBridge data" />
                 <Button variant="outline" onClick={handleExportData} leftIcon={<span className="material-symbols-outlined text-[18px]">download</span>}>Export my data (JSON)</Button>

@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import { BrandGlyph } from '../../../components/ui/BrandLogo';
+import { TwoFactorChallenge } from '../../../components/auth/TwoFactorChallenge';
 import type { AuthResult } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { isStudentOnboarded } from '../../../utils/onboarding';
@@ -30,6 +31,8 @@ const MobileAuthentication: React.FC = () => {
   const [tab, setTab] = useState<Tab>('signin');
   const [role, setRole] = useState<Role>(initialRole);
   const [loading, setLoading] = useState(false);
+  // Set when the password step succeeds but the account requires a second factor.
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
 
   useEffect(() => { selectRole(role); }, [role, selectRole]);
@@ -73,6 +76,13 @@ const MobileAuthentication: React.FC = () => {
     setLoading(true);
     try {
       const resolved = await login(email, password);
+
+      // 2FA accounts are not signed in yet: hand off to the code step.
+      if (resolved.twoFactorRequired) {
+        setChallengeToken(resolved.challengeToken);
+        return;
+      }
+
       showToast('Welcome back!', 'success');
       goByRole(resolved);
     } catch (err) {
@@ -111,6 +121,23 @@ const MobileAuthentication: React.FC = () => {
   };
 
   const input = 'w-full h-12 rounded-2xl bg-surface-container/70 border border-on-surface/8 px-4 text-[15px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition';
+
+  if (challengeToken) {
+    return (
+      <div className="min-h-screen bg-surface text-on-surface flex flex-col justify-center px-5 m-safe-top">
+        <div className="rounded-3xl bg-surface border border-on-surface/8 shadow-xl p-6">
+          <TwoFactorChallenge
+            challengeToken={challengeToken}
+            onVerified={(result) => {
+              showToast('Welcome back!', 'success');
+              goByRole(result);
+            }}
+            onCancel={() => setChallengeToken(null)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
