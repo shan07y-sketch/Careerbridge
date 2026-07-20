@@ -6,6 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
+import { BrandGlyph } from '../../../components/ui/BrandLogo';
 import type { AuthResult } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { isStudentOnboarded } from '../../../utils/onboarding';
@@ -116,7 +117,7 @@ const MobileAuthentication: React.FC = () => {
       {/* Brand hero */}
       <div className="m-hero m-safe-top px-6 pt-10 pb-14 rounded-b-[32px]">
         <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center mb-4">
-          <span className="material-symbols-outlined text-[30px] text-white">hub</span>
+          <BrandGlyph size={30} className="text-white" />
         </div>
         <h1 className="text-[26px] font-extrabold leading-tight">CareerBridge</h1>
         <p className="text-white/75 text-[15px] mt-1">Your AI-powered career, all in one place.</p>

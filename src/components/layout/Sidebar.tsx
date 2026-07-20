@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Dialog } from '../ui/Dialog';
 import { NAV_CONFIG, PORTAL_META, type NavGroup, type NavItem, type PortalRole } from '../../config/navigation';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { BrandLogo } from '../ui/BrandLogo';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -81,14 +82,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Brand */}
         <div className="px-5 h-16 flex items-center justify-between shrink-0 border-b border-outline-variant/50">
           <button onClick={() => (onNavigate ? onNavigate(groups[0].items[0].key || '') : navigate(meta.home))}
-            className="flex items-center gap-2.5 group">
-            <span className="w-9 h-9 rounded-xl bg-primary text-on-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
-            </span>
-            <span className="text-left leading-tight">
-              <span className="block text-body-md font-bold text-on-surface tracking-tight">CareerBridge</span>
-              <span className="block text-[11px] font-semibold text-tertiary uppercase tracking-wider">{meta.label}</span>
-            </span>
+            className="group">
+            <BrandLogo size={36} subtitle={meta.label} />
           </button>
           {onClose && (
             <button onClick={onClose} className="lg:hidden w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface rounded-full" type="button">
