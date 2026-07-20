@@ -14,12 +14,13 @@ jobs:
     env:
       # Your Railway backend — baked into the web build here.
       VITE_API_URL: https://honest-adaptation-production-ceb3.up.railway.app
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - uses: actions/setup-java@v4
         with:
@@ -34,13 +35,16 @@ jobs:
 
       - name: Sync Capacitor Android
         run: |
-          if [ ! -d "android" ]; then npx cap add android; fi
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
       - name: Build debug APK
         run: |
           chmod +x android/gradlew
-          cd android && ./gradlew assembleDebug
+          cd android
+          ./gradlew assembleDebug
 
       - name: Publish APK to a Release
         uses: softprops/action-gh-release@v2
