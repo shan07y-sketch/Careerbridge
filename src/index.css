@@ -1,6 +1,11 @@
+/* Every @import must precede all other at-rules. `@config` used to sit between
+   these two, which made the mobile import invalid per the CSS spec — it was
+   silently discarded, so the entire mobile presentation layer (.m-hero,
+   .m-card, .m-rise …) never reached the production bundle and every mobile
+   screen rendered unstyled. Keep the imports together and @config after them. */
 @import "tailwindcss";
-@config "../tailwind.config.js";
 @import "./mobile/mobile.css";
+@config "../tailwind.config.js";
 
 /* ===================================================================
    Theme tokens — RGB channels consumed by tailwind.config.js as
