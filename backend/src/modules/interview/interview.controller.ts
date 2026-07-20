@@ -15,7 +15,17 @@ const startSchema = z.object({
   jobTitle: z.string().trim().min(2).max(120).optional(),
   companyName: z.string().trim().max(120).optional(),
   targetRole: z.string().trim().max(120).optional()
-}).refine(v => v.jobId || v.jobTitle, { message: 'Either jobId or jobTitle is required.' });
+});
+// No job identifier is required to start a session. This used to demand
+// `jobId || jobTitle`, which made the mobile mock interview impossible to
+// start: that screen offers a single "Target role (optional)" field and sends
+// it as `targetRole`, so the check failed on every attempt and reported two
+// field names the mobile UI does not even have.
+//
+// InterviewContextService already resolves the role through a documented
+// fallback chain (explicit job -> jobTitle -> the student's preferredRole ->
+// a sensible default), so an unspecified session is still personalised rather
+// than empty. The desktop screen keeps its own stricter guard.
 
 const answerSchema = z.object({
   questionIndex: z.coerce.number().int().min(0).max(50),

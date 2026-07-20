@@ -136,6 +136,11 @@ const MobileMockInterview: React.FC = () => {
       const res: StartMockInterviewResult = await MockInterviewAIService.startInterview({
         interviewType, difficulty, numQuestions,
         targetRole: targetRole.trim() || undefined,
+        // Also sent as jobTitle so the entered role actually shapes the
+        // question plan. Passing it only as targetRole stored it on the
+        // session but left the AI context to fall back to the profile's
+        // preferred role, so the interview ignored what the user typed.
+        jobTitle: targetRole.trim() || undefined,
       });
       setSessionId(res.mockInterviewId);
       setTotalQuestions(res.totalQuestions);
