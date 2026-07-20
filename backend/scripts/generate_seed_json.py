@@ -490,7 +490,7 @@ def main():
     serialized_jobs = []
     serialized_job_skills = []
 
-    for job in jobs:
+    for job_idx, job in enumerate(jobs):
         job_id = get_id(job)
         cat_id = category_name_to_id.get(job.category)
         if not cat_id:
@@ -501,6 +501,20 @@ def main():
 
         job_type_map = {"full_time": "FULL_TIME", "internship": "INTERNSHIP", "contract": "CONTRACT", "part_time": "PART_TIME"}
         work_mode_map = {"onsite": "ON_SITE", "hybrid": "HYBRID", "remote": "REMOTE"}
+
+        # A realistic employer catalogue is mostly live with a tail of drafts,
+        # paused and closed roles, so every employer-portal status filter has
+        # something behind it. Inactive source records always land in CLOSED.
+        if not bool(job.is_active):
+            job_status = "CLOSED"
+        elif job_idx % 20 == 7:
+            job_status = "DRAFT"
+        elif job_idx % 20 == 13:
+            job_status = "PAUSED"
+        elif job_idx % 20 == 19:
+            job_status = "CLOSED"
+        else:
+            job_status = "PUBLISHED"
 
         serialized_jobs.append({
             "id": job_id,
@@ -518,7 +532,12 @@ def main():
             "salaryMax": float(job.salary_max or 120000),
             "currency": job.currency or "USD",
             "deadline": job.application_deadline.isoformat() if hasattr(job.application_deadline, 'isoformat') else None,
-            "isPublished": bool(job.is_active)
+            # `status` is the source of truth for visibility; `isPublished` is a
+            # derived legacy flag. Emitting only the flag used to leave every
+            # seeded job at the schema default of DRAFT, so employers saw their
+            # whole catalogue as unpublished while students could still apply.
+            "status": job_status,
+            "isPublished": job_status == "PUBLISHED",
         })
 
         # JobSkills required

@@ -251,7 +251,10 @@ const tables: TableDef[] = [
       salaryMax: r.salaryMax ?? null,
       currency: r.currency ?? 'USD',
       deadline: toDate(r.deadline) ?? null,
-      isPublished: r.isPublished ?? true,
+      // `status` drives visibility everywhere; `isPublished` is the derived
+      // legacy flag and must never be allowed to disagree with it.
+      status: r.status ?? 'PUBLISHED',
+      isPublished: (r.status ?? 'PUBLISHED') === 'PUBLISHED',
     }),
   },
 

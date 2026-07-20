@@ -1,11 +1,28 @@
 import { prisma } from '../../config/database';
+import { JobStatus } from '@prisma/client';
 import { PaginationParams } from '../../utils/pagination';
+
+/**
+ * `Job.status` is the source of truth for visibility — the employer portal
+ * writes it, and `isPublished` is only a derived legacy flag (see
+ * `EmployerRepository.deriveLegacyFlags`). This feed used to filter on the
+ * legacy flag, so any job whose two fields disagreed leaked into the student
+ * portal while its employer still saw it as an unpublished draft.
+ */
+const LISTABLE_STATUSES: JobStatus[] = ['PUBLISHED'];
+
+/**
+ * Detail view is deliberately wider than the list: a student who already
+ * applied must still be able to open a posting that has since been paused or
+ * closed. Drafts and archived jobs stay hidden.
+ */
+const VIEWABLE_STATUSES: JobStatus[] = ['PUBLISHED', 'PAUSED', 'CLOSED'];
 
 export class JobsRepository {
   static async getJobs(params: PaginationParams, filterQuery: any) {
     const whereClause: any = {
       isDeleted: false,
-      isPublished: true,
+      status: { in: LISTABLE_STATUSES },
       ...filterQuery
     };
 
@@ -33,8 +50,8 @@ export class JobsRepository {
   }
 
   static async getJobById(id: string) {
-    return prisma.job.findUnique({
-      where: { id },
+    return prisma.job.findFirst({
+      where: { id, isDeleted: false, status: { in: VIEWABLE_STATUSES } },
       include: {
         company: true,
         skillsRequired: { include: { skill: true } }
