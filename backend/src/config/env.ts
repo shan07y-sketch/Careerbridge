@@ -20,6 +20,12 @@ const envSchema = z.object({
   // (resume file links, share links) that need to work outside localhost.
   APP_BASE_URL: z.string().url().default('http://localhost:5000'),
 
+  // Key used to encrypt TOTP secrets at rest (AES-256-GCM). Optional: when
+  // unset it is derived from JWT_ACCESS_SECRET via HKDF so 2FA works without
+  // extra configuration, but setting it explicitly lets the 2FA key be
+  // rotated independently of session signing.
+  TWO_FACTOR_ENCRYPTION_KEY: z.string().min(16).optional(),
+
   // --- Gemini AI (Google Generative Language API) -----------------------
   // When GEMINI_API_KEY is unset, every AI module (resume, career, interview,
   // employer, university, admin) falls back to its deterministic mock

@@ -6,6 +6,21 @@ import { EmailService } from '../shared/email.service';
 import { AppError } from '../../utils/app-error';
 import { securityConfig } from '../../config/security';
 import { env } from '../../config/env';
+import { buildOtpAuthUri, generateTotpSecret, verifyTotp } from '../../utils/totp';
+import { openSecret, sealSecret } from '../../utils/secret-box';
+import QRCode from 'qrcode';
+
+/**
+ * Marks a token as usable only for completing the second login step. Checked
+ * explicitly on verification so a full access token cannot be replayed here,
+ * and the challenge token cannot be used as a session.
+ */
+const TWO_FACTOR_CHALLENGE_PURPOSE = 'two_factor_challenge';
+
+/** Long enough to open an authenticator app, short enough to limit replay. */
+const TWO_FACTOR_CHALLENGE_EXPIRY = '5m';
+
+const RECOVERY_CODE_COUNT = 10;
 
 export class AuthService {
   /**
@@ -88,7 +103,37 @@ export class AuthService {
     //   throw new AppError('Please verify your email address to log in.', 403, 'EMAIL_NOT_VERIFIED');
     // }
 
-    // Generate tokens
+    // Password was correct, but an enrolled account is not authenticated yet.
+    // Instead of a session we hand back a short-lived challenge token that is
+    // only good for completing the second step. It deliberately carries no
+    // role claim, so it cannot be mistaken for an access token by any
+    // downstream middleware even if a caller sends it as a bearer token.
+    if (user.twoFactorEnabled) {
+      const challengeToken = jwt.sign(
+        { id: user.id, purpose: TWO_FACTOR_CHALLENGE_PURPOSE },
+        securityConfig.jwt.accessSecret,
+        { expiresIn: TWO_FACTOR_CHALLENGE_EXPIRY }
+      );
+
+      return {
+        twoFactorRequired: true as const,
+        challengeToken,
+        methods: ['totp', 'recovery_code'],
+      };
+    }
+
+    return this.issueSession(user);
+  }
+
+  /**
+   * Mints the access/refresh pair for an authenticated user.
+   *
+   * Extracted from `login` so the second-factor step can issue exactly the
+   * same session shape — the two paths must not be allowed to drift, or a
+   * 2FA login would end up with subtly different session semantics from a
+   * password-only one.
+   */
+  private static async issueSession(user: any) {
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       securityConfig.jwt.accessSecret,
@@ -112,6 +157,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        twoFactorEnabled: user.twoFactorEnabled ?? false,
         studentProfile: user.studentProfile,
         recruiterProfile: user.recruiterProfile,
         universityProfile: user.universityProfile
@@ -272,5 +318,191 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(body.newPassword, salt);
 
     await AuthRepository.updateUser(user.id, { passwordHash });
+  }
+
+  // ────────────────────────────── Two-step verification ──────────────────────
+
+  /**
+   * Step 1 of enrolment: mint a secret and hand back the QR code for it.
+   *
+   * The secret is persisted immediately but `twoFactorEnabled` stays false —
+   * enrolment only completes once the user proves, in `confirmTwoFactor`, that
+   * their authenticator actually produces matching codes. Persisting first
+   * means a user who scans the QR and then reloads the page does not end up
+   * with an authenticator entry that the server has forgotten about.
+   */
+  static async beginTwoFactorEnrolment(userId: string) {
+    const user = await AuthRepository.findUserById(userId);
+    if (!user) throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+    if (user.twoFactorEnabled) {
+      throw new AppError(
+        'Two-step verification is already switched on for this account.',
+        409,
+        'TWO_FACTOR_ALREADY_ENABLED'
+      );
+    }
+
+    const secret = generateTotpSecret();
+    await AuthRepository.updateUser(user.id, { twoFactorSecret: sealSecret(secret) });
+
+    const otpAuthUri = buildOtpAuthUri({ secret, accountName: user.email });
+
+    return {
+      otpAuthUri,
+      qrCodeDataUri: await QRCode.toDataURL(otpAuthUri, { margin: 1, width: 240 }),
+      // Shown as a fallback for authenticator apps that cannot scan a QR code.
+      manualEntryKey: secret,
+    };
+  }
+
+  /**
+   * Step 2 of enrolment: switch 2FA on once a live code verifies, and issue
+   * the one-time recovery codes.
+   */
+  static async confirmTwoFactorEnrolment(userId: string, code: string) {
+    const user = await AuthRepository.findUserById(userId);
+    if (!user) throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+    if (user.twoFactorEnabled) {
+      throw new AppError(
+        'Two-step verification is already switched on for this account.',
+        409,
+        'TWO_FACTOR_ALREADY_ENABLED'
+      );
+    }
+    if (!user.twoFactorSecret) {
+      throw new AppError(
+        'Start two-step verification setup before confirming a code.',
+        400,
+        'TWO_FACTOR_NOT_STARTED'
+      );
+    }
+
+    if (!verifyTotp(openSecret(user.twoFactorSecret), code)) {
+      throw new AppError(
+        'That code is not valid. Check your authenticator app and try again.',
+        400,
+        'TWO_FACTOR_INVALID_CODE'
+      );
+    }
+
+    const recoveryCodes = await this.regenerateRecoveryCodes(user.id);
+    await AuthRepository.updateUser(user.id, {
+      twoFactorEnabled: true,
+      twoFactorEnrolledAt: new Date(),
+    });
+
+    return { recoveryCodes };
+  }
+
+  /**
+   * Completes a login that stopped at the second factor.
+   *
+   * Accepts either a TOTP code or one of the recovery codes; recovery codes
+   * are single-use and are burned on success.
+   */
+  static async verifyTwoFactorLogin(challengeToken: string, code: string) {
+    let payload: any;
+    try {
+      payload = jwt.verify(challengeToken, securityConfig.jwt.accessSecret);
+    } catch {
+      throw new AppError(
+        'This verification session has expired. Please sign in again.',
+        401,
+        'TWO_FACTOR_CHALLENGE_EXPIRED'
+      );
+    }
+
+    // Without this check any valid access token would be accepted here,
+    // letting a caller skip the password step entirely.
+    if (payload?.purpose !== TWO_FACTOR_CHALLENGE_PURPOSE) {
+      throw new AppError('Invalid verification session.', 401, 'TWO_FACTOR_CHALLENGE_INVALID');
+    }
+
+    const user = await AuthRepository.findUserById(payload.id);
+    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new AppError('Invalid verification session.', 401, 'TWO_FACTOR_CHALLENGE_INVALID');
+    }
+
+    const accepted =
+      verifyTotp(openSecret(user.twoFactorSecret), code) ||
+      (await this.consumeRecoveryCode(user.id, code));
+
+    if (!accepted) {
+      throw new AppError(
+        'That code is not valid. Check your authenticator app or use a recovery code.',
+        401,
+        'TWO_FACTOR_INVALID_CODE'
+      );
+    }
+
+    return this.issueSession(user);
+  }
+
+  /**
+   * Switches 2FA off. Requires the account password rather than a TOTP code:
+   * an attacker on an already-open session should not be able to strip the
+   * second factor, and a user whose device is lost still needs a way out.
+   */
+  static async disableTwoFactor(userId: string, password: string) {
+    const user = await AuthRepository.findUserById(userId);
+    if (!user) throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash).catch(() => false);
+    if (!isMatch) {
+      throw new AppError('Current password details do not match.', 400, 'PASSWORD_MISMATCH');
+    }
+
+    await AuthRepository.deleteRecoveryCodes(user.id);
+    await AuthRepository.updateUser(user.id, {
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+      twoFactorEnrolledAt: null,
+    });
+  }
+
+  /** Replaces every recovery code, returning the new plaintext set once. */
+  static async regenerateRecoveryCodes(userId: string) {
+    const codes = Array.from({ length: RECOVERY_CODE_COUNT }, () =>
+      // Base32 alphabet, grouped, so the codes are unambiguous when written
+      // down by hand (no 0/O or 1/I confusion).
+      generateTotpSecret().slice(0, 10).replace(/(.{5})/, '$1-')
+    );
+
+    const salt = await bcrypt.genSalt(securityConfig.bcrypt.saltRounds);
+    const hashed = await Promise.all(codes.map((code) => bcrypt.hash(code, salt)));
+
+    await AuthRepository.replaceRecoveryCodes(userId, hashed);
+
+    return codes;
+  }
+
+  /** Burns a recovery code if it matches an unused one. */
+  private static async consumeRecoveryCode(userId: string, candidate: string) {
+    const normalized = candidate.trim().toUpperCase();
+    const stored = await AuthRepository.findUnusedRecoveryCodes(userId);
+
+    for (const record of stored) {
+      const matches = await bcrypt.compare(normalized, record.codeHash).catch(() => false);
+      if (matches) {
+        await AuthRepository.markRecoveryCodeUsed(record.id);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** Status for the security settings screen. */
+  static async getTwoFactorStatus(userId: string) {
+    const user = await AuthRepository.findUserById(userId);
+    if (!user) throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+
+    return {
+      enabled: user.twoFactorEnabled,
+      enrolledAt: user.twoFactorEnrolledAt,
+      recoveryCodesRemaining: user.twoFactorEnabled
+        ? await AuthRepository.countUnusedRecoveryCodes(user.id)
+        : 0,
+    };
   }
 }

@@ -9,7 +9,10 @@ import {
   resetPasswordSchema,
   verifyEmailSchema,
   resendVerificationSchema,
-  changePasswordSchema
+  changePasswordSchema,
+  confirmTwoFactorSchema,
+  verifyTwoFactorLoginSchema,
+  disableTwoFactorSchema
 } from './auth.validation';
 import rateLimit from 'express-rate-limit';
 import { securityConfig } from '../../config/security';
@@ -31,8 +34,22 @@ router.post('/reset-password', validate(resetPasswordSchema), AuthController.res
 router.get('/verify-email', verificationLimiter, validate(verifyEmailSchema), AuthController.verifyEmail);
 router.post('/resend-verification', validate(resendVerificationSchema), AuthController.resendVerification);
 
+// Second login step. Rate limited with the same budget as /login: without it
+// a stolen challenge token could be brute-forced against a 6-digit code space.
+router.post(
+  '/2fa/verify-login',
+  loginLimiter,
+  validate(verifyTwoFactorLoginSchema),
+  AuthController.verifyTwoFactorLogin
+);
+
 // Protected routes
 router.get('/me', authenticate, AuthController.me);
+router.get('/2fa/status', authenticate, AuthController.twoFactorStatus);
+router.post('/2fa/setup', authenticate, AuthController.beginTwoFactor);
+router.post('/2fa/confirm', authenticate, validate(confirmTwoFactorSchema), AuthController.confirmTwoFactor);
+router.post('/2fa/disable', authenticate, validate(disableTwoFactorSchema), AuthController.disableTwoFactor);
+router.post('/2fa/recovery-codes', authenticate, AuthController.regenerateRecoveryCodes);
 router.post('/change-password', authenticate, validate(changePasswordSchema), AuthController.changePassword);
 
 // Optional authentication parser for health checks

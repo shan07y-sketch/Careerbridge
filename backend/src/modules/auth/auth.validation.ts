@@ -85,3 +85,34 @@ export const changePasswordSchema = z.object({
       .regex(/[0-9]/, 'New password must contain at least one numeric digit.')
   })
 });
+
+// ─────────────────────────── Two-step verification ───────────────────────────
+
+/** TOTP codes are 6 digits; spaces are tolerated because several apps display
+ *  them grouped as "123 456". */
+const totpCode = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\s/g, ''))
+  .refine((value) => /^\d{6}$/.test(value), 'Enter the 6-digit code from your authenticator app.');
+
+export const confirmTwoFactorSchema = z.object({
+  body: z.object({
+    code: totpCode
+  })
+});
+
+export const verifyTwoFactorLoginSchema = z.object({
+  body: z.object({
+    challengeToken: z.string().min(1, 'Verification session is required.'),
+    // Accepts either a 6-digit TOTP code or a recovery code, so this is
+    // validated loosely here and resolved in the service.
+    code: z.string().trim().min(6, 'Enter your 6-digit code or a recovery code.')
+  })
+});
+
+export const disableTwoFactorSchema = z.object({
+  body: z.object({
+    password: z.string().min(1, 'Your current password is required.')
+  })
+});

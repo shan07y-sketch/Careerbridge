@@ -22,6 +22,15 @@ model User {
   deletedAt              DateTime?
   companyId              String?
   lastLoginAt            DateTime?
+
+  // ── Two-step verification (TOTP, RFC 6238) ──
+  // The secret is stored encrypted (AES-256-GCM) rather than in the clear, so
+  // a database leak alone does not let an attacker mint valid codes.
+  twoFactorSecret        String?
+  twoFactorEnabled       Boolean                 @default(false)
+  twoFactorEnrolledAt    DateTime?
+  twoFactorRecoveryCodes TwoFactorRecoveryCode[]
+
   auditLogs              AuditLog[]
   receivedNotifications  Notification[]          @relation("NotificationRecipient")
   sentNotifications      Notification[]          @relation("NotificationSender")
@@ -38,6 +47,20 @@ model User {
 
   @@index([email])
   @@index([companyId])
+}
+
+/// Single-use fallback codes issued at 2FA enrolment, for when a user loses
+/// their authenticator device. Only a bcrypt hash is stored — the plaintext is
+/// shown to the user exactly once and is unrecoverable afterwards.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model RefreshToken {

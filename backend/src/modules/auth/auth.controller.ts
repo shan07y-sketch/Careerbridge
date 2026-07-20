@@ -22,6 +22,18 @@ export class AuthController {
   static login = catchAsync(async (req: Request, res: Response) => {
     const result = await AuthService.login(req.body);
 
+    // An account with two-step verification is not signed in yet: no session
+    // cookie is set and no access token is returned until the second factor
+    // is verified at /auth/2fa/verify-login.
+    if ('twoFactorRequired' in result) {
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Enter the code from your authenticator app to finish signing in.'
+      });
+      return;
+    }
+
     // Cookie parameters mapping HttpOnly token
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
@@ -159,6 +171,75 @@ export class AuthController {
       success: true,
       data: {},
       message: 'Your password has been changed successfully.'
+    });
+  });
+
+  // ────────────────────────── Two-step verification ──────────────────────────
+
+  static twoFactorStatus = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.user) throw new AppError('Unauthorized access.', 401, 'UNAUTHORIZED');
+    res.status(200).json({
+      success: true,
+      data: await AuthService.getTwoFactorStatus(req.user.id),
+      message: 'Two-step verification status retrieved.'
+    });
+  });
+
+  static beginTwoFactor = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.user) throw new AppError('Unauthorized access.', 401, 'UNAUTHORIZED');
+    res.status(200).json({
+      success: true,
+      data: await AuthService.beginTwoFactorEnrolment(req.user.id),
+      message: 'Scan the QR code with your authenticator app, then confirm a code.'
+    });
+  });
+
+  static confirmTwoFactor = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.user) throw new AppError('Unauthorized access.', 401, 'UNAUTHORIZED');
+    res.status(200).json({
+      success: true,
+      data: await AuthService.confirmTwoFactorEnrolment(req.user.id, req.body.code),
+      message: 'Two-step verification is now switched on. Save your recovery codes.'
+    });
+  });
+
+  static verifyTwoFactorLogin = catchAsync(async (req: Request, res: Response) => {
+    const result = await AuthService.verifyTwoFactorLogin(req.body.challengeToken, req.body.code);
+
+    // This is the point the session actually begins, so the refresh cookie is
+    // set here with exactly the same options `login` uses for password-only
+    // accounts — the two paths must produce identical session semantics.
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.status(200).json({
+      success: true,
+      data: { accessToken: result.accessToken, user: result.user },
+      message: 'Signed in successfully.'
+    });
+  });
+
+  static disableTwoFactor = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.user) throw new AppError('Unauthorized access.', 401, 'UNAUTHORIZED');
+    await AuthService.disableTwoFactor(req.user.id, req.body.password);
+    res.status(200).json({
+      success: true,
+      data: {},
+      message: 'Two-step verification has been switched off.'
+    });
+  });
+
+  static regenerateRecoveryCodes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.user) throw new AppError('Unauthorized access.', 401, 'UNAUTHORIZED');
+    const recoveryCodes = await AuthService.regenerateRecoveryCodes(req.user.id);
+    res.status(200).json({
+      success: true,
+      data: { recoveryCodes },
+      message: 'New recovery codes generated. Your previous codes no longer work.'
     });
   });
 }

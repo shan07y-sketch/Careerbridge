@@ -272,4 +272,39 @@ export class AuthRepository {
       return user;
     });
   }
+
+  // ────────────────────────── Two-step verification ──────────────────────────
+
+  /** Swaps the whole recovery-code set atomically, so a failure part-way
+   *  through cannot leave an account with a mix of old and new codes. */
+  static async replaceRecoveryCodes(userId: string, codeHashes: string[]) {
+    return prisma.$transaction([
+      prisma.twoFactorRecoveryCode.deleteMany({ where: { userId } }),
+      prisma.twoFactorRecoveryCode.createMany({
+        data: codeHashes.map((codeHash) => ({ userId, codeHash })),
+      }),
+    ]);
+  }
+
+  static async findUnusedRecoveryCodes(userId: string) {
+    return prisma.twoFactorRecoveryCode.findMany({
+      where: { userId, usedAt: null },
+      select: { id: true, codeHash: true },
+    });
+  }
+
+  static async countUnusedRecoveryCodes(userId: string) {
+    return prisma.twoFactorRecoveryCode.count({ where: { userId, usedAt: null } });
+  }
+
+  static async markRecoveryCodeUsed(id: string) {
+    return prisma.twoFactorRecoveryCode.update({
+      where: { id },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  static async deleteRecoveryCodes(userId: string) {
+    return prisma.twoFactorRecoveryCode.deleteMany({ where: { userId } });
+  }
 }
