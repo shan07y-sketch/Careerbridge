@@ -56,11 +56,17 @@ console.log(`\n🌱  Seeding REMOTE database via upsert (no reset): ${host}\n`);
 // rows in place. NODE_ENV is left unset so no accidental prod-only branch trips.
 const result = spawnSync(
   'npx',
-  ['ts-node', path.join(__dirname, 'ingest_seed.ts'), '--mode', 'upsert'],
+  ['ts-node', path.join(__dirname, 'ingest_seed.ts'), '--mode', 'upsert', '--fast'],
   {
     stdio: 'inherit',
     shell: process.platform === 'win32',
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+      // One fixture file (career insights) is ~240 MB of JSON; the default
+      // heap is too small to parse it. Raise it for this run only.
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=4096`.trim(),
+    },
   }
 );
 

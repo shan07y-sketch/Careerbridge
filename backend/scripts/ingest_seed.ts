@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+// bcryptjs (not native bcrypt): the backend migrated off the native module,
+// and it is the only one installed. Same hashSync API, and $2a/$2b hashes it
+// produces verify interchangeably with the auth layer.
+import * as bcrypt from 'bcryptjs';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -588,12 +591,15 @@ async function main() {
   const args = process.argv.slice(2);
   let mode = 'reset';
   let selectiveTables: string[] = [];
+  let fastMode = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--mode' && i + 1 < args.length) {
       mode = args[++i].toLowerCase();
     } else if (args[i] === '--selective' && i + 1 < args.length) {
       selectiveTables = args[++i].split(',').map((t) => t.trim().toLowerCase());
+    } else if (args[i] === '--fast') {
+      fastMode = true;
     }
   }
 
@@ -648,6 +654,43 @@ async function main() {
     let ok = 0;
     let fail = 0;
     const errs: string[] = [];
+
+    // Fast path (--fast): bulk createMany in chunks. Per-row upsert costs one
+    // network round-trip per record, which is unusable over a remote link for
+    // hundreds of thousands of rows. Bulk insert is one round-trip per chunk.
+    // Only safe into an empty/fresh target — skipDuplicates absorbs the rare
+    // collision, and a chunk that fails as a batch falls back to per-row so a
+    // single bad record can't drop the other 999.
+    if (fastMode) {
+      const mappedAll: Record<string, any>[] = [];
+      for (const raw of records) {
+        try { const m = t.transform(raw); if (m) mappedAll.push(m); } catch { fail++; }
+      }
+      const CHUNK = 1000;
+      for (let i = 0; i < mappedAll.length; i += CHUNK) {
+        const chunk = mappedAll.slice(i, i + CHUNK);
+        try {
+          const r = await (prisma as any)[t.prismaName].createMany({ data: chunk, skipDuplicates: true });
+          ok += r.count;
+        } catch {
+          for (const m of chunk) {
+            try {
+              await (prisma as any)[t.prismaName].create({ data: m });
+              ok++;
+            } catch (err: any) {
+              fail++;
+              const msg = errMsg(err);
+              if (!errs.includes(msg)) errs.push(msg);
+            }
+          }
+        }
+      }
+      const icon = fail === 0 ? '✅' : ok === 0 ? '❌' : '⚠️ ';
+      console.log(`${icon}  ${t.name}: ${ok}/${records.length} inserted (${fail} failed)`);
+      errs.slice(0, 2).forEach((e) => console.log(`       └─ ${e}`));
+      summary.push({ table: t.name, ok, fail, errs });
+      continue;
+    }
 
     for (const raw of records) {
       try {
