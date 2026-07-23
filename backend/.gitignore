@@ -13,3 +13,4 @@ uploads/*
 !uploads/resumes/
 uploads/resumes/*
 !uploads/resumes/dummy_resume.pdf
+.env.seedprod

@@ -22,7 +22,8 @@
     "seed:ingest": "ts-node scripts/ingest_seed.ts",
     "seed": "npm run seed:generate && npm run seed:reset && npm run seed:ingest && npm run validate",
     "validate": "ts-node scripts/validate_seed.ts",
-    "verify-api": "ts-node scripts/verify_api.ts"
+    "verify-api": "ts-node scripts/verify_api.ts",
+    "seed:prod": "ts-node scripts/seed_prod.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
