@@ -43,7 +43,15 @@ export const securityConfig = {
   },
   rateLimit: {
     windowMs: 15 * 60 * 1000,
-    max: isDev ? 9999999 : 100,
+    // Global per-IP ceiling. The old value of 100/15min was far too low for a
+    // data-heavy SPA: a single user opening a dashboard and browsing a few
+    // pages (jobs, applications, messages, notifications, analytics) easily
+    // fires well over 100 requests, so a legitimate session tripped
+    // "Too many requests from this IP" within a minute. `trust proxy` is set
+    // (app.ts), so this is keyed on the real client IP, not the Railway edge —
+    // 5000/15min (~5.5 req/s sustained) never inconveniences a real user while
+    // still stopping a scraper doing tens of thousands of calls.
+    max: isDev ? 9999999 : 5000,
     message: {
       success: false,
       error: {
@@ -55,7 +63,11 @@ export const securityConfig = {
   rateLimits: {
     login: {
       windowMs: 15 * 60 * 1000, // 15 mins
-      max: isDev ? 9999999 : 5,
+      // 5 was brutal: two fat-fingered passwords plus a couple of 2FA code
+      // retries (the 2FA step shares this limiter) locked a real user out for
+      // 15 minutes. 40/15min still throttles brute force to a crawl against
+      // bcrypt hashes while never blocking a genuine sign-in.
+      max: isDev ? 9999999 : 40,
       message: {
         success: false,
         error: {
@@ -66,7 +78,7 @@ export const securityConfig = {
     },
     register: {
       windowMs: 60 * 60 * 1000, // 1 hour
-      max: isDev ? 9999999 : 10,
+      max: isDev ? 9999999 : 50,
       message: {
         success: false,
         error: {
@@ -77,7 +89,7 @@ export const securityConfig = {
     },
     forgotPassword: {
       windowMs: 60 * 60 * 1000, // 1 hour
-      max: isDev ? 9999999 : 3,
+      max: isDev ? 9999999 : 20,
       message: {
         success: false,
         error: {
@@ -88,7 +100,7 @@ export const securityConfig = {
     },
     verification: {
       windowMs: 60 * 60 * 1000, // 1 hour
-      max: isDev ? 9999999 : 5,
+      max: isDev ? 9999999 : 30,
       message: {
         success: false,
         error: {
