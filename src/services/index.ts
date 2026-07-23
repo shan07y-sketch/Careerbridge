@@ -10,6 +10,45 @@ const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000').rep
 const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 export { API_ORIGIN };
 
+/**
+ * Thrown when the request never reaches the server (DNS/TLS/offline/blocked).
+ * `fetch()` rejects these as a bare `TypeError: Failed to fetch`, which tells
+ * the user nothing — it looks identical to a wrong password in a toast. We
+ * rewrap it so the message names the actual server and points at connectivity,
+ * and we tag it so callers can special-case an offline state. The host is
+ * surfaced deliberately: on a device this is the single fastest way to tell a
+ * "can't reach the backend" problem apart from a bad build pointing at the
+ * wrong origin.
+ */
+export class NetworkError extends Error {
+  readonly isNetworkError = true;
+  readonly url: string;
+  constructor(url: string, cause?: unknown) {
+    super(
+      `Can't reach the CareerBridge server (${API_ORIGIN}). ` +
+        `Check your internet connection and try again.`
+    );
+    this.name = 'NetworkError';
+    this.url = url;
+    if (cause instanceof Error) this.stack = cause.stack;
+  }
+}
+
+/**
+ * A raw fetch that converts a network-level rejection into a NetworkError.
+ * `fetch` only rejects for transport failures — an HTTP 4xx/5xx still
+ * resolves — so anything caught here is genuinely "the request did not
+ * complete", never an application error.
+ */
+const rawFetch = async (input: string, init?: RequestInit): Promise<Response> => {
+  try {
+    return await fetch(input, init);
+  } catch (err) {
+    console.error(`Network request to ${input} did not complete.`, err);
+    throw new NetworkError(input, err);
+  }
+};
+
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -38,7 +77,7 @@ const fetchJson = async (endpoint: string, options: RequestInit = {}): Promise<a
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await rawFetch(`${API_BASE_URL}${endpoint}`, {
       credentials: 'include',
       ...options,
       headers
@@ -53,7 +92,7 @@ const fetchJson = async (endpoint: string, options: RequestInit = {}): Promise<a
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          const refreshResponse = await rawFetch(`${API_BASE_URL}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include'
@@ -706,13 +745,22 @@ export const CoachService = {
     params: { conversationId?: string; content: string },
     handlers: CoachStreamHandlers
   ): Promise<void> => {
-    const resp = await fetch(`${API_BASE_URL}/coach/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      credentials: 'include',
-      body: JSON.stringify(params),
-      signal: handlers.signal
-    });
+    let resp: Response;
+    try {
+      resp = await rawFetch(`${API_BASE_URL}/coach/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        credentials: 'include',
+        body: JSON.stringify(params),
+        signal: handlers.signal
+      });
+    } catch (err) {
+      // Transport failure (offline / can't reach server). Surface the same
+      // legible message the rest of the app uses instead of a bare
+      // "network error".
+      handlers.onError?.(err instanceof Error ? err.message : 'Network error');
+      return;
+    }
     if (!resp.ok || !resp.body) {
       let msg = 'The coach could not respond right now.';
       try { const j = await resp.json(); msg = j.error?.message || msg; } catch { /* non-JSON */ }

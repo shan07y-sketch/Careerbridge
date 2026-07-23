@@ -32,6 +32,25 @@ jobs:
       - name: Build web assets
         run: npm run build
 
+      - name: Verify backend URL is baked into the build
+        # A build that ships without the real backend URL is worse than a failed
+        # build: the app installs fine but every request dies with "Failed to
+        # fetch", because the code falls back to http://localhost:5000 (the
+        # phone itself). `.env.production` is gitignored, so on CI the URL comes
+        # only from the VITE_API_URL env above — this step proves it actually
+        # made it into the bundle before we waste time packaging an APK.
+        run: |
+          if grep -rq "honest-adaptation-production-ceb3" dist/assets/*.js; then
+            echo "OK: backend URL is present in the built bundle."
+          else
+            echo "::error::VITE_API_URL was not baked into the build — the APK would fail every request with 'Failed to fetch'. Aborting."
+            exit 1
+          fi
+          if grep -rq "localhost:5000" dist/assets/*.js; then
+            echo "::error::The build still references localhost:5000 — a device cannot reach that. Aborting."
+            exit 1
+          fi
+
       - name: Sync Capacitor Android
         run: |
           if [ ! -d "android" ]; then npx cap add android; fi
